@@ -1,5 +1,4 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
-from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from backend.database import Base
@@ -12,8 +11,14 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False)
+    updated_at = Column(DateTime, nullable=False, onupdate=datetime.now)
     
     # Relationship with Grow (one-to-many)
     grows = relationship("Grow", back_populates="user", cascade="all, delete-orphan")
+    
+    # Relationship with InventoryItem (one-to-many)
+    inventory_items = relationship("InventoryItem", back_populates="user", cascade="all, delete-orphan")
+    
+    # Relationship with IoTGateway (one-to-many)
+    iot_gateways = relationship("IotGateway", back_populates="user", cascade="all, delete-orphan")
