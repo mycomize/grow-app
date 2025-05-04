@@ -163,18 +163,6 @@ module.exports = {
           light: '#FBFBFB',
           dark: '#181719',
         },
-        accent: {
-          50: '#e3eeff',
-          100: '#b6ccfe',
-          200: '#88abf7',
-          300: '#5b89f1',
-          400: '#2d67ec',
-          500: '#134ed2',
-          600: '#0b3da4',
-          700: '#052b77',
-          800: '#001a4a',
-          900: '#00091e',
-        },
         indicator: {
           primary: 'rgb(var(--color-indicator-primary)/<alpha-value>)',
           info: 'rgb(var(--color-indicator-info)/<alpha-value>)',

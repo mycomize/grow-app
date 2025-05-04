@@ -8,7 +8,7 @@ export default function RootLayout() {
   return (
     <>
       <AuthProvider>
-        <GluestackUIProvider>
+        <GluestackUIProvider mode="light">
           <Stack>
             <Stack.Screen name="(protected)" options={{ headerShown: false }} />
           </Stack>
