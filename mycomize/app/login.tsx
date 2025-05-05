@@ -12,7 +12,8 @@ import { Center } from '@/components/ui/center';
 import { VStack } from '@/components/ui/vstack';
 import { EyeIcon, EyeOffIcon } from '@/components/ui/icon';
 import { useRouter } from 'expo-router';
-import { UserPlus } from 'lucide-react-native';
+import { HStack } from '@/components/ui/hstack';
+import { Link, LinkText } from '~/components/ui/link';
 import mycomizeLogo from '~/assets/mycomize-blue-icon.png';
 
 export default function LoginScreen() {
@@ -96,11 +97,12 @@ export default function LoginScreen() {
           </VStack>
         </FormControl>
       </VStack>
-      <Text className="mt-10">Need an account?</Text>
-      <Button action="positive" onPress={() => router.replace('/register')}>
-        <ButtonText className="text-typography-0">Sign Up</ButtonText>
-        <ButtonIcon as={UserPlus} className="ml-2" />
-      </Button>
+      <Link className="mt-10" onPress={() => router.replace('/register')}>
+        <HStack>
+          <Text>Need an account? </Text>
+          <LinkText className="text-success-300">Sign Up</LinkText>
+        </HStack>
+      </Link>
     </View>
   );
 }
