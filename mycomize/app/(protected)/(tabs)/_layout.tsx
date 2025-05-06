@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { TabBarIcon } from '~/components/TabBarIcon';
+import { CircuitBoard, User, Package, Flower, House } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -10,15 +10,41 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Tab One',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
+          title: 'Home',
+          tabBarIcon: ({ color }) => <House color={color} />,
+          headerShown: false,
         }}
       />
       <Tabs.Screen
-        name="two"
+        name="grows"
         options={{
-          title: 'Tab Two',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
+          title: 'Grows',
+          tabBarIcon: ({ color }) => <Flower color={color} />,
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="inventory"
+        options={{
+          title: 'Inventory',
+          tabBarIcon: ({ color }) => <Package color={color} />,
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="iot"
+        options={{
+          title: 'IoT',
+          tabBarIcon: ({ color }) => <CircuitBoard color={color} />,
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <User color={color} />,
+          headerShown: false,
         }}
       />
     </Tabs>
