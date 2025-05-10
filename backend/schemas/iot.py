@@ -59,14 +59,6 @@ class IoTGateway(IoTGatewayBase):
     class Config:
         from_attributes = True
     
-    @validator('api_key')
-    def mask_api_key(cls, v):
-        """Masks the API key for security"""
-        if v and len(v) > 4:
-            # Return only the last 4 characters
-            return '••••' + v[-4:]
-        return v
-    
 class IoTGatewayUpdate(BaseModel):
     """Schema for updating a IoT gateway"""
     name: Optional[str] = None

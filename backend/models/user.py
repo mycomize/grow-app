@@ -21,4 +21,4 @@ class User(Base):
     inventory_items = relationship("InventoryItem", back_populates="user", cascade="all, delete-orphan")
     
     # Relationship with IoTGateway (one-to-many)
-    iot_gateways = relationship("IotGateway", back_populates="user", cascade="all, delete-orphan")
+    iot_gateways = relationship("IoTGateway", back_populates="user", cascade="all, delete-orphan")

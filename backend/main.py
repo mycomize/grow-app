@@ -1,9 +1,13 @@
+import uvicorn
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import routers
 from .routers.auth import router as auth_router
 from .routers.grow import router as grow_router
+from .routers.iot import router as iot_router
+from .routers.inventory import router as inventory_router
 
 app = FastAPI(title="Mycomize Grow API")
 
@@ -32,7 +36,12 @@ app.add_middleware(
 # Include routers
 app.include_router(auth_router)
 app.include_router(grow_router)
+app.include_router(iot_router)
+app.include_router(inventory_router)
 
 @app.get("/")
 async def root():
     return {"message": "Mycomize Grow API"}
+
+if __name__ == '__main__':
+    uvicorn.app(app, log_level="debug")

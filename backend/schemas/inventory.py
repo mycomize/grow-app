@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, validator
 from typing import Optional
-from datetime import date
+from datetime import datetime
 from enum import Enum
 
 class InventoryItemTypeEnum(str, Enum):
@@ -15,23 +15,18 @@ class SyringeTypeEnum(str, Enum):
 
 # Base schema for common inventory item attributes
 class InventoryItemBase(BaseModel):
-    name: str
+    type: str
+    id: int
     source: Optional[str] = None
-    source_date: date
-    expiration_date: Optional[date] = None
+    source_date: datetime
+    expiration_date: Optional[datetime] = None
     cost: Optional[float] = None
     notes: Optional[str] = None
-
-    @validator('name')
-    def name_must_not_be_empty(cls, v):
-        if not v or not v.strip():
-            raise ValueError('Name cannot be empty')
-        return v.strip()
 
 # Syringe schemas
 class SyringeBase(InventoryItemBase):
     syringe_type: str
-    volume_ml: int
+    volume_ml: float 
     species: str
     variant: str
 
@@ -111,10 +106,9 @@ class Bulk(BulkBase):
 # Update schemas
 class SyringeUpdate(BaseModel):
     """Schema for updating a syringe"""
-    name: Optional[str] = None
     source: Optional[str] = None
-    source_date: Optional[date] = None
-    expiration_date: Optional[date] = None
+    source_date: Optional[datetime] = None
+    expiration_date: Optional[datetime] = None
     cost: Optional[float] = None
     notes: Optional[str] = None
     syringe_type: Optional[str] = None
@@ -122,7 +116,7 @@ class SyringeUpdate(BaseModel):
     species: Optional[str] = None
     variant: Optional[str] = None
     
-    @validator('name', 'species', 'variant')
+    @validator('species', 'variant')
     def fields_must_not_be_empty(cls, v, values, **kwargs):
         if v is not None and not v.strip():
             field_name = kwargs.get('field').name
@@ -131,16 +125,15 @@ class SyringeUpdate(BaseModel):
 
 class SpawnUpdate(BaseModel):
     """Schema for updating spawn"""
-    name: Optional[str] = None
     source: Optional[str] = None
-    source_date: Optional[date] = None
-    expiration_date: Optional[date] = None
+    source_date: Optional[datetime] = None
+    expiration_date: Optional[datetime] = None
     cost: Optional[float] = None
     notes: Optional[str] = None
     spawn_type: Optional[str] = None
     amount_lbs: Optional[float] = None
     
-    @validator('name', 'spawn_type')
+    @validator('spawn_type')
     def fields_must_not_be_empty(cls, v, values, **kwargs):
         if v is not None and not v.strip():
             field_name = kwargs.get('field').name
@@ -149,16 +142,15 @@ class SpawnUpdate(BaseModel):
 
 class BulkUpdate(BaseModel):
     """Schema for updating bulk substrate"""
-    name: Optional[str] = None
     source: Optional[str] = None
-    source_date: Optional[date] = None
-    expiration_date: Optional[date] = None
+    source_date: Optional[datetime] = None
+    expiration_date: Optional[datetime] = None
     cost: Optional[float] = None
     notes: Optional[str] = None
     bulk_type: Optional[str] = None
     amount_lbs: Optional[float] = None
     
-    @validator('name', 'bulk_type')
+    @validator('bulk_type')
     def fields_must_not_be_empty(cls, v, values, **kwargs):
         if v is not None and not v.strip():
             field_name = kwargs.get('field').name

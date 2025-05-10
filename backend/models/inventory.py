@@ -1,16 +1,15 @@
 import enum
 from sqlalchemy import Column, Integer, String, Date, Float, Boolean, ForeignKey, event
 from sqlalchemy.orm import relationship
-from datetime import date, datetime
 from backend.database import Base
 from backend.models.grow import MonotubGrow
 
 class InventoryItemType(enum.Enum):
     """Enum for inventory item types"""
-    SYRINGE = "syringe"
-    SPAWN = "spawn"
-    BULK = "bulk"
-    OTHER = "other"
+    SYRINGE = "Syringe"
+    SPAWN = "Spawn"
+    BULK = "Bulk"
+    OTHER = "Other"
 
 class SyringeType(enum.Enum):
     """Enum for syringe types"""
@@ -23,7 +22,6 @@ class InventoryItem(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     type = Column(String(64), nullable=False)
-    name = Column(String(128), nullable=False)
     source = Column(String(128), nullable=True)
     source_date = Column(Date, nullable=False)
     expiration_date = Column(Date, nullable=True)

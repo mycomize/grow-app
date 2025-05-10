@@ -1,9 +1,10 @@
 import bcrypt
 import json
+import jwt
 
+from jwt import PyJWKClient
 from datetime import datetime, timedelta
 from typing import Optional
-from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
@@ -13,7 +14,7 @@ from backend.database import get_user_db
 
 # Security configurations
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+TOKEN_URL = "token"
 
 def load_config(config_file="config/config.json"):
     """Load configuration from a JSON file"""
@@ -22,11 +23,12 @@ def load_config(config_file="config/config.json"):
     return config
 
 # OAuth2 scheme for token handling
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=TOKEN_URL)
 
 # Config
 config = load_config()
 jwt_secret_key = config["jwt_secret_key"]
+access_token_expiration = config["access_token_expiration"]
 
 def verify_password(plain_password, hashed_password):
     """Verify a password against a hash"""
@@ -50,9 +52,17 @@ def authenticate_user(db: Session, username: str, password: str):
     user = get_user(db, username)
 
     if not user:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     if not verify_password(password, user.hashed_password):
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     return user
 
@@ -63,7 +73,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.utcnow() + timedelta(minutes=access_token_expiration)
 
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, jwt_secret_key, algorithm=ALGORITHM)
@@ -72,6 +82,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_user_db)):
     """Get the current user from the JWT token"""
+    print(f"Token received: {token}")
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -82,10 +93,19 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         username: str = payload.get("sub")
 
         if username is None:
+            print("Username not found in token payload")
             raise credentials_exception
 
         token_data = TokenData(username=username)
-    except JWTError:
+    except jwt.ExpiredSignatureError:
+        print("Token has expired")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except jwt.InvalidTokenError:
+        print("Invalid token")
         raise credentials_exception
 
     user = get_user(db, username=token_data.username)

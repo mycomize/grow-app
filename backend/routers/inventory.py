@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Union
-from datetime import date
+from datetime import datetime
 
 from backend.models.inventory import InventoryItem, Syringe, Spawn, Bulk
 from backend.models.user import User
@@ -44,15 +44,16 @@ def check_item_availability(db: Session, item_id: int, item_type: str):
 
 # === SYRINGE ROUTES ===
 
-@router.post("/syringes", response_model=SyringeSchema, status_code=status.HTTP_201_CREATED)
+@router.post("/syringe", response_model=SyringeSchema, status_code=status.HTTP_201_CREATED)
 async def create_syringe(
     syringe: SyringeCreate, 
     db: Session = Depends(get_grow_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    print(f"Creating syringe: {syringe}") 
     """Create a new syringe inventory item"""
     db_syringe = Syringe(
-        name=syringe.name,
+        type="Syringe",
         source=syringe.source,
         source_date=syringe.source_date,
         expiration_date=syringe.expiration_date,
@@ -72,7 +73,7 @@ async def create_syringe(
     
     return db_syringe
 
-@router.get("/syringes", response_model=List[SyringeSchema])
+@router.get("/syringe", response_model=List[SyringeSchema])
 async def read_syringes(
     skip: int = 0, 
     limit: int = 100, 
@@ -89,7 +90,7 @@ async def read_syringes(
     syringes = query.offset(skip).limit(limit).all()
     return syringes
 
-@router.get("/syringes/{syringe_id}", response_model=SyringeSchema)
+@router.get("/syringe/{syringe_id}", response_model=SyringeSchema)
 async def read_syringe(
     syringe_id: int, 
     db: Session = Depends(get_grow_db),
@@ -101,7 +102,7 @@ async def read_syringe(
         raise HTTPException(status_code=404, detail="Syringe not found")
     return syringe
 
-@router.put("/syringes/{syringe_id}", response_model=SyringeSchema)
+@router.put("/syringe/{syringe_id}", response_model=SyringeSchema)
 async def update_syringe(
     syringe_id: int, 
     syringe: SyringeUpdate, 
@@ -129,7 +130,7 @@ async def update_syringe(
     db.refresh(db_syringe)
     return db_syringe
 
-@router.delete("/syringes/{syringe_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/syringe/{syringe_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_syringe(
     syringe_id: int, 
     db: Session = Depends(get_grow_db),
@@ -153,7 +154,7 @@ async def delete_syringe(
 
 # === SPAWN ROUTES ===
 
-@router.post("/spawns", response_model=SpawnSchema, status_code=status.HTTP_201_CREATED)
+@router.post("/spawn", response_model=SpawnSchema, status_code=status.HTTP_201_CREATED)
 async def create_spawn(
     spawn: SpawnCreate, 
     db: Session = Depends(get_grow_db),
@@ -161,7 +162,7 @@ async def create_spawn(
 ):
     """Create a new spawn inventory item"""
     db_spawn = Spawn(
-        name=spawn.name,
+        type="Spawn",
         source=spawn.source,
         source_date=spawn.source_date,
         expiration_date=spawn.expiration_date,
@@ -179,7 +180,7 @@ async def create_spawn(
     
     return db_spawn
 
-@router.get("/spawns", response_model=List[SpawnSchema])
+@router.get("/spawn", response_model=List[SpawnSchema])
 async def read_spawns(
     skip: int = 0, 
     limit: int = 100, 
@@ -196,7 +197,7 @@ async def read_spawns(
     spawns = query.offset(skip).limit(limit).all()
     return spawns
 
-@router.get("/spawns/{spawn_id}", response_model=SpawnSchema)
+@router.get("/spawn/{spawn_id}", response_model=SpawnSchema)
 async def read_spawn(
     spawn_id: int, 
     db: Session = Depends(get_grow_db),
@@ -208,7 +209,7 @@ async def read_spawn(
         raise HTTPException(status_code=404, detail="Spawn not found")
     return spawn
 
-@router.put("/spawns/{spawn_id}", response_model=SpawnSchema)
+@router.put("/spawn/{spawn_id}", response_model=SpawnSchema)
 async def update_spawn(
     spawn_id: int, 
     spawn: SpawnUpdate, 
@@ -236,7 +237,7 @@ async def update_spawn(
     db.refresh(db_spawn)
     return db_spawn
 
-@router.delete("/spawns/{spawn_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/spawn/{spawn_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_spawn(
     spawn_id: int, 
     db: Session = Depends(get_grow_db),
@@ -260,7 +261,7 @@ async def delete_spawn(
 
 # === BULK ROUTES ===
 
-@router.post("/bulks", response_model=BulkSchema, status_code=status.HTTP_201_CREATED)
+@router.post("/bulk", response_model=BulkSchema, status_code=status.HTTP_201_CREATED)
 async def create_bulk(
     bulk: BulkCreate, 
     db: Session = Depends(get_grow_db),
@@ -268,7 +269,7 @@ async def create_bulk(
 ):
     """Create a new bulk substrate inventory item"""
     db_bulk = Bulk(
-        name=bulk.name,
+        type="Bulk",
         source=bulk.source,
         source_date=bulk.source_date,
         expiration_date=bulk.expiration_date,
@@ -286,7 +287,7 @@ async def create_bulk(
     
     return db_bulk
 
-@router.get("/bulks", response_model=List[BulkSchema])
+@router.get("/bulk", response_model=List[BulkSchema])
 async def read_bulks(
     skip: int = 0, 
     limit: int = 100, 
@@ -303,7 +304,7 @@ async def read_bulks(
     bulks = query.offset(skip).limit(limit).all()
     return bulks
 
-@router.get("/bulks/{bulk_id}", response_model=BulkSchema)
+@router.get("/bulk/{bulk_id}", response_model=BulkSchema)
 async def read_bulk(
     bulk_id: int, 
     db: Session = Depends(get_grow_db),
@@ -315,7 +316,7 @@ async def read_bulk(
         raise HTTPException(status_code=404, detail="Bulk substrate not found")
     return bulk
 
-@router.put("/bulks/{bulk_id}", response_model=BulkSchema)
+@router.put("/bulk/{bulk_id}", response_model=BulkSchema)
 async def update_bulk(
     bulk_id: int, 
     bulk: BulkUpdate, 
@@ -343,7 +344,7 @@ async def update_bulk(
     db.refresh(db_bulk)
     return db_bulk
 
-@router.delete("/bulks/{bulk_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/bulk/{bulk_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_bulk(
     bulk_id: int, 
     db: Session = Depends(get_grow_db),
