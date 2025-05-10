@@ -51,7 +51,7 @@ export default function LoginScreen() {
 
   return (
     <View className="mt-16 flex items-center gap-4">
-      {errorMessage && <Text>{errorMessage}</Text>}
+      {errorMessage && <Text className="text-error-500">{errorMessage}</Text>}
       <VStack space="xl">
         <Center>
           <Image size="xl" source={mycomizeLogo} className="mt-4" alt="logo" resizeMode="contain" />
