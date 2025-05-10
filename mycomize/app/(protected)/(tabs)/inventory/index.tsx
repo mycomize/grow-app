@@ -11,23 +11,7 @@ import { PlusIcon, Syringe } from 'lucide-react-native';
 import { Pressable } from '~/components/ui/pressable';
 import { useRouter } from 'expo-router';
 
-export interface InventoryItem {
-  id: number;
-  type: string;
-  name: string;
-  source: string;
-  source_date: Date;
-  expiration_date: Date;
-  cost: number;
-  notes: string;
-}
-
-export type SyringeItem = InventoryItem & {
-  syringe_type: string;
-  volume_ml: number;
-  species: string;
-  variant: string;
-};
+import { InventoryItem, SyringeItem } from '~/lib/inventory';
 
 interface AddItemButtonProps {
   title: string;
@@ -101,7 +85,6 @@ const ItemCard: React.FC<{ item: InventoryItem }> = ({ item }) => {
 const item: SyringeItem = {
   id: 1,
   type: 'Syringe',
-  name: 'Syringe 1',
   source: 'Supplier A',
   source_date: new Date('2023-01-01'),
   expiration_date: new Date('2024-01-01'),
