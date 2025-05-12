@@ -10,11 +10,11 @@ import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { Center } from '@/components/ui/center';
 import { VStack } from '@/components/ui/vstack';
-import { EyeIcon, EyeOffIcon } from '@/components/ui/icon';
 import { useRouter } from 'expo-router';
 import { HStack } from '@/components/ui/hstack';
 import { Link, LinkText } from '~/components/ui/link';
 import mycomizeLogo from '~/assets/mycomize-blue-icon.png';
+import { EyeIcon, EyeOffIcon } from 'lucide-react-native';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -83,7 +83,7 @@ export default function LoginScreen() {
                   value={password}
                 />
                 <InputSlot className="pr-3" onPress={handleShowState}>
-                  <InputIcon as={showPassword ? EyeIcon : EyeOffIcon} />
+                  <InputIcon as={showPassword ? EyeIcon : EyeOffIcon} size="lg" />
                 </InputSlot>
               </Input>
             </VStack>

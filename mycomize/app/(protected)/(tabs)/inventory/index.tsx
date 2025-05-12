@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Button, ButtonIcon } from '~/components/ui/button';
 import { Text } from '~/components/ui/text';
 import { VStack } from '~/components/ui/vstack';
@@ -11,7 +11,8 @@ import { PlusIcon, Syringe } from 'lucide-react-native';
 import { Pressable } from '~/components/ui/pressable';
 import { useRouter } from 'expo-router';
 
-import { InventoryItem, SyringeItem } from '~/lib/inventory';
+import { AuthContext } from '~/lib/AuthContext';
+import { InventoryItem, SyringeItem, BulkItem, SpawnItem } from '~/lib/inventory';
 
 interface AddItemButtonProps {
   title: string;
@@ -28,7 +29,7 @@ const AddItemButton: React.FC<AddItemButtonProps> = ({ title }) => {
     <>
       <Button
         variant="solid"
-        className="absolute bottom-0 z-50 mb-3 h-12 w-11/12 rounded-md shadow-lg shadow-background-700"
+        className="absolute bottom-0 z-50 mb-4 h-12 w-11/12 rounded-md shadow-lg shadow-background-700"
         action="positive"
         onPress={() => {
           router.push('/inventory/new');
@@ -49,7 +50,10 @@ const ItemCard: React.FC<{ item: InventoryItem }> = ({ item }) => {
         <Pressable
           onPress={() => {
             console.log('Item pressed');
-            router.push(`/inventory/${item.id}/edit`);
+            router.push({
+              pathname: `/inventory/[id]/edit`,
+              params: { id: item.id, type: 'Syringe' },
+            });
           }}>
           <HStack>
             <Heading>{item.type}</Heading>
@@ -82,22 +86,62 @@ const ItemCard: React.FC<{ item: InventoryItem }> = ({ item }) => {
   );
 };
 
-const item: SyringeItem = {
-  id: 1,
-  type: 'Syringe',
-  source: 'Supplier A',
-  source_date: new Date('2023-01-01'),
-  expiration_date: new Date('2024-01-01'),
-  cost: 10.0,
-  notes: 'Notes about the item',
-  volume_ml: 10,
-  syringe_type: 'Liquid Culture',
-  species: 'Psilocybe cubensis',
-  variant: 'Golden Teacher',
-};
-
 export default function InventoryScreen() {
-  const items: InventoryItem[] = [item];
+  const { token } = useContext(AuthContext);
+  const router = useRouter();
+  const [items, setItems] = useState<InventoryItem[]>([]);
+
+  const addItem = (item: InventoryItem) => {
+    const isDuplicate = items.some((existingItem) => existingItem.id === item.id);
+
+    if (!isDuplicate) {
+      item.source_date = new Date(item.source_date);
+      item.expiration_date = new Date(item.expiration_date);
+
+      if (item.type === 'Syringe') {
+        setItems((prevItems) => [...prevItems, item as SyringeItem]);
+      } else if (item.type === 'Spawn') {
+        setItems((prevItems) => [...prevItems, item as SpawnItem]);
+      } else if (item.type === 'Bulk') {
+        setItems((prevItems) => [...prevItems, item as BulkItem]);
+      } else {
+        console.error('Unknown item type:', item.type);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const url = getBackendUrl();
+
+    const fetchData = async () => {
+      try {
+        const response = await fetch(`${url}/inventory/syringe`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            router.replace('/login');
+          } else {
+            console.error('Failed to fetch inventory items:', response.statusText);
+          }
+        }
+
+        const data: InventoryItem[] = await response.json();
+        for (const item of data) {
+          addItem(item);
+        }
+      } catch (error) {
+        console.error('Exception fetching inventory items:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return items.length == 0 ? (
     <VStack className="flex-1 items-center justify-center">

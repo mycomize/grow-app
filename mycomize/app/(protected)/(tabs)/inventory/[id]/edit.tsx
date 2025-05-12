@@ -1,29 +1,42 @@
-import { Text } from '~/components/ui/text';
-import { VStack } from '~/components/ui/vstack';
-import { Button, ButtonText } from '~/components/ui/button';
+import { useState, useEffect, useContext } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { getInventoryItem } from '~/lib/inventory';
+import { getInventoryItem, InventoryItem, InventoryForm } from '~/lib/inventory';
+import { AuthContext } from '~/lib/AuthContext';
 
 export default function EditInventoryScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { token } = useContext(AuthContext);
+  const { id, type } = useLocalSearchParams<{ id: string; type: string }>();
   const itemId = parseInt(id, 10);
-  const item = getInventoryItem(itemId);
 
-  console.log('Found item in backend:', item);
+  const [item, setItem] = useState<InventoryItem | null>(null);
 
-  return (
-    <VStack className="flex-1 items-center justify-center">
-      <Text>Edit Inventory</Text>
-      <Button
-        className="mt-4 w-1/2"
-        action="positive"
-        size="lg"
-        onPress={() => {
-          router.back();
-        }}>
-        <ButtonText>Back</ButtonText>
-      </Button>
-    </VStack>
-  );
+  useEffect(() => {
+    const fetchItem = async () => {
+      try {
+        const response = await getInventoryItem(itemId, type, token);
+
+        if (!response) {
+          console.error('Error fetching inventory item');
+          return;
+        }
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            router.replace('/login');
+          } else {
+            console.error('Failed to fetch inventory item:', response.status);
+          }
+        }
+
+        setItem(await response.json());
+      } catch (error) {
+        console.error('Error fetching item:', error);
+      }
+    };
+
+    fetchItem();
+  }, []);
+
+  return <InventoryForm item={item} />;
 }
