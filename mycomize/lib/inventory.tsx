@@ -44,37 +44,28 @@ export interface InventoryItem {
   expiration_date: Date;
   cost: number;
   notes: string;
+
+  // Syringe-specific fields
+  syringe_type?: string;
+  volume_ml?: number;
+  species?: string;
+  variant?: string;
+
+  // Spawn-specific fields
+  spawn_type?: string;
+  // amount_lbs?: number;
+
+  // Bulk-specific fields
+  bulk_type?: string;
+  amount_lbs?: number;
 }
-
-export type SyringeItem = InventoryItem & {
-  syringe_type: string;
-  volume_ml: number;
-  species: string;
-  variant: string;
-};
-
-export type SpawnItem = InventoryItem & {
-  spawn_type: string;
-  amount_lbs: number;
-};
-
-export type BulkItem = InventoryItem & {
-  bulk_type: string;
-  amount_lbs: number;
-};
-
 export interface SaveInventoryItemButtonProps {
   title: string;
-  item: InventoryItem;
   newItem: boolean;
-  setTypeIsValid: (isValid: boolean) => void;
-  setSyringeVolumeIsValid: (isValid: boolean) => void;
-  setSpawnAmountIsValid: (isValid: boolean) => void;
-  setBulkAmountIsValid: (isValid: boolean) => void;
 }
 
 export interface InventoryFormProps {
-  item: InventoryItem | null;
+  itemArg: InventoryItem | null;
 }
 
 export async function getInventoryItem(id: number, type: string, token: string | null | undefined) {
@@ -102,181 +93,97 @@ const validateItemType = (type: string) => {
   return validTypes.includes(type);
 };
 
-const SaveInventoryItemButton: React.FC<SaveInventoryItemButtonProps> = ({
-  title,
-  item,
-  newItem,
-  setTypeIsValid,
-  setSyringeVolumeIsValid,
-  setSpawnAmountIsValid,
-  setBulkAmountIsValid,
-}) => {
-  const router = useRouter();
-  const { token } = useContext(AuthContext);
-
-  const handleSave = async () => {
-    const itemType = item.type;
-    let validData = true;
-
-    if (!validateItemType(itemType)) {
-      console.error('Invalid item type:', itemType);
-      console.error('New item:', newItem);
-      setTypeIsValid(false);
-      validData = false;
-    }
-
-    if (itemType === 'Syringe') {
-      if (!(item as SyringeItem).volume_ml || (item as SyringeItem).volume_ml <= 0) {
-        setSyringeVolumeIsValid(false);
-        validData = false;
-      }
-    } else if (itemType === 'Spawn') {
-      if (!(item as SpawnItem).amount_lbs || (item as SpawnItem).amount_lbs <= 0) {
-        setSpawnAmountIsValid(false);
-        validData = false;
-      }
-    } else if (itemType === 'Bulk') {
-      if (!(item as BulkItem).amount_lbs || (item as BulkItem).amount_lbs <= 0) {
-        setBulkAmountIsValid(false);
-        validData = false;
-      }
-    }
-
-    if (!validData) {
-      return;
-    }
-
-    try {
-      let url = '';
-
-      if (newItem) {
-        url = `${getBackendUrl()}/inventory/${itemType.toLowerCase()}`;
-      } else {
-        url = `${getBackendUrl()}/inventory/${itemType.toLowerCase()}/${item.id}`;
-      }
-
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(item),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace('/login');
-        }
-
-        if (response.status === 422) {
-          const errorData = await response.json();
-          console.error('Validation error:', errorData);
-        }
-      } else {
-        router.replace('/inventory');
-      }
-    } catch (error) {
-      console.error('Error saving item:', error);
-    }
-  };
-
-  return (
-    <>
-      <Button
-        variant="solid"
-        className="absolute bottom-0 z-50 mb-4 h-12 w-11/12 rounded-md shadow-lg shadow-background-700"
-        action="positive"
-        onPress={handleSave}>
-        <ButtonText className="text-lg font-bold">{title}</ButtonText>
-      </Button>
-    </>
-  );
-};
-
-export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
-  // Common state
-
-  const [itemType, setItemType] = useState<'Syringe' | 'Spawn' | 'Bulk' | ''>('');
-  const [vendor, setVendor] = useState('');
-  const [cost, setCost] = useState(0.0);
-  const [sourceDate, setSourceDate] = useState(new Date());
-  const [expirationDate, setExpirationDate] = useState(new Date());
-  const [notes, setNotes] = useState('');
-
-  // Syringe-specific state
-  const [syringeType, setSyringeType] = useState('');
-  const [syringeVolume, setSyringeVolume] = useState(0.0);
-  const [syringeSpecies, setSyringeSpecies] = useState('');
-  const [syringeVariant, setSyringeVariant] = useState('');
-
-  // Spawn-specific state
-  const [spawnSubstrate, setSpawnSubstrate] = useState('');
-  const [spawnAmount, setSpawnAmount] = useState(0.0);
-
-  // Bulk-specific state
-  const [bulkSubstrate, setBulkSubstrate] = useState('');
-  const [bulkAmount, setBulkAmount] = useState(0.0);
-
+export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
   // Common date fields
   const [showSourceDate, setShowSourceDate] = useState(false);
   const [showExpirationDate, setShowExpirationDate] = useState(false);
 
-  const [typeIsValid, setTypeIsValid] = useState(true);
+  const [costIsValid, setCostIsValid] = useState(true);
   const [syringeVolumeIsValid, setSyringeVolumeIsValid] = useState(true);
   const [spawnAmountIsValid, setSpawnAmountIsValid] = useState(true);
   const [bulkAmountIsValid, setBulkAmountIsValid] = useState(true);
+  const [itemTypeIsValid, setTypeIsValid] = useState(true);
+
+  const [item, setItem] = useState<InventoryItem>({
+    type: '',
+    id: 0,
+    source: '',
+    source_date: new Date(),
+    expiration_date: new Date(),
+    cost: 0,
+    notes: '',
+    syringe_type: '',
+    volume_ml: 0,
+    species: '',
+    variant: '',
+    spawn_type: '',
+    amount_lbs: 0,
+    bulk_type: '',
+  });
+
+  const handleItemChange =
+    <K extends keyof InventoryItem>(key: K) =>
+    (value: any) => {
+      setItem((prevItem) => ({
+        ...prevItem,
+        [key]: value,
+      }));
+    };
 
   useEffect(() => {
-    if (item?.type) {
-      setItemType(item.type as 'Syringe' | 'Spawn' | 'Bulk');
+    if (itemArg?.id) {
+      handleItemChange('id')(itemArg.id);
     }
 
-    if (item?.source) {
-      setVendor(item.source);
+    if (itemArg?.type) {
+      handleItemChange('type')(itemArg.type);
     }
 
-    if (item?.cost) {
-      setCost(item.cost);
+    if (itemArg?.source) {
+      handleItemChange('source')(itemArg.source);
     }
 
-    if (item?.source_date) {
-      setSourceDate(new Date(item.source_date));
+    if (itemArg?.cost) {
+      handleItemChange('cost')(itemArg.cost);
     }
 
-    if (item?.expiration_date) {
-      setExpirationDate(new Date(item.expiration_date));
+    if (itemArg?.source_date) {
+      handleItemChange('source_date')(new Date(itemArg.source_date));
     }
 
-    if (item?.notes) {
-      setNotes(item.notes);
+    if (itemArg?.expiration_date) {
+      handleItemChange('expiration_date')(new Date(itemArg.expiration_date));
     }
 
-    if (item?.type === 'Syringe') {
-      setSyringeType((item as SyringeItem)?.syringe_type);
-      setSyringeVolume((item as SyringeItem)?.volume_ml);
-      setSyringeSpecies((item as SyringeItem)?.species);
-      setSyringeVariant((item as SyringeItem)?.variant);
-    } else if (item?.type === 'Spawn') {
-      setSpawnSubstrate((item as SpawnItem)?.spawn_type);
-      setSpawnAmount((item as SpawnItem)?.amount_lbs);
-    } else if (item?.type === 'Bulk') {
-      setBulkSubstrate((item as BulkItem)?.bulk_type);
-      setBulkAmount((item as BulkItem)?.amount_lbs);
+    if (itemArg?.notes) {
+      handleItemChange('notes')(itemArg.notes);
     }
-  }, [item]);
+
+    if (itemArg?.type === 'Syringe') {
+      handleItemChange('syringe_type')(itemArg.syringe_type);
+      handleItemChange('volume_ml')(itemArg.volume_ml);
+      handleItemChange('species')(itemArg.species);
+      handleItemChange('variant')(itemArg.variant);
+    } else if (itemArg?.type === 'Spawn') {
+      handleItemChange('spawn_type')(itemArg.spawn_type);
+      handleItemChange('amount_lbs')(itemArg.amount_lbs);
+    } else if (itemArg?.type === 'Bulk') {
+      handleItemChange('bulk_type')(itemArg.bulk_type);
+      handleItemChange('amount_lbs')(itemArg.amount_lbs);
+    }
+  }, [itemArg]);
 
   const onChangeSourceDate = (event: any, selectedDate: Date | undefined) => {
-    const currentDate = selectedDate || sourceDate;
+    const currentDate = selectedDate || item.source_date;
 
-    setSourceDate(currentDate);
+    handleItemChange('source_date')(currentDate);
     setShowSourceDate(false);
   };
 
   const onChangeExpirationDate = (event: any, selectedDate: Date | undefined) => {
-    const currentDate = selectedDate || expirationDate;
+    const currentDate = selectedDate || item.expiration_date;
 
-    setExpirationDate(currentDate);
+    handleItemChange('expiration_date')(currentDate);
     setShowExpirationDate(false);
   };
 
@@ -284,10 +191,9 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
     const parsedValue = parseFloat(value);
 
     if (!isNaN(parsedValue) && parsedValue > 0) {
-      setSyringeVolume(parsedValue);
+      handleItemChange('volume_ml')(parsedValue);
       setSyringeVolumeIsValid(true);
     } else {
-      setSyringeVolume(0.0);
       setSyringeVolumeIsValid(false);
     }
   };
@@ -296,10 +202,9 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
     const parsedValue = parseFloat(value);
 
     if (!isNaN(parsedValue) && parsedValue > 0) {
-      setSpawnAmount(parsedValue);
+      handleItemChange('amount_lbs')(parsedValue);
       setSpawnAmountIsValid(true);
     } else {
-      setSpawnAmount(0.0);
       setSpawnAmountIsValid(false);
     }
   };
@@ -308,102 +213,115 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
     const parsedValue = parseFloat(value);
 
     if (!isNaN(parsedValue) && parsedValue > 0) {
-      setBulkAmount(parsedValue);
+      handleItemChange('amount_lbs')(parsedValue);
       setBulkAmountIsValid(true);
     } else {
-      setBulkAmount(0.0);
       setBulkAmountIsValid(false);
     }
   };
 
   const handleChangeInventoryType = (value: string) => {
-    if (value === 'Syringe') {
-      setItemType('Syringe');
-      setTypeIsValid(true);
-    } else if (value === 'Spawn') {
-      setItemType('Spawn');
-      setTypeIsValid(true);
-    } else if (value === 'Bulk') {
-      setItemType('Bulk');
+    if (value === 'Syringe' || value === 'Spawn' || value === 'Bulk') {
+      handleItemChange('type')(value);
       setTypeIsValid(true);
     } else {
-      setItemType('');
+      setTypeIsValid(false);
     }
   };
 
-  const createItem = (oldItem: InventoryItem | null): InventoryItem => {
-    const newItem: InventoryItem = {
-      type: itemType,
-      id: oldItem ? oldItem.id : 0,
-      source: vendor,
-      source_date: sourceDate,
-      expiration_date: expirationDate,
-      cost: cost,
-      notes: notes,
+  const SaveInventoryItemButton: React.FC<SaveInventoryItemButtonProps> = ({ title, newItem }) => {
+    const router = useRouter();
+    const { token } = useContext(AuthContext);
+
+    const handleSave = async () => {
+      const itemType = item.type;
+      let validData = true;
+
+      if (!validateItemType(itemType)) {
+        setTypeIsValid(false);
+        validData = false;
+      }
+
+      if (isNaN(parseFloat(item.cost?.toString() || ''))) {
+        setCostIsValid(false);
+        validData = false;
+      }
+
+      if (itemType === 'Syringe') {
+        if (!item.volume_ml) {
+          setSyringeVolumeIsValid(false);
+          validData = false;
+        }
+
+        if (isNaN(parseFloat(item.volume_ml?.toString() || ''))) {
+          setSyringeVolumeIsValid(false);
+          validData = false;
+        }
+      } else if (itemType === 'Spawn' || itemType === 'Bulk') {
+        if (!item.amount_lbs) {
+          setSpawnAmountIsValid(false);
+          validData = false;
+        }
+
+        if (isNaN(parseFloat(item.amount_lbs?.toString() || ''))) {
+          setSpawnAmountIsValid(false);
+          validData = false;
+        }
+      }
+
+      if (!validData) {
+        return;
+      }
+
+      try {
+        let url = '';
+        let method = '';
+
+        if (newItem) {
+          url = `${getBackendUrl()}/inventory/${itemType.toLowerCase()}`;
+          method = 'POST';
+        } else {
+          url = `${getBackendUrl()}/inventory/${itemType.toLowerCase()}/${item.id}`;
+          method = 'PUT';
+        }
+
+        const response = await fetch(url, {
+          method: method,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(item),
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            router.replace('/login');
+          }
+
+          if (response.status === 422) {
+            const errorData = await response.json();
+            console.error('Validation error:', errorData);
+          }
+        } else {
+          router.replace('/inventory');
+        }
+      } catch (error) {
+        console.error('Error saving item:', error);
+      }
     };
 
-    if (newItem.type === 'Syringe') {
-      console.log('Syringe item:', newItem);
-      return {
-        ...item,
-        syringe_type: syringeType,
-        volume_ml: syringeVolume,
-        species: syringeSpecies,
-        variant: syringeVariant,
-      } as SyringeItem;
-    } else if (newItem.type === 'Spawn') {
-      console.log('Spawn item:', newItem);
-      return {
-        ...item,
-        spawn_type: spawnSubstrate,
-        amount_lbs: spawnAmount,
-      } as SpawnItem;
-    } else if (newItem.type === 'Bulk') {
-      console.log('Bulk item:', newItem);
-      return {
-        ...item,
-        bulk_type: bulkSubstrate,
-        amount_lbs: bulkAmount,
-      } as BulkItem;
-    }
-
-    return newItem;
-  };
-
-  const setCostString = () => {
-    const parsedValue = parseFloat(cost.toString());
-    if (!isNaN(parsedValue) && parsedValue > 0) {
-      return parsedValue.toString();
-    } else {
-      return '';
-    }
-  };
-
-  const setSyringeVolumeString = () => {
-    const parsedValue = parseFloat(syringeVolume.toString());
-    if (!isNaN(parsedValue) && parsedValue > 0) {
-      return parsedValue.toString();
-    } else {
-      return '';
-    }
-  };
-
-  const setSpawnAmountString = () => {
-    const parsedValue = parseFloat(spawnAmount.toString());
-    if (!isNaN(parsedValue) && parsedValue > 0) {
-      return parsedValue.toString();
-    } else {
-      return '';
-    }
-  };
-
-  const setBulkAmountString = () => {
-    const parsedValue = parseFloat(bulkAmount.toString());
-    if (!isNaN(parsedValue) && parsedValue > 0) {
-      return parsedValue.toString();
-    } else {
-      return '';
-    }
+    return (
+      <>
+        <Button
+          variant="solid"
+          className="absolute bottom-0 z-50 mb-4 h-12 w-11/12 rounded-md shadow-lg shadow-background-700"
+          action="positive"
+          onPress={handleSave}>
+          <ButtonText className="text-lg font-bold">{title}</ButtonText>
+        </Button>
+      </>
+    );
   };
 
   return (
@@ -417,12 +335,12 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
                   TYPE
                 </FormControlLabelText>
               </FormControlLabel>
-              <Select isInvalid={!typeIsValid} onValueChange={handleChangeInventoryType}>
+              <Select isInvalid={!itemTypeIsValid} onValueChange={handleChangeInventoryType}>
                 <SelectTrigger variant="underlined" size="xl">
-                  <SelectInput className="ml-3 placeholder:text-typography-300" value={itemType} />
+                  <SelectInput className="ml-3 placeholder:text-typography-300" value={item.type} />
                   <SelectIcon className="ml-auto mr-3" as={ChevronDown}></SelectIcon>
                 </SelectTrigger>
-                {!typeIsValid && (
+                {!itemTypeIsValid && (
                   <Text className="mt-2 text-error-600">Please select inventory type</Text>
                 )}
                 <SelectPortal>
@@ -450,8 +368,8 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
                 <InputField
                   autoCapitalize="none"
                   inputMode="text"
-                  onChangeText={(value) => setVendor(value)}
-                  value={vendor}
+                  onChangeText={handleItemChange('source')}
+                  value={item.source}
                 />
                 <InputIcon as={Building2} size="xl" className="ml-auto mr-4" />
               </Input>
@@ -460,7 +378,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
               <Text className="text-bold text-lg text-typography-500">COST</Text>
               <Input
                 isDisabled={false}
-                isInvalid={false}
+                isInvalid={!costIsValid}
                 isReadOnly={false}
                 variant="underlined"
                 size="xl"
@@ -469,12 +387,15 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
                   placeholder="Enter cost"
                   autoCapitalize="none"
                   inputMode="decimal"
-                  onChangeText={(value) => setCost(parseFloat(value))}
+                  onChangeText={handleItemChange('cost')}
                   className="placeholder:text-typography-300"
-                  value={setCostString()}
+                  value={item.cost.toString()}
                 />
                 <InputIcon as={DollarSign} size="xl" className="ml-auto mr-4" />
               </Input>
+              {!costIsValid && (
+                <Text className="mt-2 text-error-600">Please enter a valid cost</Text>
+              )}
             </VStack>
             <VStack>
               <Text className="text-bold  text-lg text-typography-500">SOURCE DATE</Text>
@@ -484,14 +405,18 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
                   isDisabled={false}
                   isInvalid={false}
                   isReadOnly={false}>
-                  <InputField>{sourceDate.toDateString()}</InputField>
+                  <InputField>{item.source_date.toDateString()}</InputField>
                 </Input>
                 <Pressable onPress={() => setShowSourceDate(true)}>
                   <Icon as={CalendarDays} size="xl" className="mt-2 text-typography-400" />
                 </Pressable>
               </HStack>
               {showSourceDate && (
-                <DateTimePicker value={sourceDate} mode="date" onChange={onChangeSourceDate} />
+                <DateTimePicker
+                  value={item.source_date}
+                  mode="date"
+                  onChange={onChangeSourceDate}
+                />
               )}
             </VStack>
             <VStack>
@@ -502,7 +427,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
                   isDisabled={false}
                   isInvalid={false}
                   isReadOnly={false}>
-                  <InputField>{expirationDate.toDateString()}</InputField>
+                  <InputField>{item.expiration_date.toDateString()}</InputField>
                 </Input>
                 <Pressable onPress={() => setShowExpirationDate(true)}>
                   <Icon as={CalendarDays} size="xl" className="mt-2 text-typography-400" />
@@ -510,13 +435,13 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
               </HStack>
               {showExpirationDate && (
                 <DateTimePicker
-                  value={expirationDate}
+                  value={item.expiration_date}
                   mode="date"
                   onChange={onChangeExpirationDate}
                 />
               )}
             </VStack>
-            {itemType === 'Syringe' && (
+            {item.type === 'Syringe' && (
               <>
                 <FormControl>
                   <FormControlLabel>
@@ -524,12 +449,12 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
                       SYRINGE TYPE
                     </FormControlLabelText>
                   </FormControlLabel>
-                  <Select onValueChange={(value) => setSyringeType(value)}>
+                  <Select onValueChange={handleItemChange('syringe_type')}>
                     <SelectTrigger variant="underlined" size="xl">
                       <SelectInput
                         className="ml-3 placeholder:text-typography-300"
                         placeholder="Select syringe type"
-                        value={syringeType}
+                        value={item.syringe_type}
                       />
                       <SelectIcon className="ml-auto mr-3" as={ChevronDown}></SelectIcon>
                     </SelectTrigger>
@@ -558,9 +483,9 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
                       placeholder="Enter volume"
                       autoCapitalize="none"
                       inputMode="decimal"
-                      onChangeText={(value) => updateSyringeVolume(value)}
+                      onChangeText={handleItemChange('volume_ml')}
                       className="placeholder:text-typography-300"
-                      value={setSyringeVolumeString()}
+                      value={item.volume_ml?.toString()}
                     />
                     <InputIcon as={FlaskConical} size="xl" className="ml-auto mr-4" />
                   </Input>
@@ -581,11 +506,9 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
                       placeholder="Enter species"
                       autoCapitalize="none"
                       inputMode="text"
-                      onChangeText={(value) => {
-                        setSyringeSpecies(value);
-                      }}
+                      onChangeText={handleItemChange('species')}
                       className="placeholder:text-typography-300"
-                      value={syringeSpecies}
+                      value={item.species}
                     />
                   </Input>
                 </VStack>
@@ -602,17 +525,15 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
                       placeholder="Enter strain/variant"
                       autoCapitalize="none"
                       inputMode="text"
-                      onChangeText={(value) => {
-                        setSyringeVariant(value);
-                      }}
+                      onChangeText={handleItemChange('variant')}
                       className="placeholder:text-typography-300"
-                      value={syringeVariant}
+                      value={item.variant}
                     />
                   </Input>
                 </VStack>
               </>
             )}
-            {itemType === 'Spawn' && (
+            {item.type === 'Spawn' && (
               <>
                 <VStack>
                   <Text className="text-bold text-lg text-typography-500">SPAWN SUBSTRATE</Text>
@@ -627,11 +548,9 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
                       placeholder="Enter spawn type"
                       autoCapitalize="none"
                       inputMode="text"
-                      onChangeText={(value) => {
-                        setSpawnSubstrate(value);
-                      }}
+                      onChangeText={handleItemChange('spawn_type')}
                       className="placeholder:text-typography-300"
-                      value={spawnSubstrate}
+                      value={item.spawn_type}
                     />
                   </Input>
                 </VStack>
@@ -648,9 +567,9 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
                       placeholder="Enter spawn amount"
                       autoCapitalize="none"
                       inputMode="decimal"
-                      onChangeText={(value) => updateSpawnAmount(value)}
+                      onChangeText={handleItemChange('amount_lbs')}
                       className="placeholder:text-typography-300"
-                      value={setSpawnAmountString()}
+                      value={item.amount_lbs?.toString()}
                     />
                   </Input>
                   {!spawnAmountIsValid && (
@@ -659,7 +578,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
                 </VStack>
               </>
             )}
-            {itemType === 'Bulk' && (
+            {item.type === 'Bulk' && (
               <>
                 <VStack>
                   <Text className="text-bold mt-5 text-lg text-typography-500">BULK SUBSTRATE</Text>
@@ -674,11 +593,9 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
                       placeholder="Enter bulk substrate type"
                       autoCapitalize="none"
                       inputMode="text"
-                      onChangeText={(value) => {
-                        setBulkSubstrate(value);
-                      }}
+                      onChangeText={handleItemChange('bulk_type')}
                       className="placeholder:text-typography-300"
-                      value={bulkSubstrate}
+                      value={item.bulk_type}
                     />
                   </Input>
                 </VStack>
@@ -695,9 +612,9 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
                       placeholder="Enter bulk amount"
                       autoCapitalize="none"
                       inputMode="decimal"
-                      onChangeText={(value) => updateBulkAmount(value)}
+                      onChangeText={handleItemChange('amount_lbs')}
                       className="placeholder:text-typography-300"
-                      value={setBulkAmountString()}
+                      value={item.amount_lbs?.toString()}
                     />
                   </Input>
                   {!bulkAmountIsValid && (
@@ -712,23 +629,13 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ item }) => {
                 <TextareaInput
                   textAlignVertical="top"
                   className="mx-1"
-                  onChangeText={(value) => {
-                    setNotes(value);
-                  }}
+                  onChangeText={handleItemChange('notes')}
                 />
               </Textarea>
             </VStack>
           </Card>
         </ScrollView>
-        <SaveInventoryItemButton
-          title="Save"
-          item={createItem(item)}
-          newItem={!item}
-          setTypeIsValid={setTypeIsValid}
-          setSyringeVolumeIsValid={setSyringeVolumeIsValid}
-          setSpawnAmountIsValid={setSpawnAmountIsValid}
-          setBulkAmountIsValid={setBulkAmountIsValid}
-        />
+        <SaveInventoryItemButton title="Save" newItem={!itemArg} />
       </VStack>
     </>
   );

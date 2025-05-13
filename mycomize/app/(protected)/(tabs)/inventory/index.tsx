@@ -7,19 +7,14 @@ import { Heading } from '~/components/ui/heading';
 import { getBackendUrl } from '~/lib/backendUrl';
 import { HStack } from '~/components/ui/hstack';
 import { Icon } from '~/components/ui/icon';
-import { PlusIcon, Syringe } from 'lucide-react-native';
+import { PlusIcon, Syringe, BeanIcon } from 'lucide-react-native';
 import { Pressable } from '~/components/ui/pressable';
 import { useRouter } from 'expo-router';
 
 import { AuthContext } from '~/lib/AuthContext';
-import { InventoryItem, SyringeItem, BulkItem, SpawnItem } from '~/lib/inventory';
-
+import { InventoryItem } from '~/lib/inventory';
 interface AddItemButtonProps {
   title: string;
-}
-
-function isSyringeItem(item: InventoryItem): item is SyringeItem {
-  return item.type === 'Syringe';
 }
 
 const AddItemButton: React.FC<AddItemButtonProps> = ({ title }) => {
@@ -41,7 +36,6 @@ const AddItemButton: React.FC<AddItemButtonProps> = ({ title }) => {
 };
 
 const ItemCard: React.FC<{ item: InventoryItem }> = ({ item }) => {
-  const volume = isSyringeItem(item) ? item.volume_ml : 0;
   const router = useRouter();
 
   return (
@@ -52,26 +46,29 @@ const ItemCard: React.FC<{ item: InventoryItem }> = ({ item }) => {
             console.log('Item pressed');
             router.push({
               pathname: `/inventory/[id]/edit`,
-              params: { id: item.id, type: 'Syringe' },
+              params: { id: item.id, type: item.type },
             });
           }}>
-          <HStack>
+          <HStack className="mb-2">
             <Heading>{item.type}</Heading>
-            {volume > 0 && (
+            {item.type === 'Syringe' && item.volume_ml && item.volume_ml > 0 && (
               <Text className="ml-2 mt-0.5" italic={true} size="md">
-                {volume} ml
+                {item.volume_ml} ml
               </Text>
             )}
-            <Icon as={Syringe} size="xl" className="ml-auto" />
-          </HStack>
-          {isSyringeItem(item) && (
-            <HStack className="mt-4">
-              <Text>Variant</Text>
-              <Text className="ml-auto" italic={true}>
-                {item.variant}
+            {item.type === 'Spawn' && item.amount_lbs && item.amount_lbs > 0 && (
+              <Text className="ml-2 mt-0.5" italic={true} size="md">
+                {item.amount_lbs} lbs
               </Text>
-            </HStack>
-          )}
+            )}
+            {item.type === 'Bulk' && item.amount_lbs && item.amount_lbs > 0 && (
+              <Text className="ml-2 mt-0.5" italic={true} size="md">
+                {item.amount_lbs} lbs
+              </Text>
+            )}
+            {item.type === 'Syringe' && <Icon as={Syringe} size="xl" className="ml-auto" />}
+            {item.type === 'Spawn' && <Icon as={BeanIcon} size="xl" className="ml-auto" />}
+          </HStack>
           <HStack>
             <Text>Cost</Text>
             <Text className="ml-auto">${item.cost}</Text>
@@ -80,6 +77,22 @@ const ItemCard: React.FC<{ item: InventoryItem }> = ({ item }) => {
             <Text>Expires</Text>
             <Text className="ml-auto">{item.expiration_date.toDateString()}</Text>
           </HStack>
+          {item.type === 'Syringe' && (
+            <HStack className="">
+              <Text>Variant</Text>
+              <Text className="ml-auto" italic={true}>
+                {item.variant}
+              </Text>
+            </HStack>
+          )}
+          {item.type === 'Spawn' && (
+            <HStack>
+              <Text>Type</Text>
+              <Text className="ml-auto" italic={true}>
+                {item.spawn_type}
+              </Text>
+            </HStack>
+          )}
         </Pressable>
       </Card>
     </>
@@ -98,12 +111,8 @@ export default function InventoryScreen() {
       item.source_date = new Date(item.source_date);
       item.expiration_date = new Date(item.expiration_date);
 
-      if (item.type === 'Syringe') {
-        setItems((prevItems) => [...prevItems, item as SyringeItem]);
-      } else if (item.type === 'Spawn') {
-        setItems((prevItems) => [...prevItems, item as SpawnItem]);
-      } else if (item.type === 'Bulk') {
-        setItems((prevItems) => [...prevItems, item as BulkItem]);
+      if (item.type === 'Syringe' || item.type === 'Spawn' || item.type === 'Bulk') {
+        setItems((prevItems) => [...prevItems, item]);
       } else {
         console.error('Unknown item type:', item.type);
       }
@@ -115,7 +124,7 @@ export default function InventoryScreen() {
 
     const fetchData = async () => {
       try {
-        const response = await fetch(`${url}/inventory/syringe`, {
+        const response = await fetch(`${url}/inventory/all`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -149,7 +158,7 @@ export default function InventoryScreen() {
     </VStack>
   ) : (
     <>
-      <VStack className="mt-4 flex-1 items-center">
+      <VStack className="mt-4 flex-1 items-center gap-4">
         {items.map((item, index) => (
           <ItemCard key={index} item={item} />
         ))}

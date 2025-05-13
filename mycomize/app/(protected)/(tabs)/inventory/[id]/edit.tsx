@@ -38,5 +38,5 @@ export default function EditInventoryScreen() {
     fetchItem();
   }, []);
 
-  return <InventoryForm item={item} />;
+  return <InventoryForm itemArg={item} />;
 }
