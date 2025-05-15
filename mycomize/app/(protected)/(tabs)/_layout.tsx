@@ -1,11 +1,29 @@
 import { Tabs } from 'expo-router';
 import { CircuitBoard, User, Package, Flower, House } from 'lucide-react-native';
+import { useTheme } from '@/components/ui/themeprovider/themeprovider';
 
 export default function TabLayout() {
+  const { theme } = useTheme();
+
+  // Set tab bar styles based on theme
+  const tabBarStyle = {
+    backgroundColor: theme === 'dark' ? '#1a1a1a' : '#ffffff',
+    borderTopWidth: 0,
+    paddingBottom: 0,
+    paddingTop: 5,
+    height: 65,
+  };
+
+  const tabBarActiveTintColor = theme === 'dark' ? '#ffffff' : '#000000';
+  const tabBarInactiveTintColor = theme === 'dark' ? '#999999' : '#666666';
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: 'black',
+        tabBarActiveTintColor,
+        tabBarInactiveTintColor,
+        tabBarStyle,
+        tabBarHideOnKeyboard: true,
       }}>
       <Tabs.Screen
         name="index"

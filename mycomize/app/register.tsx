@@ -17,7 +17,7 @@ import { useRouter } from 'expo-router';
 import { CircleX } from 'lucide-react-native';
 import { Icon } from '@/components/ui/icon';
 
-import mycomizeLogo from '~/assets/mycomize-blue-icon.png';
+import MycomizeLogo from '~/assets/mycomize-logo.svg';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -102,7 +102,7 @@ export default function SignUpScreen() {
     <View className="mt-16 flex items-center gap-4">
       <VStack space="xl">
         <Center>
-          <Image size="xl" source={mycomizeLogo} className="mt-4" alt="logo" resizeMode="contain" />
+          <MycomizeLogo width={111} height={131} />
         </Center>
         <FormControl className="mt-16 rounded-lg border border-outline-300 p-4">
           <VStack space="xl">

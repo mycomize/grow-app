@@ -40,7 +40,7 @@ const ItemCard: React.FC<{ item: InventoryItem }> = ({ item }) => {
 
   return (
     <>
-      <Card className="w-11/12 rounded-lg shadow-lg shadow-background-700">
+      <Card className="w-11/12 rounded-lg bg-background-500 shadow-lg shadow-background-700">
         <Pressable
           onPress={() => {
             console.log('Item pressed');

@@ -1,4 +1,4 @@
-import { ScrollView } from 'react-native';
+import { ScrollView, Keyboard } from 'react-native';
 import {
   ChevronDown,
   FlaskConical,
@@ -17,6 +17,7 @@ import { Card } from '~/components/ui/card';
 import { Input, InputIcon, InputField } from '~/components/ui/input';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
+import { Box } from '~/components/ui/box';
 
 import {
   Select,
@@ -187,39 +188,6 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
     setShowExpirationDate(false);
   };
 
-  const updateSyringeVolume = (value: string) => {
-    const parsedValue = parseFloat(value);
-
-    if (!isNaN(parsedValue) && parsedValue > 0) {
-      handleItemChange('volume_ml')(parsedValue);
-      setSyringeVolumeIsValid(true);
-    } else {
-      setSyringeVolumeIsValid(false);
-    }
-  };
-
-  const updateSpawnAmount = (value: string) => {
-    const parsedValue = parseFloat(value);
-
-    if (!isNaN(parsedValue) && parsedValue > 0) {
-      handleItemChange('amount_lbs')(parsedValue);
-      setSpawnAmountIsValid(true);
-    } else {
-      setSpawnAmountIsValid(false);
-    }
-  };
-
-  const updateBulkAmount = (value: string) => {
-    const parsedValue = parseFloat(value);
-
-    if (!isNaN(parsedValue) && parsedValue > 0) {
-      handleItemChange('amount_lbs')(parsedValue);
-      setBulkAmountIsValid(true);
-    } else {
-      setBulkAmountIsValid(false);
-    }
-  };
-
   const handleChangeInventoryType = (value: string) => {
     if (value === 'Syringe' || value === 'Spawn' || value === 'Bulk') {
       handleItemChange('type')(value);
@@ -229,9 +197,33 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
     }
   };
 
+  // Track keyboard visibility to hide the save button when keyboard is showing
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  // Set up keyboard listeners
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    // Clean up listeners
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
   const SaveInventoryItemButton: React.FC<SaveInventoryItemButtonProps> = ({ title, newItem }) => {
     const router = useRouter();
     const { token } = useContext(AuthContext);
+
+    // Hide the button when keyboard is visible
+    if (keyboardVisible) {
+      return null;
+    }
 
     const handleSave = async () => {
       const itemType = item.type;
@@ -315,10 +307,10 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
       <>
         <Button
           variant="solid"
-          className="absolute bottom-0 z-50 mb-4 h-12 w-11/12 rounded-md shadow-lg shadow-background-700"
+          className="absolute bottom-0 z-50 mb-4 h-12 w-11/12 rounded-md "
           action="positive"
           onPress={handleSave}>
-          <ButtonText className="text-lg font-bold">{title}</ButtonText>
+          <ButtonText className="text-lg font-bold text-typography-700">{title}</ButtonText>
         </Button>
       </>
     );
@@ -326,317 +318,324 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
 
   return (
     <>
-      <VStack className="mt-4 flex-1 items-center">
-        <ScrollView className="w-full">
-          <Card className="mx-auto mb-24 w-11/12 gap-4 shadow-lg shadow-background-700">
-            <FormControl>
-              <FormControlLabel>
-                <FormControlLabelText className="text-lg font-normal text-typography-500">
-                  TYPE
-                </FormControlLabelText>
-              </FormControlLabel>
-              <Select isInvalid={!itemTypeIsValid} onValueChange={handleChangeInventoryType}>
-                <SelectTrigger variant="underlined" size="xl">
-                  <SelectInput className="ml-3 placeholder:text-typography-300" value={item.type} />
-                  <SelectIcon className="ml-auto mr-3" as={ChevronDown}></SelectIcon>
-                </SelectTrigger>
-                {!itemTypeIsValid && (
-                  <Text className="mt-2 text-error-600">Please select inventory type</Text>
+      <Box className="h-full w-full bg-background-50">
+        <VStack className="mt-4 flex-1 items-center">
+          <ScrollView className="w-full">
+            <Card className="mx-auto mb-24 w-11/12 gap-4 ">
+              <FormControl>
+                <FormControlLabel>
+                  <FormControlLabelText className="text-lg font-normal text-typography-500">
+                    TYPE
+                  </FormControlLabelText>
+                </FormControlLabel>
+                <Select isInvalid={!itemTypeIsValid} onValueChange={handleChangeInventoryType}>
+                  <SelectTrigger variant="underlined" size="xl">
+                    <SelectInput
+                      className="ml-3 placeholder:text-typography-300"
+                      value={item.type}
+                    />
+                    <SelectIcon className="ml-auto mr-3" as={ChevronDown}></SelectIcon>
+                  </SelectTrigger>
+                  {!itemTypeIsValid && (
+                    <Text className="mt-2 text-error-600">Please select inventory type</Text>
+                  )}
+                  <SelectPortal>
+                    <SelectBackdrop />
+                    <SelectContent>
+                      <SelectDragIndicatorWrapper>
+                        <SelectDragIndicator />
+                      </SelectDragIndicatorWrapper>
+                      <SelectItem label="Syringe" value="Syringe" />
+                      <SelectItem label="Spawn" value="Spawn" />
+                      <SelectItem label="Bulk" value="Bulk" />
+                    </SelectContent>
+                  </SelectPortal>
+                </Select>
+              </FormControl>
+              <VStack>
+                <Text className="text-bold text-lg text-typography-500">VENDOR</Text>
+                <Input
+                  isDisabled={false}
+                  isInvalid={false}
+                  isReadOnly={false}
+                  variant="underlined"
+                  size="xl"
+                  className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                  <InputField
+                    autoCapitalize="none"
+                    inputMode="text"
+                    onChangeText={handleItemChange('source')}
+                    value={item.source}
+                  />
+                  <InputIcon as={Building2} size="xl" className="ml-auto mr-4" />
+                </Input>
+              </VStack>
+              <VStack>
+                <Text className="text-bold text-lg text-typography-500">COST</Text>
+                <Input
+                  isDisabled={false}
+                  isInvalid={!costIsValid}
+                  isReadOnly={false}
+                  variant="underlined"
+                  size="xl"
+                  className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                  <InputField
+                    placeholder="Enter cost"
+                    autoCapitalize="none"
+                    inputMode="decimal"
+                    onChangeText={handleItemChange('cost')}
+                    className="placeholder:text-typography-300"
+                    value={item.cost.toString()}
+                  />
+                  <InputIcon as={DollarSign} size="xl" className="ml-auto mr-4" />
+                </Input>
+                {!costIsValid && (
+                  <Text className="mt-2 text-error-600">Please enter a valid cost</Text>
                 )}
-                <SelectPortal>
-                  <SelectBackdrop />
-                  <SelectContent>
-                    <SelectDragIndicatorWrapper>
-                      <SelectDragIndicator />
-                    </SelectDragIndicatorWrapper>
-                    <SelectItem label="Syringe" value="Syringe" />
-                    <SelectItem label="Spawn" value="Spawn" />
-                    <SelectItem label="Bulk" value="Bulk" />
-                  </SelectContent>
-                </SelectPortal>
-              </Select>
-            </FormControl>
-            <VStack>
-              <Text className="text-bold text-lg text-typography-500">VENDOR</Text>
-              <Input
-                isDisabled={false}
-                isInvalid={false}
-                isReadOnly={false}
-                variant="underlined"
-                size="xl"
-                className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
-                <InputField
-                  autoCapitalize="none"
-                  inputMode="text"
-                  onChangeText={handleItemChange('source')}
-                  value={item.source}
-                />
-                <InputIcon as={Building2} size="xl" className="ml-auto mr-4" />
-              </Input>
-            </VStack>
-            <VStack>
-              <Text className="text-bold text-lg text-typography-500">COST</Text>
-              <Input
-                isDisabled={false}
-                isInvalid={!costIsValid}
-                isReadOnly={false}
-                variant="underlined"
-                size="xl"
-                className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
-                <InputField
-                  placeholder="Enter cost"
-                  autoCapitalize="none"
-                  inputMode="decimal"
-                  onChangeText={handleItemChange('cost')}
-                  className="placeholder:text-typography-300"
-                  value={item.cost.toString()}
-                />
-                <InputIcon as={DollarSign} size="xl" className="ml-auto mr-4" />
-              </Input>
-              {!costIsValid && (
-                <Text className="mt-2 text-error-600">Please enter a valid cost</Text>
-              )}
-            </VStack>
-            <VStack>
-              <Text className="text-bold  text-lg text-typography-500">SOURCE DATE</Text>
-              <HStack className="flex flex-row items-center justify-between">
-                <Input
-                  className="mt-2 w-11/12 data-[focus=true]:border-success-400"
-                  isDisabled={false}
-                  isInvalid={false}
-                  isReadOnly={false}>
-                  <InputField>{item.source_date.toDateString()}</InputField>
-                </Input>
-                <Pressable onPress={() => setShowSourceDate(true)}>
-                  <Icon as={CalendarDays} size="xl" className="mt-2 text-typography-400" />
-                </Pressable>
-              </HStack>
-              {showSourceDate && (
-                <DateTimePicker
-                  value={item.source_date}
-                  mode="date"
-                  onChange={onChangeSourceDate}
-                />
-              )}
-            </VStack>
-            <VStack>
-              <Text className="text-bold text-lg text-typography-500">EXPIRATION DATE</Text>
-              <HStack className="flex flex-row items-center justify-between">
-                <Input
-                  className="mt-2 w-11/12 data-[focus=true]:border-success-400"
-                  isDisabled={false}
-                  isInvalid={false}
-                  isReadOnly={false}>
-                  <InputField>{item.expiration_date.toDateString()}</InputField>
-                </Input>
-                <Pressable onPress={() => setShowExpirationDate(true)}>
-                  <Icon as={CalendarDays} size="xl" className="mt-2 text-typography-400" />
-                </Pressable>
-              </HStack>
-              {showExpirationDate && (
-                <DateTimePicker
-                  value={item.expiration_date}
-                  mode="date"
-                  onChange={onChangeExpirationDate}
-                />
-              )}
-            </VStack>
-            {item.type === 'Syringe' && (
-              <>
-                <FormControl>
-                  <FormControlLabel>
-                    <FormControlLabelText className=" text-lg font-normal text-typography-500">
-                      SYRINGE TYPE
-                    </FormControlLabelText>
-                  </FormControlLabel>
-                  <Select onValueChange={handleItemChange('syringe_type')}>
-                    <SelectTrigger variant="underlined" size="xl">
-                      <SelectInput
-                        className="ml-3 placeholder:text-typography-300"
-                        placeholder="Select syringe type"
-                        value={item.syringe_type}
+              </VStack>
+              <VStack>
+                <Text className="text-bold  text-lg text-typography-500">SOURCE DATE</Text>
+                <HStack className="flex flex-row items-center justify-between">
+                  <Input
+                    className="mt-2 w-11/12 data-[focus=true]:border-success-400"
+                    isDisabled={false}
+                    isInvalid={false}
+                    isReadOnly={false}>
+                    <InputField>{item.source_date.toDateString()}</InputField>
+                  </Input>
+                  <Pressable onPress={() => setShowSourceDate(true)}>
+                    <Icon as={CalendarDays} size="xl" className="mt-2 text-typography-400" />
+                  </Pressable>
+                </HStack>
+                {showSourceDate && (
+                  <DateTimePicker
+                    value={item.source_date}
+                    mode="date"
+                    onChange={onChangeSourceDate}
+                  />
+                )}
+              </VStack>
+              <VStack>
+                <Text className="text-bold text-lg text-typography-500">EXPIRATION DATE</Text>
+                <HStack className="flex flex-row items-center justify-between">
+                  <Input
+                    className="mt-2 w-11/12 data-[focus=true]:border-success-400"
+                    isDisabled={false}
+                    isInvalid={false}
+                    isReadOnly={false}>
+                    <InputField>{item.expiration_date.toDateString()}</InputField>
+                  </Input>
+                  <Pressable onPress={() => setShowExpirationDate(true)}>
+                    <Icon as={CalendarDays} size="xl" className="mt-2 text-typography-400" />
+                  </Pressable>
+                </HStack>
+                {showExpirationDate && (
+                  <DateTimePicker
+                    value={item.expiration_date}
+                    mode="date"
+                    onChange={onChangeExpirationDate}
+                  />
+                )}
+              </VStack>
+              {item.type === 'Syringe' && (
+                <>
+                  <FormControl>
+                    <FormControlLabel>
+                      <FormControlLabelText className=" text-lg font-normal text-typography-500">
+                        SYRINGE TYPE
+                      </FormControlLabelText>
+                    </FormControlLabel>
+                    <Select onValueChange={handleItemChange('syringe_type')}>
+                      <SelectTrigger variant="underlined" size="xl">
+                        <SelectInput
+                          className="ml-3 placeholder:text-typography-300"
+                          placeholder="Select syringe type"
+                          value={item.syringe_type}
+                        />
+                        <SelectIcon className="ml-auto mr-3" as={ChevronDown}></SelectIcon>
+                      </SelectTrigger>
+                      <SelectPortal>
+                        <SelectBackdrop />
+                        <SelectContent>
+                          <SelectDragIndicatorWrapper>
+                            <SelectDragIndicator />
+                          </SelectDragIndicatorWrapper>
+                          <SelectItem label="Spore" value="Spore" />
+                          <SelectItem label="Liquid Culture" value="Liquid Culture" />
+                        </SelectContent>
+                      </SelectPortal>
+                    </Select>
+                  </FormControl>
+                  <VStack>
+                    <Text className="text-bold text-lg text-typography-500">VOLUME (ml)</Text>
+                    <Input
+                      isDisabled={false}
+                      isInvalid={!syringeVolumeIsValid}
+                      isReadOnly={false}
+                      variant="underlined"
+                      size="xl"
+                      className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                      <InputField
+                        placeholder="Enter volume"
+                        autoCapitalize="none"
+                        inputMode="decimal"
+                        onChangeText={handleItemChange('volume_ml')}
+                        className="placeholder:text-typography-300"
+                        value={item.volume_ml?.toString()}
                       />
-                      <SelectIcon className="ml-auto mr-3" as={ChevronDown}></SelectIcon>
-                    </SelectTrigger>
-                    <SelectPortal>
-                      <SelectBackdrop />
-                      <SelectContent>
-                        <SelectDragIndicatorWrapper>
-                          <SelectDragIndicator />
-                        </SelectDragIndicatorWrapper>
-                        <SelectItem label="Spore" value="Spore" />
-                        <SelectItem label="Liquid Culture" value="Liquid Culture" />
-                      </SelectContent>
-                    </SelectPortal>
-                  </Select>
-                </FormControl>
-                <VStack>
-                  <Text className="text-bold text-lg text-typography-500">VOLUME (ml)</Text>
-                  <Input
-                    isDisabled={false}
-                    isInvalid={!syringeVolumeIsValid}
-                    isReadOnly={false}
-                    variant="underlined"
-                    size="xl"
-                    className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
-                    <InputField
-                      placeholder="Enter volume"
-                      autoCapitalize="none"
-                      inputMode="decimal"
-                      onChangeText={handleItemChange('volume_ml')}
-                      className="placeholder:text-typography-300"
-                      value={item.volume_ml?.toString()}
-                    />
-                    <InputIcon as={FlaskConical} size="xl" className="ml-auto mr-4" />
-                  </Input>
-                  {!syringeVolumeIsValid && (
-                    <Text className="mt-2 text-error-600">Please enter syringe volume</Text>
-                  )}
-                </VStack>
-                <VStack>
-                  <Text className="text-bold text-lg text-typography-500">SPECIES</Text>
-                  <Input
-                    isDisabled={false}
-                    isInvalid={false}
-                    isReadOnly={false}
-                    variant="underlined"
-                    size="xl"
-                    className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
-                    <InputField
-                      placeholder="Enter species"
-                      autoCapitalize="none"
-                      inputMode="text"
-                      onChangeText={handleItemChange('species')}
-                      className="placeholder:text-typography-300"
-                      value={item.species}
-                    />
-                  </Input>
-                </VStack>
-                <VStack>
-                  <Text className="text-bold text-lg text-typography-500">VARIANT</Text>
-                  <Input
-                    isDisabled={false}
-                    isInvalid={false}
-                    isReadOnly={false}
-                    variant="underlined"
-                    size="xl"
-                    className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
-                    <InputField
-                      placeholder="Enter strain/variant"
-                      autoCapitalize="none"
-                      inputMode="text"
-                      onChangeText={handleItemChange('variant')}
-                      className="placeholder:text-typography-300"
-                      value={item.variant}
-                    />
-                  </Input>
-                </VStack>
-              </>
-            )}
-            {item.type === 'Spawn' && (
-              <>
-                <VStack>
-                  <Text className="text-bold text-lg text-typography-500">SPAWN SUBSTRATE</Text>
-                  <Input
-                    isDisabled={false}
-                    isInvalid={false}
-                    isReadOnly={false}
-                    variant="underlined"
-                    size="xl"
-                    className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
-                    <InputField
-                      placeholder="Enter spawn type"
-                      autoCapitalize="none"
-                      inputMode="text"
-                      onChangeText={handleItemChange('spawn_type')}
-                      className="placeholder:text-typography-300"
-                      value={item.spawn_type}
-                    />
-                  </Input>
-                </VStack>
-                <VStack>
-                  <Text className="text-bold text-lg text-typography-500">AMOUNT (lbs)</Text>
-                  <Input
-                    isDisabled={false}
-                    isInvalid={!spawnAmountIsValid}
-                    isReadOnly={false}
-                    variant="underlined"
-                    size="xl"
-                    className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
-                    <InputField
-                      placeholder="Enter spawn amount"
-                      autoCapitalize="none"
-                      inputMode="decimal"
-                      onChangeText={handleItemChange('amount_lbs')}
-                      className="placeholder:text-typography-300"
-                      value={item.amount_lbs?.toString()}
-                    />
-                  </Input>
-                  {!spawnAmountIsValid && (
-                    <Text className="mt-2 text-error-600">Please enter spawn amount</Text>
-                  )}
-                </VStack>
-              </>
-            )}
-            {item.type === 'Bulk' && (
-              <>
-                <VStack>
-                  <Text className="text-bold mt-5 text-lg text-typography-500">BULK SUBSTRATE</Text>
-                  <Input
-                    isDisabled={false}
-                    isInvalid={false}
-                    isReadOnly={false}
-                    variant="underlined"
-                    size="xl"
-                    className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
-                    <InputField
-                      placeholder="Enter bulk substrate type"
-                      autoCapitalize="none"
-                      inputMode="text"
-                      onChangeText={handleItemChange('bulk_type')}
-                      className="placeholder:text-typography-300"
-                      value={item.bulk_type}
-                    />
-                  </Input>
-                </VStack>
-                <VStack>
-                  <Text className="text-bold text-lg text-typography-500">AMOUNT (lbs)</Text>
-                  <Input
-                    isDisabled={false}
-                    isInvalid={!bulkAmountIsValid}
-                    isReadOnly={false}
-                    variant="underlined"
-                    size="xl"
-                    className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
-                    <InputField
-                      placeholder="Enter bulk amount"
-                      autoCapitalize="none"
-                      inputMode="decimal"
-                      onChangeText={handleItemChange('amount_lbs')}
-                      className="placeholder:text-typography-300"
-                      value={item.amount_lbs?.toString()}
-                    />
-                  </Input>
-                  {!bulkAmountIsValid && (
-                    <Text className="mt-2 text-error-600">Please enter bulk amount</Text>
-                  )}
-                </VStack>
-              </>
-            )}
-            <VStack>
-              <Text className="text-bold text-lg text-typography-500">NOTES</Text>
-              <Textarea className="mt-2 data-[focus=true]:border-success-400">
-                <TextareaInput
-                  textAlignVertical="top"
-                  className="mx-1"
-                  onChangeText={handleItemChange('notes')}
-                />
-              </Textarea>
-            </VStack>
-          </Card>
-        </ScrollView>
-        <SaveInventoryItemButton title="Save" newItem={!itemArg} />
-      </VStack>
+                      <InputIcon as={FlaskConical} size="xl" className="ml-auto mr-4" />
+                    </Input>
+                    {!syringeVolumeIsValid && (
+                      <Text className="mt-2 text-error-600">Please enter syringe volume</Text>
+                    )}
+                  </VStack>
+                  <VStack>
+                    <Text className="text-bold text-lg text-typography-500">SPECIES</Text>
+                    <Input
+                      isDisabled={false}
+                      isInvalid={false}
+                      isReadOnly={false}
+                      variant="underlined"
+                      size="xl"
+                      className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                      <InputField
+                        placeholder="Enter species"
+                        autoCapitalize="none"
+                        inputMode="text"
+                        onChangeText={handleItemChange('species')}
+                        className="placeholder:text-typography-300"
+                        value={item.species}
+                      />
+                    </Input>
+                  </VStack>
+                  <VStack>
+                    <Text className="text-bold text-lg text-typography-500">VARIANT</Text>
+                    <Input
+                      isDisabled={false}
+                      isInvalid={false}
+                      isReadOnly={false}
+                      variant="underlined"
+                      size="xl"
+                      className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                      <InputField
+                        placeholder="Enter strain/variant"
+                        autoCapitalize="none"
+                        inputMode="text"
+                        onChangeText={handleItemChange('variant')}
+                        className="placeholder:text-typography-300"
+                        value={item.variant}
+                      />
+                    </Input>
+                  </VStack>
+                </>
+              )}
+              {item.type === 'Spawn' && (
+                <>
+                  <VStack>
+                    <Text className="text-bold text-lg text-typography-500">SPAWN SUBSTRATE</Text>
+                    <Input
+                      isDisabled={false}
+                      isInvalid={false}
+                      isReadOnly={false}
+                      variant="underlined"
+                      size="xl"
+                      className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                      <InputField
+                        placeholder="Enter spawn type"
+                        autoCapitalize="none"
+                        inputMode="text"
+                        onChangeText={handleItemChange('spawn_type')}
+                        className="placeholder:text-typography-300"
+                        value={item.spawn_type}
+                      />
+                    </Input>
+                  </VStack>
+                  <VStack>
+                    <Text className="text-bold text-lg text-typography-500">AMOUNT (lbs)</Text>
+                    <Input
+                      isDisabled={false}
+                      isInvalid={!spawnAmountIsValid}
+                      isReadOnly={false}
+                      variant="underlined"
+                      size="xl"
+                      className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                      <InputField
+                        placeholder="Enter spawn amount"
+                        autoCapitalize="none"
+                        inputMode="decimal"
+                        onChangeText={handleItemChange('amount_lbs')}
+                        className="placeholder:text-typography-300"
+                        value={item.amount_lbs?.toString()}
+                      />
+                    </Input>
+                    {!spawnAmountIsValid && (
+                      <Text className="mt-2 text-error-600">Please enter spawn amount</Text>
+                    )}
+                  </VStack>
+                </>
+              )}
+              {item.type === 'Bulk' && (
+                <>
+                  <VStack>
+                    <Text className="text-bold mt-5 text-lg text-typography-500">
+                      BULK SUBSTRATE
+                    </Text>
+                    <Input
+                      isDisabled={false}
+                      isInvalid={false}
+                      isReadOnly={false}
+                      variant="underlined"
+                      size="xl"
+                      className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                      <InputField
+                        placeholder="Enter bulk substrate type"
+                        autoCapitalize="none"
+                        inputMode="text"
+                        onChangeText={handleItemChange('bulk_type')}
+                        className="placeholder:text-typography-300"
+                        value={item.bulk_type}
+                      />
+                    </Input>
+                  </VStack>
+                  <VStack>
+                    <Text className="text-bold text-lg text-typography-500">AMOUNT (lbs)</Text>
+                    <Input
+                      isDisabled={false}
+                      isInvalid={!bulkAmountIsValid}
+                      isReadOnly={false}
+                      variant="underlined"
+                      size="xl"
+                      className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                      <InputField
+                        placeholder="Enter bulk amount"
+                        autoCapitalize="none"
+                        inputMode="decimal"
+                        onChangeText={handleItemChange('amount_lbs')}
+                        className="placeholder:text-typography-300"
+                        value={item.amount_lbs?.toString()}
+                      />
+                    </Input>
+                    {!bulkAmountIsValid && (
+                      <Text className="mt-2 text-error-600">Please enter bulk amount</Text>
+                    )}
+                  </VStack>
+                </>
+              )}
+              <VStack>
+                <Text className="text-bold text-lg text-typography-500">NOTES</Text>
+                <Textarea className="mt-2 data-[focus=true]:border-success-400">
+                  <TextareaInput
+                    textAlignVertical="top"
+                    className="mx-1"
+                    onChangeText={handleItemChange('notes')}
+                  />
+                </Textarea>
+              </VStack>
+            </Card>
+          </ScrollView>
+          <SaveInventoryItemButton title="Save" newItem={!itemArg} />
+        </VStack>
+      </Box>
     </>
   );
 };

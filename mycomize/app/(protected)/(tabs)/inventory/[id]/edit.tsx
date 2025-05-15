@@ -2,6 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getInventoryItem, InventoryItem, InventoryForm } from '~/lib/inventory';
 import { AuthContext } from '~/lib/AuthContext';
+import { Box } from '@/components/ui/box';
 
 export default function EditInventoryScreen() {
   const router = useRouter();
