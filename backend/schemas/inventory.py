@@ -112,17 +112,10 @@ class SyringeUpdate(BaseModel):
     cost: Optional[float] = None
     notes: Optional[str] = None
     syringe_type: Optional[str] = None
-    volume_ml: Optional[int] = None
+    volume_ml: Optional[float] = None
     species: Optional[str] = None
     variant: Optional[str] = None
     
-    @validator('species', 'variant')
-    def fields_must_not_be_empty(cls, v, values, **kwargs):
-        if v is not None and not v.strip():
-            field_name = kwargs.get('field').name
-            raise ValueError(f'{field_name.capitalize()} cannot be empty')
-        return v.strip() if v else v
-
 class SpawnUpdate(BaseModel):
     """Schema for updating spawn"""
     source: Optional[str] = None
@@ -132,14 +125,6 @@ class SpawnUpdate(BaseModel):
     notes: Optional[str] = None
     spawn_type: Optional[str] = None
     amount_lbs: Optional[float] = None
-    
-    @validator('spawn_type')
-    def fields_must_not_be_empty(cls, v, values, **kwargs):
-        if v is not None and not v.strip():
-            field_name = kwargs.get('field').name
-            raise ValueError(f'{field_name.capitalize()} cannot be empty')
-        return v.strip() if v else v
-
 class BulkUpdate(BaseModel):
     """Schema for updating bulk substrate"""
     source: Optional[str] = None
@@ -149,10 +134,3 @@ class BulkUpdate(BaseModel):
     notes: Optional[str] = None
     bulk_type: Optional[str] = None
     amount_lbs: Optional[float] = None
-    
-    @validator('bulk_type')
-    def fields_must_not_be_empty(cls, v, values, **kwargs):
-        if v is not None and not v.strip():
-            field_name = kwargs.get('field').name
-            raise ValueError(f'{field_name.capitalize()} cannot be empty')
-        return v.strip() if v else v

@@ -51,12 +51,12 @@ class Syringe(InventoryItem):
     
     id = Column(Integer, ForeignKey("inventory_items.id"), primary_key=True)
     syringe_type = Column(String(64), nullable=False) # Using string instead of enum for flexibility
-    volume_ml = Column(Integer, nullable=False)
-    species = Column(String(64), nullable=False)
-    variant = Column(String(64), nullable=False)
+    volume_ml = Column(Float, nullable=True)
+    species = Column(String(64), nullable=True)
+    variant = Column(String(64), nullable=True)
     
     __mapper_args__ = {
-        'polymorphic_identity': 'syringe',
+        'polymorphic_identity': 'Syringe',
     }
 
 # Spawn inventory model
@@ -68,7 +68,7 @@ class Spawn(InventoryItem):
     amount_lbs = Column(Float, nullable=False)
     
     __mapper_args__ = {
-        'polymorphic_identity': 'spawn',
+        'polymorphic_identity': 'Spawn',
     }
 
 # Bulk substrate inventory model
@@ -80,7 +80,7 @@ class Bulk(InventoryItem):
     amount_lbs = Column(Float, nullable=False)
     
     __mapper_args__ = {
-        'polymorphic_identity': 'bulk',
+        'polymorphic_identity': 'Bulk',
     }
 
 # Event listener to mark inventory items as "in use" when associated with a grow

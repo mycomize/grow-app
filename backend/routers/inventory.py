@@ -100,6 +100,7 @@ async def read_syringe(
     syringe = db.query(Syringe).filter(Syringe.id == syringe_id, Syringe.user_id == current_user.id).first()
     if syringe is None:
         raise HTTPException(status_code=404, detail="Syringe not found")
+    print(f"Retrieved syringe: id={syringe.id} type={syringe.syringe_type} species={syringe.species} variant={syringe.variant}")
     return syringe
 
 @router.put("/syringe/{syringe_id}", response_model=SyringeSchema)
@@ -367,6 +368,30 @@ async def delete_bulk(
     return {"detail": "Bulk substrate deleted"}
 
 # === GENERAL INVENTORY ROUTES ===
+
+@router.get("/all", response_model=List[Union[SyringeSchema, SpawnSchema, BulkSchema]])
+async def read_all_items(
+    skip: int = 0,
+    limit: int = 100,
+    available_only: bool = False,
+    db: Session = Depends(get_grow_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get all inventory items for the current user"""
+    syringes = db.query(Syringe).filter(Syringe.user_id == current_user.id)
+    spawns = db.query(Spawn).filter(Spawn.user_id == current_user.id)
+    bulks = db.query(Bulk).filter(Bulk.user_id == current_user.id)
+
+    if available_only:
+        syringes = syringes.filter(Syringe.in_use == False)
+        spawns = spawns.filter(Spawn.in_use == False)
+        bulks = bulks.filter(Bulk.in_use == False)
+
+    syringes = syringes.offset(skip).limit(limit).all()
+    spawns = spawns.offset(skip).limit(limit).all()
+    bulks = bulks.offset(skip).limit(limit).all()
+
+    return syringes + spawns + bulks
 
 @router.get("/available", response_model=dict)
 async def get_available_inventory(
