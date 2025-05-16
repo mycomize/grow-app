@@ -1,7 +1,6 @@
 import { use, createContext, type PropsWithChildren } from 'react';
 import { useStorageState } from '~/lib/useStorageState';
 import { useRouter } from 'expo-router';
-import { Platform } from 'react-native';
 import { getBackendUrl } from '~/lib/backendUrl';
 
 type AuthState = {

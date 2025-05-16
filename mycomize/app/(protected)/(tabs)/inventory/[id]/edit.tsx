@@ -2,12 +2,16 @@ import { useState, useEffect, useContext } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getInventoryItem, InventoryItem, InventoryForm } from '~/lib/inventory';
 import { AuthContext } from '~/lib/AuthContext';
-import { Box } from '@/components/ui/box';
+import { VStack } from '@/components/ui/vstack';
+import { Pressable } from '@/components/ui/pressable';
+import { Icon } from '@/components/ui/icon';
+import { Trash2Icon } from 'lucide-react-native';
+import { Button, ButtonIcon } from '~/components/ui/button';
 
 export default function EditInventoryScreen() {
   const router = useRouter();
   const { token } = useContext(AuthContext);
-  const { id, type } = useLocalSearchParams<{ id: string; type: string }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const itemId = parseInt(id, 10);
 
   const [item, setItem] = useState<InventoryItem | null>(null);
@@ -15,7 +19,8 @@ export default function EditInventoryScreen() {
   useEffect(() => {
     const fetchItem = async () => {
       try {
-        const response = await getInventoryItem(itemId, type, token);
+        // With the consolidated model, we no longer need the type parameter
+        const response = await getInventoryItem(itemId, token);
 
         if (!response) {
           console.error('Error fetching inventory item');
@@ -39,5 +44,9 @@ export default function EditInventoryScreen() {
     fetchItem();
   }, []);
 
-  return <InventoryForm itemArg={item} />;
+  return (
+    <>
+      <InventoryForm itemArg={item} />
+    </>
+  );
 }

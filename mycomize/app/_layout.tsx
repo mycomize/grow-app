@@ -38,9 +38,7 @@ function ThemedApp() {
             headerTitleStyle: {
               color: headerTintColor,
             },
-            contentStyle: {
-              paddingTop: 40, // Add padding for the status bar
-            },
+            contentStyle: { paddingTop: 40 },
           }}>
           <Stack.Screen name="(protected)" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />

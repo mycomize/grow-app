@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useCallback } from 'react';
 import { Button, ButtonIcon } from '~/components/ui/button';
 import { Text } from '~/components/ui/text';
 import { VStack } from '~/components/ui/vstack';
@@ -7,29 +7,35 @@ import { Heading } from '~/components/ui/heading';
 import { getBackendUrl } from '~/lib/backendUrl';
 import { HStack } from '~/components/ui/hstack';
 import { Icon } from '~/components/ui/icon';
-import { PlusIcon, Syringe, BeanIcon } from 'lucide-react-native';
+import { PlusIcon, Syringe, BeanIcon, Box } from 'lucide-react-native';
 import { Pressable } from '~/components/ui/pressable';
+import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { AuthContext } from '~/lib/AuthContext';
 import { InventoryItem } from '~/lib/inventory';
+import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 interface AddItemButtonProps {
   title: string;
+  initial?: boolean;
 }
 
-const AddItemButton: React.FC<AddItemButtonProps> = ({ title }) => {
+const AddItemButton: React.FC<AddItemButtonProps> = ({ title, initial = false }) => {
   const router = useRouter();
 
   return (
     <>
       <Button
         variant="solid"
-        className="absolute bottom-0 z-50 mb-4 h-12 w-11/12 rounded-md shadow-lg shadow-background-700"
+        className={
+          initial ? 'h-16 w-16 rounded-full' : 'absolute bottom-0 z-50 mb-4 h-12 w-11/12 rounded-md'
+        }
         action="positive"
         onPress={() => {
           router.push('/inventory/new');
         }}>
-        <ButtonIcon as={PlusIcon} size="xl" />
+        <ButtonIcon as={PlusIcon} className="h-8 w-8 text-white" />
       </Button>
     </>
   );
@@ -37,16 +43,22 @@ const AddItemButton: React.FC<AddItemButtonProps> = ({ title }) => {
 
 const ItemCard: React.FC<{ item: InventoryItem }> = ({ item }) => {
   const router = useRouter();
+  const { theme } = useTheme();
 
   return (
     <>
-      <Card className="w-11/12 rounded-lg bg-background-500 shadow-lg shadow-background-700">
+      <Card
+        className={
+          theme === 'light'
+            ? 'w-11/12 rounded-xl bg-background-0 shadow-lg shadow-background-700'
+            : 'w-11/12 rounded-xl bg-background-0'
+        }>
         <Pressable
           onPress={() => {
             console.log('Item pressed');
             router.push({
               pathname: `/inventory/[id]/edit`,
-              params: { id: item.id, type: item.type },
+              params: { id: item.id }, // type no longer needed with consolidated model
             });
           }}>
           <HStack className="mb-2">
@@ -119,51 +131,65 @@ export default function InventoryScreen() {
     }
   };
 
-  useEffect(() => {
-    const url = getBackendUrl();
+  // Define the fetch function
+  const fetchData = useCallback(async () => {
+    try {
+      const url = getBackendUrl();
+      // Reset items before fetching to avoid stale data
+      setItems([]);
 
-    const fetchData = async () => {
-      try {
-        const response = await fetch(`${url}/inventory/all`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        });
+      const response = await fetch(`${url}/inventory/all`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-        if (!response.ok) {
-          if (response.status === 401) {
-            router.replace('/login');
-          } else {
-            console.error('Failed to fetch inventory items:', response.statusText);
-          }
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.replace('/login');
+        } else {
+          console.error('Failed to fetch inventory items:', response.statusText);
         }
-
-        const data: InventoryItem[] = await response.json();
-        for (const item of data) {
-          addItem(item);
-        }
-      } catch (error) {
-        console.error('Exception fetching inventory items:', error);
+        return;
       }
-    };
 
-    fetchData();
-  }, []);
+      const data: InventoryItem[] = await response.json();
+      const formattedItems = data.map((item) => ({
+        ...item,
+        source_date: new Date(item.source_date),
+        expiration_date: new Date(item.expiration_date),
+      }));
+
+      setItems(formattedItems);
+    } catch (error) {
+      console.error('Exception fetching inventory items:', error);
+    }
+  }, [token, router]);
+
+  // Use useFocusEffect to refresh data when the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+
+      // No cleanup needed for useFocusEffect in this case
+      return () => {};
+    }, [fetchData])
+  );
 
   return items.length == 0 ? (
-    <VStack className="flex-1 items-center justify-center">
-      <AddItemButton title="Add Inventory" />
+    <VStack className="flex-1 items-center justify-center gap-2 bg-background-50">
+      <AddItemButton title="Add Inventory" initial={true} />
+      <Heading className="font-bold text-typography-700">Add Inventory</Heading>
     </VStack>
   ) : (
-    <>
-      <VStack className="mt-4 flex-1 items-center gap-4">
-        {items.map((item, index) => (
-          <ItemCard key={index} item={item} />
-        ))}
-        <AddItemButton title="Add Inventory" />
-      </VStack>
-    </>
+    <VStack className="flex-1 items-center gap-4 bg-background-50">
+      <View className="mt-2" />
+      {items.map((item, index) => (
+        <ItemCard key={index} item={item} />
+      ))}
+      <AddItemButton title="Add Inventory" />
+    </VStack>
   );
 }

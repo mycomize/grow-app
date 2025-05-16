@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
 
-export default function InventoryLayout() {
+export default function IoTGatewayLayout() {
   const { theme } = useTheme();
 
   // Set header styles based on theme
@@ -18,15 +18,7 @@ export default function InventoryLayout() {
         headerTintColor,
         headerTitleAlign: 'center',
       }}>
-      <Stack.Screen name="index" options={{ title: 'Inventory', headerShown: true }} />
-      <Stack.Screen
-        name="[id]/edit"
-        options={{
-          title: 'Edit Inventory',
-          headerShown: true,
-        }}
-      />
-      <Stack.Screen name="new" options={{ title: 'Add Inventory', headerShown: true }} />
+      <Stack.Screen name="index" options={{ title: 'IoT Gateway', headerShown: true }} />
     </Stack>
   );
 }

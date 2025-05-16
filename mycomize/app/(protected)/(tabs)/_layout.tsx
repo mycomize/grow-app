@@ -17,9 +17,18 @@ export default function TabLayout() {
   const tabBarActiveTintColor = theme === 'dark' ? '#ffffff' : '#000000';
   const tabBarInactiveTintColor = theme === 'dark' ? '#999999' : '#666666';
 
+  // Set header styles based on theme
+  const headerStyle = {
+    backgroundColor: theme === 'dark' ? '#1a1a1a' : '#ffffff',
+  };
+
+  const headerTintColor = theme === 'dark' ? '#ffffff' : '#000000';
+
   return (
     <Tabs
       screenOptions={{
+        headerStyle,
+        headerTintColor,
         tabBarActiveTintColor,
         tabBarInactiveTintColor,
         tabBarStyle,

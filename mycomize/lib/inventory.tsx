@@ -18,6 +18,7 @@ import { Input, InputIcon, InputField } from '~/components/ui/input';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { Box } from '~/components/ui/box';
+import { Center } from '~/components/ui/center';
 
 import {
   Select,
@@ -65,13 +66,16 @@ export interface SaveInventoryItemButtonProps {
   newItem: boolean;
 }
 
+export interface DeleteInventoryItemButtonProps {
+  title: string;
+}
+
 export interface InventoryFormProps {
   itemArg: InventoryItem | null;
 }
 
-export async function getInventoryItem(id: number, type: string, token: string | null | undefined) {
-  type = type.toLowerCase();
-  const url = `${getBackendUrl()}/inventory/${type}/${id}`;
+export async function getInventoryItem(id: number, token: string | null | undefined) {
+  const url = `${getBackendUrl()}/inventory/item/${id}`;
 
   try {
     const response = await fetch(url, {
@@ -111,14 +115,14 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
     source: '',
     source_date: new Date(),
     expiration_date: new Date(),
-    cost: 0,
+    cost: -1,
     notes: '',
     syringe_type: '',
-    volume_ml: 0,
+    volume_ml: -1,
     species: '',
     variant: '',
     spawn_type: '',
-    amount_lbs: 0,
+    amount_lbs: -1,
     bulk_type: '',
   });
 
@@ -234,29 +238,28 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
         validData = false;
       }
 
-      if (isNaN(parseFloat(item.cost?.toString() || ''))) {
+      if (item.cost < 0 || isNaN(parseFloat(item.cost.toString()))) {
         setCostIsValid(false);
         validData = false;
       }
 
       if (itemType === 'Syringe') {
-        if (!item.volume_ml) {
+        if (!item.volume_ml || item.volume_ml < 0) {
           setSyringeVolumeIsValid(false);
           validData = false;
         }
 
-        if (isNaN(parseFloat(item.volume_ml?.toString() || ''))) {
+        if (
+          (item.volume_ml && item.volume_ml < 0) ||
+          isNaN(parseFloat(item.volume_ml?.toString() || ''))
+        ) {
           setSyringeVolumeIsValid(false);
           validData = false;
         }
       } else if (itemType === 'Spawn' || itemType === 'Bulk') {
-        if (!item.amount_lbs) {
+        if (!item.amount_lbs || item.amount_lbs < 0) {
           setSpawnAmountIsValid(false);
-          validData = false;
-        }
-
-        if (isNaN(parseFloat(item.amount_lbs?.toString() || ''))) {
-          setSpawnAmountIsValid(false);
+          setBulkAmountIsValid(false);
           validData = false;
         }
       }
@@ -270,10 +273,10 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
         let method = '';
 
         if (newItem) {
-          url = `${getBackendUrl()}/inventory/${itemType.toLowerCase()}`;
+          url = `${getBackendUrl()}/inventory/item`;
           method = 'POST';
         } else {
-          url = `${getBackendUrl()}/inventory/${itemType.toLowerCase()}/${item.id}`;
+          url = `${getBackendUrl()}/inventory/item/${item.id}`;
           method = 'PUT';
         }
 
@@ -296,7 +299,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
             console.error('Validation error:', errorData);
           }
         } else {
-          router.replace('/inventory');
+          router.back();
         }
       } catch (error) {
         console.error('Error saving item:', error);
@@ -307,10 +310,58 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
       <>
         <Button
           variant="solid"
-          className="absolute bottom-0 z-50 mb-4 h-12 w-11/12 rounded-md "
+          className="mb-4 h-12 w-11/12 rounded-md"
           action="positive"
           onPress={handleSave}>
-          <ButtonText className="text-lg font-bold text-typography-700">{title}</ButtonText>
+          <ButtonText className="text-lg font-bold text-white">{title}</ButtonText>
+        </Button>
+      </>
+    );
+  };
+
+  const DeleteInventoryItemButton: React.FC<DeleteInventoryItemButtonProps> = ({ title }) => {
+    const router = useRouter();
+    const { token } = useContext(AuthContext);
+
+    if (keyboardVisible) {
+      return null;
+    }
+
+    const handleDelete = async () => {
+      try {
+        const url = `${getBackendUrl()}/inventory/item/${item.id}`;
+        const response = await fetch(url, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            router.replace('/login');
+          } else {
+            const errorData = await response.json();
+            console.error('Error deleting item:', errorData);
+            router.back();
+          }
+        } else {
+          router.back();
+        }
+      } catch (error) {
+        console.error('Error deleting item:', error);
+      }
+    };
+
+    return (
+      <>
+        <Button
+          variant="solid"
+          className="mb-4 h-12 w-11/12 rounded-md"
+          action="negative"
+          onPress={handleDelete}>
+          <ButtonText className="text-lg font-bold text-white">{title}</ButtonText>
         </Button>
       </>
     );
@@ -320,8 +371,8 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
     <>
       <Box className="h-full w-full bg-background-50">
         <VStack className="mt-4 flex-1 items-center">
-          <ScrollView className="w-full">
-            <Card className="mx-auto mb-24 w-11/12 gap-4 ">
+          <ScrollView className="w-full bg-background-50">
+            <Card className="mx-auto mb-4 w-11/12 gap-4 bg-background-50">
               <FormControl>
                 <FormControlLabel>
                   <FormControlLabelText className="text-lg font-normal text-typography-500">
@@ -330,10 +381,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
                 </FormControlLabel>
                 <Select isInvalid={!itemTypeIsValid} onValueChange={handleChangeInventoryType}>
                   <SelectTrigger variant="underlined" size="xl">
-                    <SelectInput
-                      className="ml-3 placeholder:text-typography-300"
-                      value={item.type}
-                    />
+                    <SelectInput className="ml-3" value={item.type} />
                     <SelectIcon className="ml-auto mr-3" as={ChevronDown}></SelectIcon>
                   </SelectTrigger>
                   {!itemTypeIsValid && (
@@ -360,7 +408,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
                   isReadOnly={false}
                   variant="underlined"
                   size="xl"
-                  className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                  className="pl-3 ">
                   <InputField
                     autoCapitalize="none"
                     inputMode="text"
@@ -378,14 +426,12 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
                   isReadOnly={false}
                   variant="underlined"
                   size="xl"
-                  className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                  className="pl-3 ">
                   <InputField
-                    placeholder="Enter cost"
                     autoCapitalize="none"
                     inputMode="decimal"
                     onChangeText={handleItemChange('cost')}
-                    className="placeholder:text-typography-300"
-                    value={item.cost.toString()}
+                    value={item.cost >= 0 ? item.cost.toString() : ''}
                   />
                   <InputIcon as={DollarSign} size="xl" className="ml-auto mr-4" />
                 </Input>
@@ -397,7 +443,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
                 <Text className="text-bold  text-lg text-typography-500">SOURCE DATE</Text>
                 <HStack className="flex flex-row items-center justify-between">
                   <Input
-                    className="mt-2 w-11/12 data-[focus=true]:border-success-400"
+                    className="mt-2 w-11/12"
                     isDisabled={false}
                     isInvalid={false}
                     isReadOnly={false}>
@@ -419,7 +465,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
                 <Text className="text-bold text-lg text-typography-500">EXPIRATION DATE</Text>
                 <HStack className="flex flex-row items-center justify-between">
                   <Input
-                    className="mt-2 w-11/12 data-[focus=true]:border-success-400"
+                    className="mt-2 w-11/12"
                     isDisabled={false}
                     isInvalid={false}
                     isReadOnly={false}>
@@ -447,11 +493,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
                     </FormControlLabel>
                     <Select onValueChange={handleItemChange('syringe_type')}>
                       <SelectTrigger variant="underlined" size="xl">
-                        <SelectInput
-                          className="ml-3 placeholder:text-typography-300"
-                          placeholder="Select syringe type"
-                          value={item.syringe_type}
-                        />
+                        <SelectInput className="ml-3" value={item.syringe_type} />
                         <SelectIcon className="ml-auto mr-3" as={ChevronDown}></SelectIcon>
                       </SelectTrigger>
                       <SelectPortal>
@@ -474,14 +516,14 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
                       isReadOnly={false}
                       variant="underlined"
                       size="xl"
-                      className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                      className="pl-3">
                       <InputField
-                        placeholder="Enter volume"
                         autoCapitalize="none"
                         inputMode="decimal"
                         onChangeText={handleItemChange('volume_ml')}
-                        className="placeholder:text-typography-300"
-                        value={item.volume_ml?.toString()}
+                        value={
+                          item.volume_ml && item.volume_ml >= 0 ? item.volume_ml.toString() : ''
+                        }
                       />
                       <InputIcon as={FlaskConical} size="xl" className="ml-auto mr-4" />
                     </Input>
@@ -497,13 +539,11 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
                       isReadOnly={false}
                       variant="underlined"
                       size="xl"
-                      className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                      className="pl-3">
                       <InputField
-                        placeholder="Enter species"
                         autoCapitalize="none"
                         inputMode="text"
                         onChangeText={handleItemChange('species')}
-                        className="placeholder:text-typography-300"
                         value={item.species}
                       />
                     </Input>
@@ -516,13 +556,11 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
                       isReadOnly={false}
                       variant="underlined"
                       size="xl"
-                      className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                      className="pl-3">
                       <InputField
-                        placeholder="Enter strain/variant"
                         autoCapitalize="none"
                         inputMode="text"
                         onChangeText={handleItemChange('variant')}
-                        className="placeholder:text-typography-300"
                         value={item.variant}
                       />
                     </Input>
@@ -539,13 +577,11 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
                       isReadOnly={false}
                       variant="underlined"
                       size="xl"
-                      className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                      className="pl-3">
                       <InputField
-                        placeholder="Enter spawn type"
                         autoCapitalize="none"
                         inputMode="text"
                         onChangeText={handleItemChange('spawn_type')}
-                        className="placeholder:text-typography-300"
                         value={item.spawn_type}
                       />
                     </Input>
@@ -558,14 +594,14 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
                       isReadOnly={false}
                       variant="underlined"
                       size="xl"
-                      className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                      className="pl-3">
                       <InputField
-                        placeholder="Enter spawn amount"
                         autoCapitalize="none"
                         inputMode="decimal"
                         onChangeText={handleItemChange('amount_lbs')}
-                        className="placeholder:text-typography-300"
-                        value={item.amount_lbs?.toString()}
+                        value={
+                          item.amount_lbs && item.amount_lbs >= 0 ? item.amount_lbs.toString() : ''
+                        }
                       />
                     </Input>
                     {!spawnAmountIsValid && (
@@ -586,13 +622,11 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
                       isReadOnly={false}
                       variant="underlined"
                       size="xl"
-                      className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                      className="pl-3">
                       <InputField
-                        placeholder="Enter bulk substrate type"
                         autoCapitalize="none"
                         inputMode="text"
                         onChangeText={handleItemChange('bulk_type')}
-                        className="placeholder:text-typography-300"
                         value={item.bulk_type}
                       />
                     </Input>
@@ -605,14 +639,14 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
                       isReadOnly={false}
                       variant="underlined"
                       size="xl"
-                      className="pl-3 data-[focus=true]:border-b data-[focus=true]:border-success-400">
+                      className="pl-3">
                       <InputField
-                        placeholder="Enter bulk amount"
                         autoCapitalize="none"
                         inputMode="decimal"
                         onChangeText={handleItemChange('amount_lbs')}
-                        className="placeholder:text-typography-300"
-                        value={item.amount_lbs?.toString()}
+                        value={
+                          item.amount_lbs && item.amount_lbs >= 0 ? item.amount_lbs?.toString() : ''
+                        }
                       />
                     </Input>
                     {!bulkAmountIsValid && (
@@ -623,7 +657,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
               )}
               <VStack>
                 <Text className="text-bold text-lg text-typography-500">NOTES</Text>
-                <Textarea className="mt-2 data-[focus=true]:border-success-400">
+                <Textarea className="mt-2">
                   <TextareaInput
                     textAlignVertical="top"
                     className="mx-1"
@@ -632,8 +666,11 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
                 </Textarea>
               </VStack>
             </Card>
+            <Center className="mt-4">
+              <SaveInventoryItemButton title="Save" newItem={!itemArg} />
+              {itemArg && <DeleteInventoryItemButton title="Delete" />}
+            </Center>
           </ScrollView>
-          <SaveInventoryItemButton title="Save" newItem={!itemArg} />
         </VStack>
       </Box>
     </>

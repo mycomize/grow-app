@@ -51,7 +51,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <Box className="h-full w-full flex-1 bg-background-200">
+    <Box className="h-full w-full flex-1 bg-background-50">
       <View className="mt-36 flex items-center gap-4">
         {errorMessage && <Text className="text-error-500">{errorMessage}</Text>}
         <VStack space="xl">
@@ -94,7 +94,7 @@ export default function LoginScreen() {
                 action="positive"
                 onPress={handleLogin}
                 isDisabled={isLoading}>
-                <ButtonText className="text-typography-700">Log In</ButtonText>
+                <ButtonText className="text-white">Log In</ButtonText>
               </Button>
             </VStack>
           </FormControl>
