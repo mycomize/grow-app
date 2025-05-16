@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from backend.models.grow import Grow, GrowType, MonotubGrow
 from backend.models.iot import IoTGateway
-from backend.models.inventory import Syringe, Spawn, Bulk
+from backend.models.inventory import InventoryItem
 from backend.models.user import User
 from backend.schemas.grow import (
     GrowCreate, 
@@ -78,23 +78,26 @@ async def create_monotub_grow(
         raise HTTPException(status_code=400, detail="Monotub grow already exists for this grow")
     
     # Check if inventory items exist and belong to user
-    syringe = db.query(Syringe).filter(
-        Syringe.id == monotub.syringe_id,
-        Syringe.user_id == current_user.id
+    syringe = db.query(InventoryItem).filter(
+        InventoryItem.id == monotub.syringe_id,
+        InventoryItem.user_id == current_user.id,
+        InventoryItem.type == "Syringe"
     ).first()
     if syringe is None:
         raise HTTPException(status_code=404, detail="Syringe not found")
     
-    spawn = db.query(Spawn).filter(
-        Spawn.id == monotub.spawn_id,
-        Spawn.user_id == current_user.id
+    spawn = db.query(InventoryItem).filter(
+        InventoryItem.id == monotub.spawn_id,
+        InventoryItem.user_id == current_user.id,
+        InventoryItem.type == "Spawn"
     ).first()
     if spawn is None:
         raise HTTPException(status_code=404, detail="Spawn not found")
     
-    bulk = db.query(Bulk).filter(
-        Bulk.id == monotub.bulk_id,
-        Bulk.user_id == current_user.id
+    bulk = db.query(InventoryItem).filter(
+        InventoryItem.id == monotub.bulk_id,
+        InventoryItem.user_id == current_user.id,
+        InventoryItem.type == "Bulk"
     ).first()
     if bulk is None:
         raise HTTPException(status_code=404, detail="Bulk substrate not found")
