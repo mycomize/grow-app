@@ -10,7 +10,7 @@ import { Center } from '@/components/ui/center';
 import { VStack } from '@/components/ui/vstack';
 import { HStack } from '@/components/ui/hstack';
 import { Image } from '@/components/ui/image';
-import { Link, LinkText } from '~/components/ui/link';
+import { Link, LinkText } from '@/components/ui/link';
 import { Text } from '~/components/ui/text';
 import { useToast, Toast, ToastTitle, ToastDescription } from '@/components/ui/toast';
 import { useRouter } from 'expo-router';
