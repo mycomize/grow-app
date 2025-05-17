@@ -58,7 +58,7 @@ export default function ProfileScreen() {
         <HStack className="flex w-full flex-row">
           <Text className="text-lg">Change password</Text>
           <Pressable className="ml-auto mt-1" onPress={() => {}}>
-            <Icon className="h-6 w-6" as={ArrowRightIcon} />
+            <Icon className="mr-2 h-6 w-6" as={ArrowRightIcon} />
           </Pressable>
         </HStack>
       </Card>

@@ -19,6 +19,8 @@ export default function GrowsLayout() {
         headerTitleAlign: 'center',
       }}>
       <Stack.Screen name="index" options={{ title: 'Grows', headerShown: true }} />
+      <Stack.Screen name="new" options={{ title: 'Add Grow', headerShown: true }} />
+      <Stack.Screen name="[id]/edit" options={{ title: 'Edit Grow', headerShown: true }} />
     </Stack>
   );
 }

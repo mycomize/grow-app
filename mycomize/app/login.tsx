@@ -53,11 +53,11 @@ export default function LoginScreen() {
   return (
     <Box className="h-full w-full flex-1 bg-background-50">
       <View className="mt-36 flex items-center gap-4">
-        {errorMessage && <Text className="text-error-500">{errorMessage}</Text>}
         <VStack space="xl">
           <Center>
             <MycomizeLogo width={111} height={131} />
           </Center>
+          {errorMessage && <Text className="mt-6 text-error-500">{errorMessage}</Text>}
           <FormControl className="mt-16 rounded-lg border border-outline-300 p-4">
             <VStack space="xl">
               <Heading className="text-typography-900">Login</Heading>

@@ -181,7 +181,6 @@ export default function InventoryScreen() {
   return items.length == 0 ? (
     <VStack className="flex-1 items-center justify-center gap-2 bg-background-50">
       <AddItemButton title="Add Inventory" initial={true} />
-      <Heading className="font-bold text-typography-700">Add Inventory</Heading>
     </VStack>
   ) : (
     <VStack className="flex-1 items-center gap-4 bg-background-50">
