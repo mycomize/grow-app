@@ -2,7 +2,6 @@ import enum
 from sqlalchemy import Column, Integer, String, Date, Float, Boolean, ForeignKey, event
 from sqlalchemy.orm import relationship
 from backend.database import Base
-from backend.models.grow import MonotubGrow
 
 class InventoryItemType(enum.Enum):
     """Enum for inventory item types"""
@@ -30,6 +29,9 @@ class InventoryItem(Base):
     in_use = Column(Boolean, default=False)
     user_id = Column(Integer, ForeignKey("users.id"))
     
+    # Foreign key to grow (nullable, as inventory items may exist without being assigned to a grow)
+    grow_id = Column(Integer, ForeignKey("grows.id"), nullable=True)
+    
     # Syringe-specific fields
     syringe_type = Column(String(64), nullable=True)
     volume_ml = Column(Float, nullable=True)
@@ -48,6 +50,9 @@ class InventoryItem(Base):
     # Relationship with User (back reference)
     user = relationship("User", back_populates="inventory_items")
     
+    # Relationship with Grow (back reference)
+    grow = relationship("Grow", back_populates="inventory_items")
+    
     # Helper method to check if the item is available for use in a grow
     @property
     def is_available(self):
@@ -55,25 +60,14 @@ class InventoryItem(Base):
         return not self.in_use
 
 # Event listener to mark inventory items as "in use" when associated with a grow
-@event.listens_for(MonotubGrow, 'after_insert')
-def mark_inventory_in_use(mapper, connection, target):
-    """Mark inventory items as in-use when associated with a grow"""
-    # Update the in_use flag for the associated inventory items
-    if target.syringe_id:
-        connection.execute(
-            InventoryItem.__table__.update().
-            where(InventoryItem.id == target.syringe_id).
-            values(in_use=True)
-        )
-    if target.spawn_id:
-        connection.execute(
-            InventoryItem.__table__.update().
-            where(InventoryItem.id == target.spawn_id).
-            values(in_use=True)
-        )
-    if target.bulk_id:
-        connection.execute(
-            InventoryItem.__table__.update().
-            where(InventoryItem.id == target.bulk_id).
-            values(in_use=True)
-        )
+@event.listens_for(InventoryItem, 'after_update')
+def mark_inventory_in_use_after_update(mapper, connection, target):
+    """Mark inventory item as in-use when associated with a grow"""
+    if target.grow_id is not None:
+        target.in_use = True
+
+@event.listens_for(InventoryItem, 'after_insert')
+def mark_inventory_in_use_after_insert(mapper, connection, target):
+    """Mark inventory item as in-use when associated with a grow"""
+    if target.grow_id is not None:
+        target.in_use = True

@@ -2,13 +2,20 @@ from pydantic import BaseModel, Field, validator
 from typing import Optional, List
 from datetime import date
 from backend.schemas.iot import IoTGateway
+from backend.schemas.inventory import InventoryItem
 
 class GrowBase(BaseModel):
     species: str
     variant: str
-    inoculation_date: date
+    inoculation_date: Optional[date] = None
     type: str = "monotub"  # Default to monotub type
     notes: Optional[str] = None
+    contaminated: Optional[bool] = False
+    
+    # Harvest fields directly in the Grow model
+    harvest_date: Optional[date] = None
+    harvest_dry_weight_grams: Optional[float] = 0
+    harvest_wet_weight_grams: Optional[float] = 0
 
 class GrowCreate(GrowBase):
     """Schema for creating a new grow"""
@@ -28,15 +35,52 @@ class Grow(GrowBase):
     """Schema for returning a grow"""
     id: int
     
+    # Derived fields for frontend compatibility
+    inoculationDate: Optional[date] = None
+    harvestDate: Optional[date] = None
+    harvestDryWeight: float = 0
+    harvestWetWeight: float = 0
+    
     # Hidden fields that exist in the model but won't be returned in responses
     user_id: int = Field(exclude=True)
     
     class Config:
         from_attributes = True
+        
+    @validator("inoculationDate", always=True)
+    def set_inoculation_date(cls, v, values):
+        return values.get("inoculation_date")
+        
+    @validator("harvestDate", always=True)
+    def set_harvest_date(cls, v, values):
+        return values.get("harvest_date")
+    
+    @validator("harvestDryWeight", always=True)
+    def set_harvest_dry_weight(cls, v, values):
+        return values.get("harvest_dry_weight_grams") or 0
+    
+    @validator("harvestWetWeight", always=True)
+    def set_harvest_wet_weight(cls, v, values):
+        return values.get("harvest_wet_weight_grams") or 0
 
 class GrowWithIoTGateways(Grow):
     """Schema for returning a grow with its IoT gateways"""
     iot_gateways: List[IoTGateway] = []
+    
+class GrowComplete(Grow):
+    """Schema for returning a complete grow with all related data"""
+    iotGatewayList: List[IoTGateway] = []
+    inventoryList: List[InventoryItem] = []
+    
+    @validator("iotGatewayList", always=True)
+    def set_iot_gateway_list(cls, v, values):
+        from_values = values.get("iot_gateways")
+        return from_values if from_values is not None else v
+    
+    @validator("inventoryList", always=True)
+    def set_inventory_list(cls, v, values):
+        from_values = values.get("inventory_items")
+        return from_values if from_values is not None else v
 
 class GrowUpdate(BaseModel):
     """Schema for updating a grow"""
@@ -45,6 +89,12 @@ class GrowUpdate(BaseModel):
     inoculation_date: Optional[date] = None
     type: Optional[str] = None
     notes: Optional[str] = None
+    contaminated: Optional[bool] = None
+    
+    # Harvest fields
+    harvest_date: Optional[date] = None
+    harvest_dry_weight_grams: Optional[float] = None
+    harvest_wet_weight_grams: Optional[float] = None
     
     @validator('species')
     def species_must_not_be_empty(cls, v):

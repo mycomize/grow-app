@@ -4,7 +4,7 @@ from typing import List
 from datetime import date
 from pydantic import BaseModel
 
-from backend.models.grow import Grow, GrowType, MonotubGrow
+from backend.models.grow import Grow, GrowType
 from backend.models.iot import IoTGateway
 from backend.models.inventory import InventoryItem
 from backend.models.user import User
@@ -12,7 +12,8 @@ from backend.schemas.grow import (
     GrowCreate, 
     Grow as GrowSchema, 
     GrowUpdate,
-    GrowWithIoTGateways
+    GrowWithIoTGateways,
+    GrowComplete
 )
 from backend.database import get_grow_db, grow_engine
 from backend.security import get_current_active_user
@@ -27,11 +28,9 @@ router = APIRouter(
     responses={401: {"detail": "Not authenticated"}},
 )
 
-# Additional schema for creating a Monotub grow with inventory items
-class MonotubGrowCreate(BaseModel):
-    syringe_id: int
-    spawn_id: int
-    bulk_id: int
+# Schema for associating inventory items with a grow
+class GrowInventoryAssociation(BaseModel):
+    inventory_item_ids: List[int]
 
 @router.post("/", response_model=GrowSchema, status_code=status.HTTP_201_CREATED)
 async def create_grow(
@@ -45,8 +44,12 @@ async def create_grow(
         species=grow.species,
         variant=grow.variant,
         inoculation_date=grow.inoculation_date,
-        type=GrowType(grow.type),
+        type=grow.type,
         notes=grow.notes,
+        contaminated=grow.contaminated,
+        harvest_date=grow.harvest_date,
+        harvest_dry_weight_grams=grow.harvest_dry_weight_grams,
+        harvest_wet_weight_grams=grow.harvest_wet_weight_grams,
         user_id=current_user.id
     )
     
@@ -56,74 +59,37 @@ async def create_grow(
     
     return db_grow
 
-@router.post("/{grow_id}/monotub", response_model=GrowSchema, status_code=status.HTTP_201_CREATED)
-async def create_monotub_grow(
+@router.post("/{grow_id}/inventory", response_model=GrowSchema, status_code=status.HTTP_201_CREATED)
+async def associate_inventory_with_grow(
     grow_id: int,
-    monotub: MonotubGrowCreate,
+    inventory: GrowInventoryAssociation,
     db: Session = Depends(get_grow_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Associate inventory items with a monotub grow"""
+    """Associate inventory items with a grow"""
     # Check if grow exists and belongs to user
     db_grow = db.query(Grow).filter(Grow.id == grow_id, Grow.user_id == current_user.id).first()
     if db_grow is None:
         raise HTTPException(status_code=404, detail="Grow not found")
     
-    # Check if grow is of type monotub
-    if db_grow.type != GrowType.MONOTUB.value:
-        raise HTTPException(status_code=400, detail="Grow is not of type monotub")
-    
-    # Check if monotub already exists for this grow
-    if db.query(MonotubGrow).filter(MonotubGrow.grow_id == grow_id).first():
-        raise HTTPException(status_code=400, detail="Monotub grow already exists for this grow")
-    
-    # Check if inventory items exist and belong to user
-    syringe = db.query(InventoryItem).filter(
-        InventoryItem.id == monotub.syringe_id,
-        InventoryItem.user_id == current_user.id,
-        InventoryItem.type == "Syringe"
-    ).first()
-    if syringe is None:
-        raise HTTPException(status_code=404, detail="Syringe not found")
-    
-    spawn = db.query(InventoryItem).filter(
-        InventoryItem.id == monotub.spawn_id,
-        InventoryItem.user_id == current_user.id,
-        InventoryItem.type == "Spawn"
-    ).first()
-    if spawn is None:
-        raise HTTPException(status_code=404, detail="Spawn not found")
-    
-    bulk = db.query(InventoryItem).filter(
-        InventoryItem.id == monotub.bulk_id,
-        InventoryItem.user_id == current_user.id,
-        InventoryItem.type == "Bulk"
-    ).first()
-    if bulk is None:
-        raise HTTPException(status_code=404, detail="Bulk substrate not found")
-    
-    # Check if inventory items are available (not in use)
-    if syringe.in_use:
-        raise HTTPException(status_code=400, detail="Syringe is already in use")
-    if spawn.in_use:
-        raise HTTPException(status_code=400, detail="Spawn is already in use")
-    if bulk.in_use:
-        raise HTTPException(status_code=400, detail="Bulk substrate is already in use")
-    
-    # Create MonotubGrow
-    db_monotub = MonotubGrow(
-        grow_id=grow_id,
-        syringe_id=monotub.syringe_id,
-        spawn_id=monotub.spawn_id,
-        bulk_id=monotub.bulk_id
-    )
-    
-    db.add(db_monotub)
-    
-    # Mark inventory items as in use
-    syringe.in_use = True
-    spawn.in_use = True
-    bulk.in_use = True
+    # Process each inventory item
+    for item_id in inventory.inventory_item_ids:
+        # Check if inventory item exists and belongs to user
+        item = db.query(InventoryItem).filter(
+            InventoryItem.id == item_id,
+            InventoryItem.user_id == current_user.id
+        ).first()
+        
+        if item is None:
+            raise HTTPException(status_code=404, detail=f"Inventory item with ID {item_id} not found")
+            
+        # Check if inventory item is available (not in use)
+        if item.in_use:
+            raise HTTPException(status_code=400, detail=f"Inventory item with ID {item_id} is already in use")
+            
+        # Associate inventory item with grow
+        item.grow_id = grow_id
+        item.in_use = True
     
     db.commit()
     db.refresh(db_grow)
@@ -141,6 +107,17 @@ async def read_grows(
     grows = db.query(Grow).filter(Grow.user_id == current_user.id).offset(skip).limit(limit).all()
     return grows
 
+@router.get("/all", response_model=List[GrowComplete])
+async def read_all_grows(
+    db: Session = Depends(get_grow_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get all grows with complete data for the current user"""
+    # Query all grows for the current user with their relationships
+    grows = db.query(Grow).filter(Grow.user_id == current_user.id).all()
+    
+    return grows
+
 @router.get("/{grow_id}", response_model=GrowWithIoTGateways)
 async def read_grow(
     grow_id: int, 
@@ -152,6 +129,7 @@ async def read_grow(
     if grow is None:
         raise HTTPException(status_code=404, detail="Grow not found")
     return grow
+
 
 @router.put("/{grow_id}", response_model=GrowSchema)
 async def update_grow(
@@ -190,6 +168,12 @@ async def delete_grow(
     for gateway in gateways:
         gateway.grow_id = None
         gateway.is_active = False
+        
+    # Check if any inventory items are linked to this grow
+    inventory_items = db.query(InventoryItem).filter(InventoryItem.grow_id == grow_id).all()
+    for item in inventory_items:
+        item.grow_id = None
+        item.in_use = False
     
     db.delete(db_grow)
     db.commit()
