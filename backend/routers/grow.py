@@ -4,7 +4,7 @@ from typing import List
 from datetime import date
 from pydantic import BaseModel
 
-from backend.models.grow import Grow, GrowType
+from backend.models.grow import Grow 
 from backend.models.iot import IoTGateway
 from backend.models.inventory import InventoryItem
 from backend.models.user import User
@@ -44,9 +44,11 @@ async def create_grow(
         species=grow.species,
         variant=grow.variant,
         inoculation_date=grow.inoculation_date,
-        type=grow.type,
+        tek=grow.tek,
+        stage=grow.stage,
+        status=grow.status,
         notes=grow.notes,
-        contaminated=grow.contaminated,
+        cost=grow.cost,
         harvest_date=grow.harvest_date,
         harvest_dry_weight_grams=grow.harvest_dry_weight_grams,
         harvest_wet_weight_grams=grow.harvest_wet_weight_grams,
@@ -72,6 +74,9 @@ async def associate_inventory_with_grow(
     if db_grow is None:
         raise HTTPException(status_code=404, detail="Grow not found")
     
+    # Calculate total cost of associated inventory items
+    total_cost = 0.0
+    
     # Process each inventory item
     for item_id in inventory.inventory_item_ids:
         # Check if inventory item exists and belongs to user
@@ -90,6 +95,13 @@ async def associate_inventory_with_grow(
         # Associate inventory item with grow
         item.grow_id = grow_id
         item.in_use = True
+        
+        # Add item cost to total
+        if item.cost:
+            total_cost += item.cost
+    
+    # Update grow with total cost of inventory items
+    db_grow.cost = total_cost
     
     db.commit()
     db.refresh(db_grow)
@@ -147,6 +159,10 @@ async def update_grow(
     grow_data = grow.dict(exclude_unset=True)
     for key, value in grow_data.items():
         setattr(db_grow, key, value)
+    
+    # If harvest_date is set, update status to harvested
+    if grow_data.get('harvest_date') and not db_grow.status == 'harvested':
+        db_grow.status = 'harvested'
     
     db.commit()
     db.refresh(db_grow)

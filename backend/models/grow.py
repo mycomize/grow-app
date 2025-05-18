@@ -1,13 +1,27 @@
 import enum
+from datetime import date, datetime
 
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Float, Text, Boolean
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Float, Text, Boolean, func
 from sqlalchemy.orm import relationship
 from datetime import date
 from backend.database import Base
 
-class GrowType(enum.Enum):
-    """Enum for grow types"""
-    MONOTUB = "monotub"
+class GrowTek(enum.Enum):
+    """Enum for grow techniques"""
+    MONOTUB = "Monotub"
+
+class GrowStage(enum.Enum):
+    """Enum for grow stages"""
+    SPAWN_COLONIZATION = "spawn_colonization"
+    BULK_COLONIZATION = "bulk_colonization"
+    FRUITING = "fruiting"
+    HARVEST = "harvest"
+
+class GrowStatus(enum.Enum):
+    """Enum for grow status"""
+    GROWING = "growing"
+    CONTAMINATED = "contaminated"
+    HARVESTED = "harvested"
     
 class Grow(Base):
     """Grow model for mushroom cultivation tracking"""
@@ -17,9 +31,11 @@ class Grow(Base):
     species = Column(String(64), index=True)
     variant = Column(String(64), index=True)
     inoculation_date = Column(Date)
-    type = Column(String(64), default=GrowType.MONOTUB.value)  # Default to monotub type
+    tek = Column(String(64), default=GrowTek.MONOTUB.value)  # Default to monotub tek
+    stage = Column(String(64), default=GrowStage.SPAWN_COLONIZATION.value)  # Default to spawn colonization
     notes = Column(Text)
-    contaminated = Column(Boolean, default=False)
+    status = Column(String(64), default=GrowStatus.GROWING.value)
+    cost = Column(Float, default=0.0)
     
     # Harvest fields directly in the Grow model
     harvest_date = Column(Date, nullable=True)

@@ -1,6 +1,7 @@
 import { Image } from '@/components/ui/image';
 import { useState } from 'react';
 import { View } from 'react-native';
+import { ScrollView } from '@/components/ui/scroll-view';
 import { Box } from '@/components/ui/box';
 import { useContext } from 'react';
 import { AuthContext } from '~/lib/AuthContext';
@@ -52,60 +53,62 @@ export default function LoginScreen() {
 
   return (
     <Box className="h-full w-full flex-1 bg-background-50">
-      <View className="mt-36 flex items-center gap-4">
-        <VStack space="xl">
-          <Center>
-            <MycomizeLogo width={111} height={131} />
-          </Center>
-          {errorMessage && <Text className="mt-6 text-error-500">{errorMessage}</Text>}
-          <FormControl className="mt-16 rounded-lg border border-outline-300 p-4">
-            <VStack space="xl">
-              <Heading className="text-typography-900">Login</Heading>
-              <VStack space="xs">
-                <Text className="text-typography-700">Username</Text>
-                <Input className="min-w-[250px]">
-                  <InputField
-                    type="text"
-                    autoCapitalize="none"
-                    autoComplete="username"
-                    autoCorrect={false}
-                    autoFocus={true}
-                    onChangeText={setUsername}
-                    value={username}
-                  />
-                </Input>
+      <ScrollView>
+        <View className="mt-36 flex items-center gap-4">
+          <VStack space="xl">
+            <Center>
+              <MycomizeLogo width={111} height={131} />
+            </Center>
+            {errorMessage && <Text className="mt-6 text-error-500">{errorMessage}</Text>}
+            <FormControl className="mt-16 rounded-lg border border-outline-300 p-4">
+              <VStack space="xl">
+                <Heading className="text-typography-900">Login</Heading>
+                <VStack space="xs">
+                  <Text className="text-typography-700">Username</Text>
+                  <Input className="min-w-[250px]">
+                    <InputField
+                      type="text"
+                      autoCapitalize="none"
+                      autoComplete="username"
+                      autoCorrect={false}
+                      autoFocus={true}
+                      onChangeText={setUsername}
+                      value={username}
+                    />
+                  </Input>
+                </VStack>
+                <VStack space="xs">
+                  <Text className="text-typography-700">Password</Text>
+                  <Input className="text-center">
+                    <InputField
+                      type={showPassword ? 'text' : 'password'}
+                      autoCapitalize="none"
+                      onChangeText={setPassword}
+                      value={password}
+                    />
+                    <InputSlot className="pr-3" onPress={handleShowState}>
+                      <InputIcon as={showPassword ? EyeIcon : EyeOffIcon} size="lg" />
+                    </InputSlot>
+                  </Input>
+                </VStack>
+                <Button
+                  className="mx-auto"
+                  action="positive"
+                  onPress={handleLogin}
+                  isDisabled={isLoading}>
+                  <ButtonText className="text-white">Log In</ButtonText>
+                </Button>
               </VStack>
-              <VStack space="xs">
-                <Text className="text-typography-700">Password</Text>
-                <Input className="text-center">
-                  <InputField
-                    type={showPassword ? 'text' : 'password'}
-                    autoCapitalize="none"
-                    onChangeText={setPassword}
-                    value={password}
-                  />
-                  <InputSlot className="pr-3" onPress={handleShowState}>
-                    <InputIcon as={showPassword ? EyeIcon : EyeOffIcon} size="lg" />
-                  </InputSlot>
-                </Input>
-              </VStack>
-              <Button
-                className="mx-auto"
-                action="positive"
-                onPress={handleLogin}
-                isDisabled={isLoading}>
-                <ButtonText className="text-white">Log In</ButtonText>
-              </Button>
-            </VStack>
-          </FormControl>
-        </VStack>
-        <Link className="mt-10" onPress={() => router.replace('/register')}>
-          <HStack>
-            <Text>Need an account? </Text>
-            <LinkText className="text-success-300">Sign Up</LinkText>
-          </HStack>
-        </Link>
-      </View>
+            </FormControl>
+          </VStack>
+          <Link className="my-10 " onPress={() => router.replace('/register')}>
+            <HStack>
+              <Text>Need an account? </Text>
+              <LinkText className="text-success-300">Sign Up</LinkText>
+            </HStack>
+          </Link>
+        </View>
+      </ScrollView>
     </Box>
   );
 }

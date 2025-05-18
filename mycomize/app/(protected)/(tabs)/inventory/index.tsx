@@ -63,47 +63,58 @@ const ItemCard: React.FC<{ item: InventoryItem }> = ({ item }) => {
           }}>
           <HStack className="mb-2">
             <Heading>{item.type}</Heading>
-            {item.type === 'Syringe' && item.volume_ml && item.volume_ml > 0 && (
-              <Text className="ml-2 mt-0.5" italic={true} size="md">
-                {item.volume_ml} ml
-              </Text>
-            )}
-            {item.type === 'Spawn' && item.amount_lbs && item.amount_lbs > 0 && (
-              <Text className="ml-2 mt-0.5" italic={true} size="md">
-                {item.amount_lbs} lbs
-              </Text>
-            )}
-            {item.type === 'Bulk' && item.amount_lbs && item.amount_lbs > 0 && (
-              <Text className="ml-2 mt-0.5" italic={true} size="md">
-                {item.amount_lbs} lbs
-              </Text>
-            )}
-            {item.type === 'Syringe' && <Icon as={Syringe} size="xl" className="ml-auto" />}
-            {item.type === 'Spawn' && <Icon as={BeanIcon} size="xl" className="ml-auto" />}
           </HStack>
-          <HStack>
+          <HStack className="my-1">
             <Text>Cost</Text>
             <Text className="ml-auto">${item.cost}</Text>
           </HStack>
-          <HStack>
-            <Text>Expires</Text>
-            <Text className="ml-auto">{item.expiration_date.toDateString()}</Text>
-          </HStack>
-          {item.type === 'Syringe' && (
-            <HStack className="">
-              <Text>Variant</Text>
-              <Text className="ml-auto" italic={true}>
-                {item.variant}
-              </Text>
+          {item.expiration_date && (
+            <HStack className="my-1">
+              <Text>Expires</Text>
+              <Text className="ml-auto">{item.expiration_date.toDateString()}</Text>
             </HStack>
           )}
+          {item.type === 'Syringe' && (
+            <>
+              <HStack className="my-1">
+                <Text>Species</Text>
+                <Text className="ml-auto" italic={true}>
+                  {item.species}
+                </Text>
+              </HStack>
+              <HStack className="my-1">
+                <Text>Variant</Text>
+                <Text className="ml-auto">{item.variant}</Text>
+              </HStack>
+              <HStack className="my-1">
+                <Text>Volume</Text>
+                <Text className="ml-auto">{item.volume_ml} ml</Text>
+              </HStack>
+            </>
+          )}
           {item.type === 'Spawn' && (
-            <HStack>
-              <Text>Type</Text>
-              <Text className="ml-auto" italic={true}>
-                {item.spawn_type}
-              </Text>
-            </HStack>
+            <>
+              <HStack className="my-1">
+                <Text>Type</Text>
+                <Text className="ml-auto">{item.spawn_type}</Text>
+              </HStack>
+              <HStack className="my-1">
+                <Text>Ammount</Text>
+                <Text className="ml-auto">{item.amount_lbs} lbs</Text>
+              </HStack>
+            </>
+          )}
+          {item.type === 'Bulk' && (
+            <>
+              <HStack className="my-1">
+                <Text>Type</Text>
+                <Text className="ml-auto">{item.bulk_type}</Text>
+              </HStack>
+              <HStack className="my-1">
+                <Text>Ammount</Text>
+                <Text className="ml-auto">{item.amount_lbs} lbs</Text>
+              </HStack>
+            </>
           )}
         </Pressable>
       </Card>
@@ -121,7 +132,7 @@ export default function InventoryScreen() {
 
     if (!isDuplicate) {
       item.source_date = new Date(item.source_date);
-      item.expiration_date = new Date(item.expiration_date);
+      item.expiration_date = item.expiration_date ? new Date(item.expiration_date) : null;
 
       if (item.type === 'Syringe' || item.type === 'Spawn' || item.type === 'Bulk') {
         setItems((prevItems) => [...prevItems, item]);
@@ -159,7 +170,7 @@ export default function InventoryScreen() {
       const formattedItems = data.map((item) => ({
         ...item,
         source_date: new Date(item.source_date),
-        expiration_date: new Date(item.expiration_date),
+        expiration_date: item.expiration_date ? new Date(item.expiration_date) : null,
       }));
 
       setItems(formattedItems);

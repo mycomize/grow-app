@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { View } from 'react-native';
+import { ScrollView } from '@/components/ui/scroll-view';
+import { Box } from '@/components/ui/box';
 import { useContext } from 'react';
 import { AuthContext } from '~/lib/AuthContext';
 import { Button, ButtonText } from '~/components/ui/button';
@@ -109,75 +111,79 @@ export default function SignUpScreen() {
   };
 
   return (
-    <View className="mt-16 flex items-center gap-4">
-      <VStack space="xl">
-        <Center>
-          <MycomizeLogo width={111} height={131} />
-        </Center>
-        <FormControl className="mt-16 rounded-lg border border-outline-300 p-4">
+    <Box className="h-full w-full flex-1 bg-background-50">
+      <ScrollView>
+        <View className="mt-36 flex items-center gap-4">
           <VStack space="xl">
-            <Heading className="text-typography-900">Sign Up</Heading>
-            <VStack space="xs">
-              <Text className="text-typography-700">Username</Text>
-              <Input className="min-w-[250px]">
-                <InputField
-                  type="text"
-                  autoCapitalize="none"
-                  autoComplete="username"
-                  autoCorrect={false}
-                  autoFocus={true}
-                  onChangeText={setUsername}
-                  value={username}
-                  onFocus={() => setConfirmFocused(false)}
-                />
-              </Input>
-            </VStack>
-            <VStack space="xs">
-              <Text className="text-typography-700">Password</Text>
-              <Input className="text-center">
-                <InputField
-                  type={showPassword ? 'text' : 'password'}
-                  autoCapitalize="none"
-                  onChangeText={setPassword}
-                  value={password}
-                  onFocus={() => setConfirmFocused(false)}
-                />
-                <InputSlot className="pr-3" onPress={handleShowPassword}>
-                  <InputIcon as={showPassword ? EyeIcon : EyeOffIcon} size="lg" />
-                </InputSlot>
-              </Input>
-            </VStack>
-            <VStack space="xs">
-              <Text className="text-typography-700">Confirm Password</Text>
-              <Input className="text-center" isInvalid={!passwordsMatch && confirmFocused}>
-                <InputField
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  autoCapitalize="none"
-                  onChangeText={handleConfirmPassword}
-                  value={confirmPassword}
-                  onFocus={() => setConfirmFocused(true)}
-                />
-                <InputSlot className="pr-3" onPress={handleShowConfirmPassword}>
-                  <InputIcon as={showConfirmPassword ? EyeIcon : EyeOffIcon} size="lg" />
-                </InputSlot>
-              </Input>
-            </VStack>
-            <Button
-              className="mx-auto"
-              action="positive"
-              onPress={handleSignUp}
-              isDisabled={isLoading}>
-              <ButtonText className="text-typography-0">Sign Up</ButtonText>
-            </Button>
+            <Center>
+              <MycomizeLogo width={111} height={131} />
+            </Center>
+            <FormControl className="mt-16 rounded-lg border border-outline-300 p-4">
+              <VStack space="xl">
+                <Heading className="text-white">Sign Up</Heading>
+                <VStack space="xs">
+                  <Text className="text-typography-700">Username</Text>
+                  <Input className="min-w-[250px]">
+                    <InputField
+                      type="text"
+                      autoCapitalize="none"
+                      autoComplete="username"
+                      autoCorrect={false}
+                      autoFocus={true}
+                      onChangeText={setUsername}
+                      value={username}
+                      onFocus={() => setConfirmFocused(false)}
+                    />
+                  </Input>
+                </VStack>
+                <VStack space="xs">
+                  <Text className="text-typography-700">Password</Text>
+                  <Input className="text-center">
+                    <InputField
+                      type={showPassword ? 'text' : 'password'}
+                      autoCapitalize="none"
+                      onChangeText={setPassword}
+                      value={password}
+                      onFocus={() => setConfirmFocused(false)}
+                    />
+                    <InputSlot className="pr-3" onPress={handleShowPassword}>
+                      <InputIcon as={showPassword ? EyeIcon : EyeOffIcon} size="lg" />
+                    </InputSlot>
+                  </Input>
+                </VStack>
+                <VStack space="xs">
+                  <Text className="text-typography-700">Confirm Password</Text>
+                  <Input className="text-center" isInvalid={!passwordsMatch && confirmFocused}>
+                    <InputField
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      autoCapitalize="none"
+                      onChangeText={handleConfirmPassword}
+                      value={confirmPassword}
+                      onFocus={() => setConfirmFocused(true)}
+                    />
+                    <InputSlot className="pr-3" onPress={handleShowConfirmPassword}>
+                      <InputIcon as={showConfirmPassword ? EyeIcon : EyeOffIcon} size="lg" />
+                    </InputSlot>
+                  </Input>
+                </VStack>
+                <Button
+                  className="mx-auto"
+                  action="positive"
+                  onPress={handleSignUp}
+                  isDisabled={isLoading}>
+                  <ButtonText className="text-typography-0">Sign Up</ButtonText>
+                </Button>
+              </VStack>
+            </FormControl>
           </VStack>
-        </FormControl>
-      </VStack>
-      <Link className="mt-10" onPress={() => router.replace('/login')}>
-        <HStack>
-          <Text>Already have an account? </Text>
-          <LinkText className="text-success-300">Log In</LinkText>
-        </HStack>
-      </Link>
-    </View>
+          <Link className="my-10" onPress={() => router.replace('/login')}>
+            <HStack>
+              <Text>Already have an account? </Text>
+              <LinkText className="text-success-300">Log In</LinkText>
+            </HStack>
+          </Link>
+        </View>
+      </ScrollView>
+    </Box>
   );
 }

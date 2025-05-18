@@ -43,7 +43,7 @@ export interface InventoryItem {
   id: number;
   source: string;
   source_date: Date;
-  expiration_date: Date;
+  expiration_date: Date | null;
   cost: number;
   notes: string;
 
@@ -114,7 +114,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
     id: 0,
     source: '',
     source_date: new Date(),
-    expiration_date: new Date(),
+    expiration_date: null,
     cost: -1,
     notes: '',
     syringe_type: '',
@@ -186,10 +186,19 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
   };
 
   const onChangeExpirationDate = (event: any, selectedDate: Date | undefined) => {
-    const currentDate = selectedDate || item.expiration_date;
+    // If user cancels or selects an invalid date, keep the current value
+    if (event.type === 'dismissed') {
+      setShowExpirationDate(false);
+      return;
+    }
 
-    handleItemChange('expiration_date')(currentDate);
+    // Update the expiration date
+    handleItemChange('expiration_date')(selectedDate);
     setShowExpirationDate(false);
+  };
+
+  const clearExpirationDate = () => {
+    handleItemChange('expiration_date')(null);
   };
 
   const handleChangeInventoryType = (value: string) => {
@@ -372,7 +381,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
       <Box className="h-full w-full bg-background-50">
         <VStack className="mt-4 flex-1 items-center">
           <ScrollView className="w-full bg-background-50">
-            <Card className="mx-auto mb-4 w-11/12 gap-4 bg-background-50">
+            <Card className="mx-auto mb-4 w-11/12 gap-8 bg-background-50">
               <FormControl>
                 <FormControlLabel>
                   <FormControlLabelText className="text-lg font-normal text-typography-500">
@@ -469,15 +478,26 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
                     isDisabled={false}
                     isInvalid={false}
                     isReadOnly={false}>
-                    <InputField>{item.expiration_date.toDateString()}</InputField>
+                    <InputField>
+                      {item.expiration_date
+                        ? item.expiration_date.toDateString()
+                        : 'No expiration date'}
+                    </InputField>
                   </Input>
-                  <Pressable onPress={() => setShowExpirationDate(true)}>
-                    <Icon as={CalendarDays} size="xl" className="mt-2 text-typography-400" />
-                  </Pressable>
+                  <VStack>
+                    <Pressable onPress={() => setShowExpirationDate(true)}>
+                      <Icon as={CalendarDays} size="xl" className="mt-2 text-typography-400" />
+                    </Pressable>
+                    {item.expiration_date && (
+                      <Pressable onPress={clearExpirationDate}>
+                        <Text className="mt-1 text-xs text-error-600">Clear</Text>
+                      </Pressable>
+                    )}
+                  </VStack>
                 </HStack>
                 {showExpirationDate && (
                   <DateTimePicker
-                    value={item.expiration_date}
+                    value={item.expiration_date || new Date()}
                     mode="date"
                     onChange={onChangeExpirationDate}
                   />

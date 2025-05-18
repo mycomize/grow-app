@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List
-from datetime import date
+from datetime import date, datetime
 from backend.schemas.iot import IoTGateway
 from backend.schemas.inventory import InventoryItem
 
@@ -8,9 +8,11 @@ class GrowBase(BaseModel):
     species: str
     variant: str
     inoculation_date: Optional[date] = None
-    type: str = "monotub"  # Default to monotub type
+    tek: str = "Monotub"  # Default to monotub tek
+    stage: str = "spawn_colonization"  # Default to spawn colonization
+    status: str = "growing"  # Default to growing status
     notes: Optional[str] = None
-    contaminated: Optional[bool] = False
+    cost: Optional[float] = 0
     
     # Harvest fields directly in the Grow model
     harvest_date: Optional[date] = None
@@ -40,6 +42,8 @@ class Grow(GrowBase):
     harvestDate: Optional[date] = None
     harvestDryWeight: float = 0
     harvestWetWeight: float = 0
+    stage: str = "spawn_colonization"
+    age: Optional[int] = None
     
     # Hidden fields that exist in the model but won't be returned in responses
     user_id: int = Field(exclude=True)
@@ -62,6 +66,14 @@ class Grow(GrowBase):
     @validator("harvestWetWeight", always=True)
     def set_harvest_wet_weight(cls, v, values):
         return values.get("harvest_wet_weight_grams") or 0
+        
+    @validator("age", always=True)
+    def calculate_age(cls, v, values):
+        inoculation_date = values.get("inoculation_date")
+        if inoculation_date:
+            today = date.today()
+            return (today - inoculation_date).days
+        return None
 
 class GrowWithIoTGateways(Grow):
     """Schema for returning a grow with its IoT gateways"""
@@ -87,9 +99,11 @@ class GrowUpdate(BaseModel):
     species: Optional[str] = None
     variant: Optional[str] = None
     inoculation_date: Optional[date] = None
-    type: Optional[str] = None
+    tek: Optional[str] = None
+    stage: Optional[str] = None
+    status: Optional[str] = None
     notes: Optional[str] = None
-    contaminated: Optional[bool] = None
+    cost: Optional[float] = None
     
     # Harvest fields
     harvest_date: Optional[date] = None
