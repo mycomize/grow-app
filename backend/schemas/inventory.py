@@ -22,6 +22,7 @@ class InventoryItemBase(BaseModel):
     expiration_date: Optional[datetime] = None
     cost: Optional[float] = None
     notes: Optional[str] = None
+    grow_id: Optional[int] = None
     
     # Syringe-specific fields
     syringe_type: Optional[str] = None
@@ -96,6 +97,7 @@ class InventoryItemUpdate(BaseModel):
     expiration_date: Optional[datetime] = None
     cost: Optional[float] = None
     notes: Optional[str] = None
+    grow_id: Optional[int] = None
     
     # Syringe-specific fields
     syringe_type: Optional[str] = None

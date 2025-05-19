@@ -39,6 +39,7 @@ async def create_inventory_item(
         expiration_date=item.expiration_date,
         cost=item.cost,
         notes=item.notes,
+        grow_id=item.grow_id,
         # Type-specific fields - only set if relevant
         syringe_type=item.syringe_type if item.type == "Syringe" else None,
         volume_ml=item.volume_ml if item.type == "Syringe" else None,
@@ -47,7 +48,7 @@ async def create_inventory_item(
         spawn_type=item.spawn_type if item.type == "Spawn" else None,
         bulk_type=item.bulk_type if item.type == "Bulk" else None,
         amount_lbs=item.amount_lbs if item.type in ["Spawn", "Bulk"] else None,
-        in_use=False,
+        in_use=item.grow_id is not None,  # Set in_use based on grow_id
         user_id=current_user.id
     )
     
@@ -111,17 +112,22 @@ async def update_inventory_item(
     if db_item is None:
         raise HTTPException(status_code=404, detail="Inventory item not found")
     
-    # Prevent updating items that are in use
-    if db_item.in_use and any(field not in ['notes'] for field in item_update.dict(exclude_unset=True)):
+    # Prevent updating items that are in use, except for notes and grow_id
+    allowed_fields_when_in_use = ['notes', 'grow_id']
+    if db_item.in_use and any(field not in allowed_fields_when_in_use for field in item_update.dict(exclude_unset=True)):
         raise HTTPException(
             status_code=400, 
-            detail="Cannot update an item that is in use, except for notes"
+            detail="Cannot update an item that is in use, except for notes and grow_id"
         )
     
     # Update item attributes
     update_data = item_update.dict(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_item, key, value)
+    
+    # Update in_use flag based on grow_id
+    if 'grow_id' in update_data:
+        db_item.in_use = db_item.grow_id is not None
     
     db.commit()
     db.refresh(db_item)
