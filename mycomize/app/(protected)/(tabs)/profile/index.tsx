@@ -48,12 +48,7 @@ export default function ProfileScreen() {
   return (
     <VStack className="flex-1 items-center gap-3 bg-background-50 py-3">
       {/* Account card */}
-      <Card
-        className={
-          theme === 'light'
-            ? 'w-11/12 bg-background-0 shadow-lg shadow-background-700'
-            : 'w-11/12 bg-background-0'
-        }>
+      <Card className="w-11/12 bg-background-0">
         <Heading className="mb-3">ACCOUNT</Heading>
         <HStack className="flex w-full flex-row">
           <Text className="text-lg">Change password</Text>
@@ -64,12 +59,7 @@ export default function ProfileScreen() {
       </Card>
 
       {/* Display card */}
-      <Card
-        className={
-          theme === 'light'
-            ? 'w-11/12 bg-background-0 shadow-lg shadow-background-700'
-            : 'w-11/12 bg-background-0'
-        }>
+      <Card className="w-11/12 bg-background-0">
         <Heading className="mb-3">DISPLAY</Heading>
         <HStack className="flex w-full flex-row">
           <Text className="text-lg">Dark mode</Text>

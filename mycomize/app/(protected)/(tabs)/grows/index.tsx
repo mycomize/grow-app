@@ -61,7 +61,6 @@ const AddGrowButton: React.FC<AddGrowButtonProps> = ({ title, initial = false })
 
 const GrowCard: React.FC<{ grow: Grow }> = ({ grow }) => {
   const router = useRouter();
-  const { theme } = useTheme();
 
   const getStatusColor = (status: string) => {
     if (status === growStatuses.CONTAMINATED) return 'text-error-500';
@@ -73,12 +72,7 @@ const GrowCard: React.FC<{ grow: Grow }> = ({ grow }) => {
 
   return (
     <>
-      <Card
-        className={
-          theme === 'light'
-            ? ' w-11/12 rounded-xl bg-background-0 shadow-lg shadow-background-700'
-            : ' w-11/12 rounded-xl bg-background-0'
-        }>
+      <Card className="w-11/12 rounded-xl bg-background-0">
         <VStack className="flex p-2">
           <Pressable
             onPress={() => {

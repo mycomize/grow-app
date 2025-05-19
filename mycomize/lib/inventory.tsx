@@ -1,15 +1,20 @@
-import { ScrollView, Keyboard } from 'react-native';
+import { ScrollView, Keyboard, Platform } from 'react-native';
 import {
   ChevronDown,
   FlaskConical,
   CalendarDays,
   DollarSign,
   Building2,
+  PlusIcon,
+  CheckIcon,
+  SearchIcon,
 } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Button, ButtonText } from '~/components/ui/button';
+import { Spinner } from '~/components/ui/spinner';
+import { Skeleton } from '~/components/ui/skeleton';
 import { Textarea, TextareaInput } from '~/components/ui/textarea';
 import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
 import { Text } from '~/components/ui/text';
@@ -19,6 +24,8 @@ import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { Box } from '~/components/ui/box';
 import { Center } from '~/components/ui/center';
+import { Checkbox, CheckboxIcon, CheckboxIndicator } from '~/components/ui/checkbox';
+import { ListChecksIcon } from 'lucide-react-native';
 
 import {
   Select,
@@ -37,6 +44,13 @@ import { getBackendUrl } from '~/lib/backendUrl';
 import { AuthContext } from '~/lib/AuthContext';
 import { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
+
+import { useCallback } from 'react';
+import { ButtonIcon } from '~/components/ui/button';
+import { View } from '~/components/ui/view';
+import { useFocusEffect } from '@react-navigation/native';
+import { useTheme } from '~/components/ui/themeprovider/themeprovider';
+import { Heading } from '~/components/ui/heading';
 
 export interface InventoryItem {
   type: 'Syringe' | 'Spawn' | 'Bulk' | '';
@@ -695,4 +709,475 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ itemArg }) => {
       </Box>
     </>
   );
+};
+interface AddItemButtonProps {
+  title: string;
+  initial?: boolean;
+}
+
+interface ItemCardProps {
+  item: InventoryItem;
+  fromGrow: boolean;
+  onPress?: () => void;
+  isSelected?: boolean;
+  onCheckboxPress?: () => void;
+}
+
+const AddItemButton: React.FC<AddItemButtonProps> = ({ title, initial = false }) => {
+  const router = useRouter();
+
+  return (
+    <>
+      <Button
+        variant="solid"
+        className={
+          initial ? 'h-16 w-16 rounded-full' : 'absolute bottom-0 z-50 mb-4 h-12 w-11/12 rounded-md'
+        }
+        action="positive"
+        onPress={() => {
+          router.push('/inventory/new');
+        }}>
+        <ButtonIcon as={PlusIcon} className=" text-white" />
+      </Button>
+    </>
+  );
+};
+
+const ItemCheckbox: React.FC<{ isSelected: boolean; onPress: () => void }> = ({
+  isSelected,
+  onPress,
+}) => {
+  return (
+    <Checkbox className="ml-auto" value="enabled" isChecked={isSelected} onChange={onPress}>
+      <CheckboxIndicator>
+        <CheckboxIcon as={CheckIcon} />
+      </CheckboxIndicator>
+    </Checkbox>
+  );
+};
+
+// Skeleton loader for inventory items
+const ItemCardSkeleton: React.FC = () => {
+  return (
+    <Card className="w-11/12 rounded-xl bg-background-0">
+      <VStack space="md">
+        <HStack className="mb-2 justify-between">
+          <Skeleton className="h-6 w-[40%]" />
+          <Skeleton className="h-6 w-6 rounded-full" />
+        </HStack>
+        <HStack className="my-1 justify-between">
+          <Skeleton className="h-4 w-[20%]" />
+          <Skeleton className="h-4 w-[30%]" />
+        </HStack>
+        <HStack className="my-1 justify-between">
+          <Skeleton className="h-4 w-[25%]" />
+          <Skeleton className="h-4 w-[35%]" />
+        </HStack>
+        <HStack className="my-1 justify-between">
+          <Skeleton className="h-4 w-[22%]" />
+          <Skeleton className="h-4 w-[28%]" />
+        </HStack>
+      </VStack>
+    </Card>
+  );
+};
+
+const ItemCard: React.FC<ItemCardProps> = ({
+  item,
+  fromGrow,
+  onPress,
+  isSelected = false,
+  onCheckboxPress,
+}) => {
+  return (
+    <>
+      <Card className="w-11/12 rounded-xl bg-background-0">
+        <Pressable onPress={onPress}>
+          <HStack className="mb-2">
+            <Heading>{item.type}</Heading>
+            {fromGrow && onCheckboxPress && (
+              <ItemCheckbox isSelected={isSelected} onPress={onCheckboxPress} />
+            )}
+          </HStack>
+          <HStack className="my-1">
+            <Text>Cost</Text>
+            <Text className="ml-auto">${item.cost}</Text>
+          </HStack>
+          {item.expiration_date && (
+            <HStack className="my-1">
+              <Text>Expires</Text>
+              <Text className="ml-auto">{item.expiration_date.toDateString()}</Text>
+            </HStack>
+          )}
+          {item.type === 'Syringe' && (
+            <>
+              <HStack className="my-1">
+                <Text>Species</Text>
+                <Text className="ml-auto" italic={true}>
+                  {item.species}
+                </Text>
+              </HStack>
+              <HStack className="my-1">
+                <Text>Variant</Text>
+                <Text className="ml-auto">{item.variant}</Text>
+              </HStack>
+              <HStack className="my-1">
+                <Text>Volume</Text>
+                <Text className="ml-auto">{item.volume_ml} ml</Text>
+              </HStack>
+            </>
+          )}
+          {item.type === 'Spawn' && (
+            <>
+              <HStack className="my-1">
+                <Text>Type</Text>
+                <Text className="ml-auto">{item.spawn_type}</Text>
+              </HStack>
+              <HStack className="my-1">
+                <Text>Amount</Text>
+                <Text className="ml-auto">{item.amount_lbs} lbs</Text>
+              </HStack>
+            </>
+          )}
+          {item.type === 'Bulk' && (
+            <>
+              <HStack className="my-1">
+                <Text>Type</Text>
+                <Text className="ml-auto">{item.bulk_type}</Text>
+              </HStack>
+              <HStack className="my-1">
+                <Text>Amount</Text>
+                <Text className="ml-auto">{item.amount_lbs} lbs</Text>
+              </HStack>
+            </>
+          )}
+        </Pressable>
+      </Card>
+    </>
+  );
+};
+
+export interface InventoryProps {
+  growId?: number;
+}
+
+export const Inventory: React.FC<InventoryProps> = ({ growId }) => {
+  const { token } = useContext(AuthContext);
+  const router = useRouter();
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [selectedItemIds, setSelectedItemIds] = useState<number[]>([]);
+  const [searchText, setSearchText] = useState('');
+  const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  // Set up keyboard listeners to hide save button when keyboard is showing
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    // Clean up listeners
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
+  // Filter items based on search text
+  useEffect(() => {
+    // Don't update filteredItems when loading to avoid flicker
+    if (isLoading) return;
+
+    if (items.length > 0) {
+      if (searchText.trim() === '') {
+        setFilteredItems(items);
+      } else {
+        const searchLower = searchText.toLowerCase();
+        const filtered = items.filter((item) => {
+          return (
+            item.type.toLowerCase().includes(searchLower) ||
+            (item.source && item.source.toLowerCase().includes(searchLower)) ||
+            (item.notes && item.notes.toLowerCase().includes(searchLower)) ||
+            (item.species && item.species.toLowerCase().includes(searchLower)) ||
+            (item.variant && item.variant.toLowerCase().includes(searchLower)) ||
+            (item.spawn_type && item.spawn_type.toLowerCase().includes(searchLower)) ||
+            (item.bulk_type && item.bulk_type.toLowerCase().includes(searchLower))
+          );
+        });
+        setFilteredItems(filtered);
+      }
+    } else {
+      setFilteredItems([]);
+    }
+  }, [items, searchText, isLoading]);
+
+  // Fetch grow's inventory items if growId is provided - we'll handle this in useFocusEffect instead
+  // to coordinate loading states better
+
+  // Define the fetch function for all inventory items
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const url = getBackendUrl();
+
+      const response = await fetch(`${url}/inventory/all`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.replace('/login');
+        } else {
+          console.error('Failed to fetch inventory items:', response.statusText);
+        }
+        return;
+      }
+
+      const data: InventoryItem[] = await response.json();
+      const formattedItems = data.map((item) => ({
+        ...item,
+        source_date: new Date(item.source_date),
+        expiration_date: item.expiration_date ? new Date(item.expiration_date) : null,
+      }));
+
+      setItems(formattedItems);
+    } catch (error) {
+      console.error('Exception fetching inventory items:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token, router]);
+
+  // Toggle selection of an inventory item
+  const toggleItemSelection = (itemId: number) => {
+    setSelectedItemIds((prevSelectedIds) => {
+      if (prevSelectedIds.includes(itemId)) {
+        return prevSelectedIds.filter((id) => id !== itemId);
+      } else {
+        return [...prevSelectedIds, itemId];
+      }
+    });
+  };
+
+  // Save selected inventory items to the grow
+  const saveSelectionToGrow = async () => {
+    if (!growId || !token) {
+      return;
+    }
+
+    setIsUpdating(true);
+
+    try {
+      const url = `${getBackendUrl()}/grows/${growId}/inventory`;
+      const response = await fetch(url, {
+        method: 'POST', // The backend uses POST for this endpoint
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ inventory_item_ids: selectedItemIds }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.replace('/login');
+        } else {
+          console.error('Failed to update grow inventory:', response.statusText);
+        }
+      } else {
+        // Handle successful update
+        console.log('Grow inventory updated successfully');
+        router.replace(`/grows`);
+      }
+    } catch (error) {
+      console.error('Error updating grow inventory:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Combined fetch function to coordinate loading states
+  const fetchGrowInventory = async () => {
+    if (!growId || !token) return;
+
+    try {
+      // Get the full grow data which includes inventory items
+      const url = `${getBackendUrl()}/grows/${growId}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.replace('/login');
+        } else {
+          console.error('Failed to fetch grow data:', response.statusText);
+        }
+        return;
+      }
+
+      const growData = await response.json();
+      // Extract inventory items from the grow data (using the inventoryList field from GrowComplete schema)
+      if (growData && growData.inventoryList && growData.inventoryList.length > 0) {
+        const itemIds = growData.inventoryList.map((item: InventoryItem) => item.id);
+        setSelectedItemIds(itemIds);
+      }
+    } catch (error) {
+      console.error('Exception fetching grow inventory items:', error);
+    }
+  };
+
+  // Use useFocusEffect to refresh data when the screen comes into focus
+  // Coordinate both fetch operations to ensure loading state is handled properly
+  useFocusEffect(
+    useCallback(() => {
+      // Set loading state at the beginning
+      setIsLoading(true);
+
+      const loadData = async () => {
+        try {
+          // Execute both fetch operations if we have a growId
+          if (growId) {
+            await Promise.all([fetchData(), fetchGrowInventory()]);
+          } else {
+            await fetchData();
+          }
+        } catch (error) {
+          console.error('Error loading data:', error);
+        } finally {
+          // Only set loading to false after all operations are complete
+          setIsLoading(false);
+        }
+      };
+
+      loadData();
+
+      return () => {};
+    }, [fetchData, growId, token])
+  );
+
+  if (!growId) {
+    // If no growId, we are viewing this from the main inventory tab, so we show all
+    // items across all grows.
+
+    // Show loading state with skeletons
+    if (isLoading) {
+      return (
+        <VStack className="flex-1 items-center gap-4 bg-background-50 pt-4">
+          {[...Array(5)].map((_, index) => (
+            <ItemCardSkeleton key={index} />
+          ))}
+        </VStack>
+      );
+    }
+
+    return items.length == 0 ? (
+      <VStack className="flex-1 items-center justify-center gap-2 bg-background-50">
+        <AddItemButton title="Add Inventory" initial={true} />
+      </VStack>
+    ) : (
+      <VStack className="flex-1 items-center gap-4 bg-background-50">
+        <View className="mt-2" />
+        {items.map((item, index) => (
+          <ItemCard
+            key={index}
+            item={item}
+            onPress={() => {
+              router.push({ pathname: `/inventory/[id]/edit`, params: { id: item.id } });
+            }}
+            fromGrow={false}
+          />
+        ))}
+        <AddItemButton title="Add Inventory" />
+      </VStack>
+    );
+  } else {
+    // If we have a growId, display inventory with selection capability
+    return (
+      <VStack className="flex-1 items-center bg-background-50">
+        {/* Search input */}
+        <Input
+          variant="outline"
+          size="lg"
+          isDisabled={isLoading}
+          isInvalid={false}
+          isReadOnly={false}
+          className="my-4 w-11/12 rounded-lg bg-background-0">
+          <InputField
+            placeholder="Search inventory..."
+            onChangeText={setSearchText}
+            value={searchText}
+          />
+          <InputIcon as={SearchIcon} className="mr-3 h-6 w-6" />
+        </Input>
+
+        {/* Main content area */}
+        <ScrollView className="mt-4 w-full">
+          <VStack className="items-center gap-4 pb-16">
+            {/* Show loading state */}
+            {isLoading
+              ? // Loading skeletons
+                [...Array(5)].map((_, index) => <ItemCardSkeleton key={index} />)
+              : // Items list
+                filteredItems.map((item, index) => (
+                  <ItemCard
+                    key={index}
+                    item={item}
+                    fromGrow={true}
+                    isSelected={selectedItemIds.includes(item.id)}
+                    onCheckboxPress={() => toggleItemSelection(item.id)}
+                    onPress={() => {
+                      // Just toggle the checkbox when pressed in the grow inventory view
+                      toggleItemSelection(item.id);
+                    }}
+                  />
+                ))}
+          </VStack>
+        </ScrollView>
+
+        {/* Save selection button - only shown when items are selected and keyboard is hidden and not loading */}
+        {!isLoading &&
+          filteredItems.length > 0 &&
+          selectedItemIds.length > 0 &&
+          !keyboardVisible && (
+            <>
+              <View className="flex-1" />
+              <Button
+                variant="solid"
+                className="mb-4 h-12 w-11/12 rounded-md"
+                action="positive"
+                isDisabled={isUpdating}
+                onPress={saveSelectionToGrow}>
+                {isUpdating ? (
+                  <HStack className="space-x-2">
+                    <ButtonText className="text-lg font-bold text-white">Saving...</ButtonText>
+                    <Spinner size="small" color="white" />
+                  </HStack>
+                ) : (
+                  <HStack>
+                    <ButtonText className="text-lg font-bold text-white">
+                      Assign to Grow ({selectedItemIds.length})
+                    </ButtonText>
+                    <ButtonIcon as={ListChecksIcon} className="ml-2 mt-1 h-5 w-5 text-white" />
+                  </HStack>
+                )}
+              </Button>
+            </>
+          )}
+      </VStack>
+    );
+  }
 };

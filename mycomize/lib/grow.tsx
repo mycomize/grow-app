@@ -719,7 +719,7 @@ export const GrowForm: React.FC<GrowFormProps> = ({ growArg }) => {
                 </Textarea>
               </VStack>
             </Card>
-            <Center className="mt-4">
+            <Center className="mb-20 mt-4">
               <SaveGrowButton title="Save" newGrow={!growArg} />
               {growArg && <DeleteGrowButton title="Delete" />}
             </Center>
