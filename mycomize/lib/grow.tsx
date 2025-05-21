@@ -46,6 +46,7 @@ import { IoTGateway } from '~/lib/iot';
 
 export interface Grow {
   id: number;
+  name: string;
   species: string;
   variant: string;
   tek: string;
@@ -185,6 +186,7 @@ export const GrowForm: React.FC<GrowFormProps> = ({ growArg }) => {
   const [showHarvestDate, setShowHarvestDate] = useState(false);
 
   // Validation states
+  const [nameIsValid, setNameIsValid] = useState(true);
   const [growTekIsValid, setGrowTekIsValid] = useState(true);
   const [speciesIsValid, setSpeciesIsValid] = useState(true);
   const [variantIsValid, setVariantIsValid] = useState(true);
@@ -194,6 +196,7 @@ export const GrowForm: React.FC<GrowFormProps> = ({ growArg }) => {
   // Grow state
   const [grow, setGrow] = useState<Grow>({
     id: 0,
+    name: '',
     species: '',
     variant: '',
     tek: growTeks.MONOTUB,
@@ -223,6 +226,7 @@ export const GrowForm: React.FC<GrowFormProps> = ({ growArg }) => {
     if (growArg) {
       setGrow({
         id: growArg.id || 0,
+        name: growArg.name || '',
         species: growArg.species || '',
         variant: growArg.variant || '',
         tek: growArg.tek || growTeks.MONOTUB,
@@ -303,6 +307,11 @@ export const GrowForm: React.FC<GrowFormProps> = ({ growArg }) => {
     const handleSave = async () => {
       let validData = true;
 
+      if (!grow.name || grow.name.trim() === '') {
+        setNameIsValid(false);
+        validData = false;
+      }
+
       if (!grow.species || grow.species.trim() === '') {
         setSpeciesIsValid(false);
         validData = false;
@@ -348,6 +357,7 @@ export const GrowForm: React.FC<GrowFormProps> = ({ growArg }) => {
 
         // Convert to backend format
         const growData = {
+          name: grow.name,
           species: grow.species,
           variant: grow.variant,
           tek: grow.tek,
@@ -454,6 +464,27 @@ export const GrowForm: React.FC<GrowFormProps> = ({ growArg }) => {
         <VStack className="mt-4 flex-1 items-center">
           <ScrollView className="w-full bg-background-50">
             <Card className="mx-auto mb-4 w-11/12 gap-8 bg-background-50">
+              <VStack>
+                <Text className="text-bold text-lg text-typography-500">NAME</Text>
+                <Input
+                  isDisabled={false}
+                  isInvalid={!nameIsValid}
+                  isReadOnly={false}
+                  variant="underlined"
+                  size="xl"
+                  className="pl-3">
+                  <InputField
+                    autoCapitalize="none"
+                    inputMode="text"
+                    onChangeText={handleGrowChange('name')}
+                    value={grow.name}
+                  />
+                </Input>
+                {!nameIsValid && (
+                  <Text className="mt-2 text-error-600">Please enter a name for your grow</Text>
+                )}
+              </VStack>
+
               <FormControl>
                 <FormControlLabel>
                   <FormControlLabelText className="text-lg font-normal text-typography-500">

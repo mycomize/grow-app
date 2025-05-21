@@ -41,6 +41,7 @@ async def create_grow(
     """Create a new grow for the current user"""
     # Create the grow
     db_grow = Grow(
+        name=grow.name,
         species=grow.species,
         variant=grow.variant,
         inoculation_date=grow.inoculation_date,

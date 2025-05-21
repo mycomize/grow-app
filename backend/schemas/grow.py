@@ -5,6 +5,7 @@ from backend.schemas.iot import IoTGateway
 from backend.schemas.inventory import InventoryItem
 
 class GrowBase(BaseModel):
+    name: str
     species: str
     variant: str
     inoculation_date: Optional[date] = None
@@ -21,6 +22,12 @@ class GrowBase(BaseModel):
 
 class GrowCreate(GrowBase):
     """Schema for creating a new grow"""
+    @validator('name')
+    def name_must_not_be_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Name cannot be empty')
+        return v.strip()
+        
     @validator('species')
     def species_must_not_be_empty(cls, v):
         if not v or not v.strip():
@@ -96,6 +103,7 @@ class GrowComplete(Grow):
 
 class GrowUpdate(BaseModel):
     """Schema for updating a grow"""
+    name: Optional[str] = None
     species: Optional[str] = None
     variant: Optional[str] = None
     inoculation_date: Optional[date] = None
@@ -109,6 +117,12 @@ class GrowUpdate(BaseModel):
     harvest_date: Optional[date] = None
     harvest_dry_weight_grams: Optional[float] = None
     harvest_wet_weight_grams: Optional[float] = None
+    
+    @validator('name')
+    def name_must_not_be_empty(cls, v):
+        if v is not None and not v.strip():
+            raise ValueError('Name cannot be empty')
+        return v.strip() if v else v
     
     @validator('species')
     def species_must_not_be_empty(cls, v):

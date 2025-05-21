@@ -28,6 +28,7 @@ class Grow(Base):
     __tablename__ = "grows"
 
     id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(128), nullable=True)
     species = Column(String(64), index=True)
     variant = Column(String(64), index=True)
     inoculation_date = Column(Date)
