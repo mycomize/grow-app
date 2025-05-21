@@ -120,7 +120,7 @@ export default function SignUpScreen() {
             </Center>
             <FormControl className="mt-16 rounded-lg border border-outline-300 p-4">
               <VStack space="xl">
-                <Heading className="text-white">Sign Up</Heading>
+                <Heading className="text-typography-900">Sign Up</Heading>
                 <VStack space="xs">
                   <Text className="text-typography-700">Username</Text>
                   <Input className="min-w-[250px]">
