@@ -199,7 +199,7 @@ export default function GrowScreen() {
         if (response.status === 401) {
           router.replace('/login');
         } else {
-          console.error('Failed to fetch inventory grows:', response.statusText);
+          console.error('Failed to fetch grows:', response.statusText);
         }
         return;
       }
@@ -213,7 +213,7 @@ export default function GrowScreen() {
 
       setGrows(formattedGrows);
     } catch (error) {
-      console.error('Exception fetching inventory grows:', error);
+      console.error('Exception fetching grows:', error);
     }
   }, [token, router]);
 

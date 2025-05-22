@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { CircuitBoard, User, Package, Flower, House } from 'lucide-react-native';
+import { CircuitBoard, User, Shrub } from 'lucide-react-native';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
 
 export default function TabLayout() {
@@ -33,28 +33,19 @@ export default function TabLayout() {
         tabBarInactiveTintColor,
         tabBarStyle,
         tabBarHideOnKeyboard: true,
-      }}>
+      }}
+      initialRouteName="grows">
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <House color={color} />,
-          headerShown: false,
+          href: null,
         }}
       />
       <Tabs.Screen
         name="grows"
         options={{
           title: 'Grows',
-          tabBarIcon: ({ color }) => <Flower color={color} />,
-          headerShown: false,
-        }}
-      />
-      <Tabs.Screen
-        name="inventory"
-        options={{
-          title: 'Inventory',
-          tabBarIcon: ({ color }) => <Package color={color} />,
+          tabBarIcon: ({ color }) => <Shrub color={color} />,
           headerShown: false,
         }}
       />

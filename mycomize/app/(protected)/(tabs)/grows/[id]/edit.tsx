@@ -9,7 +9,6 @@ import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
 import { Heading } from '~/components/ui/heading';
 import { Box } from '~/components/ui/box';
-import { Inventory } from '~/lib/inventory';
 import { ScrollView } from '~/components/ui/scroll-view';
 
 export default function EditGrowScreen() {
@@ -25,7 +24,7 @@ export default function EditGrowScreen() {
       <HStack className="flex w-full flex-row justify-around bg-background-50 pb-4 pt-6">
         <Pressable
           className={
-            activeTab === 'Grow Details' ? 'w-1/3 border-b-2 border-b-success-500' : 'w-1/3'
+            activeTab === 'Grow Details' ? 'w-1/2 border-b-2 border-b-success-500' : 'w-1/2'
           }
           onPress={() => {
             setActiveTab('Grow Details');
@@ -40,22 +39,8 @@ export default function EditGrowScreen() {
           </Text>
         </Pressable>
         <Pressable
-          className={activeTab === 'Inventory' ? 'w-1/3 border-b-2 border-b-success-500' : 'w-1/3'}
-          onPress={() => {
-            setActiveTab('Inventory');
-          }}>
-          <Text
-            className={
-              activeTab === 'Inventory'
-                ? 'mb-3 text-center text-lg font-bold text-typography-900'
-                : 'mb-3 text-center text-lg text-typography-900'
-            }>
-            Inventory
-          </Text>
-        </Pressable>
-        <Pressable
           className={
-            activeTab === 'IoT Gateway' ? 'w-1/3 border-b-2 border-b-success-500' : 'w-1/3'
+            activeTab === 'IoT Gateway' ? 'w-1/2 border-b-2 border-b-success-500' : 'w-1/2'
           }
           onPress={() => {
             setActiveTab('IoT Gateway');
@@ -117,11 +102,6 @@ export default function EditGrowScreen() {
         <ScrollView className="h-full w-full">
           <TabBar />
           {activeTab === 'Grow Details' && <GrowForm growArg={grow} />}
-          {activeTab === 'Inventory' && (
-            <>
-              <Inventory growId={Number(id)} />
-            </>
-          )}
         </ScrollView>
       </Box>
     </>

@@ -39,7 +39,6 @@ async def create_inventory_item(
         expiration_date=item.expiration_date,
         cost=item.cost,
         notes=item.notes,
-        grow_id=item.grow_id,
         # Type-specific fields - only set if relevant
         syringe_type=item.syringe_type if item.type == "Syringe" else None,
         volume_ml=item.volume_ml if item.type == "Syringe" else None,
@@ -48,7 +47,7 @@ async def create_inventory_item(
         spawn_type=item.spawn_type if item.type == "Spawn" else None,
         bulk_type=item.bulk_type if item.type == "Bulk" else None,
         amount_lbs=item.amount_lbs if item.type in ["Spawn", "Bulk"] else None,
-        in_use=item.grow_id is not None,  # Set in_use based on grow_id
+        in_use=False,
         user_id=current_user.id
     )
     
@@ -62,16 +61,12 @@ async def create_inventory_item(
 async def read_inventory_items(
     skip: int = 0, 
     limit: int = 100, 
-    available_only: bool = False,
     item_type: str = None,
     db: Session = Depends(get_grow_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get inventory items for the current user with optional type filtering"""
     query = db.query(InventoryItem).filter(InventoryItem.user_id == current_user.id)
-    
-    if available_only:
-        query = query.filter(InventoryItem.in_use == False)
     
     if item_type:
         query = query.filter(InventoryItem.type == item_type)
@@ -112,22 +107,10 @@ async def update_inventory_item(
     if db_item is None:
         raise HTTPException(status_code=404, detail="Inventory item not found")
     
-    # Prevent updating items that are in use, except for notes and grow_id
-    allowed_fields_when_in_use = ['notes', 'grow_id']
-    if db_item.in_use and any(field not in allowed_fields_when_in_use for field in item_update.dict(exclude_unset=True)):
-        raise HTTPException(
-            status_code=400, 
-            detail="Cannot update an item that is in use, except for notes and grow_id"
-        )
-    
     # Update item attributes
     update_data = item_update.dict(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_item, key, value)
-    
-    # Update in_use flag based on grow_id
-    if 'grow_id' in update_data:
-        db_item.in_use = db_item.grow_id is not None
     
     db.commit()
     db.refresh(db_item)
@@ -148,13 +131,6 @@ async def delete_inventory_item(
     if db_item is None:
         raise HTTPException(status_code=404, detail="Inventory item not found")
     
-    # Prevent deleting items that are in use
-    if db_item.in_use:
-        raise HTTPException(
-            status_code=400, 
-            detail="Cannot delete an item that is in use by a grow"
-        )
-    
     db.delete(db_item)
     db.commit()
     return {"detail": "Inventory item deleted"}
@@ -165,39 +141,11 @@ async def delete_inventory_item(
 async def read_all_items(
     skip: int = 0,
     limit: int = 100,
-    available_only: bool = False,
     db: Session = Depends(get_grow_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all inventory items for the current user"""
     query = db.query(InventoryItem).filter(InventoryItem.user_id == current_user.id)
     
-    if available_only:
-        query = query.filter(InventoryItem.in_use == False)
-    
     items = query.offset(skip).limit(limit).all()
     return items
-
-@router.get("/available", response_model=dict)
-async def get_available_inventory(
-    db: Session = Depends(get_grow_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    """Get all available inventory items for creating a grow, categorized by type"""
-    query = db.query(InventoryItem).filter(
-        InventoryItem.user_id == current_user.id,
-        InventoryItem.in_use == False
-    )
-    
-    all_items = query.all()
-    
-    # Categorize items by type
-    syringes = [item for item in all_items if item.type == "Syringe"]
-    spawns = [item for item in all_items if item.type == "Spawn"]
-    bulks = [item for item in all_items if item.type == "Bulk"]
-    
-    return {
-        "syringes": syringes,
-        "spawns": spawns,
-        "bulks": bulks
-    }

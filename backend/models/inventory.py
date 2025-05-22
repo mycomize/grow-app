@@ -29,9 +29,6 @@ class InventoryItem(Base):
     in_use = Column(Boolean, default=False)
     user_id = Column(Integer, ForeignKey("users.id"))
     
-    # Foreign key to grow (nullable, as inventory items may exist without being assigned to a grow)
-    grow_id = Column(Integer, ForeignKey("grows.id"), nullable=True)
-    
     # Syringe-specific fields
     syringe_type = Column(String(64), nullable=True)
     volume_ml = Column(Float, nullable=True)
@@ -50,24 +47,8 @@ class InventoryItem(Base):
     # Relationship with User (back reference)
     user = relationship("User", back_populates="inventory_items")
     
-    # Relationship with Grow (back reference)
-    grow = relationship("Grow", back_populates="inventory_items")
-    
     # Helper method to check if the item is available for use in a grow
     @property
     def is_available(self):
         """Check if the inventory item is available to be used in a grow"""
         return not self.in_use
-
-# Event listener to mark inventory items as "in use" when associated with a grow
-@event.listens_for(InventoryItem, 'after_update')
-def mark_inventory_in_use_after_update(mapper, connection, target):
-    """Mark inventory item as in-use when associated with a grow"""
-    if target.grow_id is not None:
-        target.in_use = True
-
-@event.listens_for(InventoryItem, 'after_insert')
-def mark_inventory_in_use_after_insert(mapper, connection, target):
-    """Mark inventory item as in-use when associated with a grow"""
-    if target.grow_id is not None:
-        target.in_use = True

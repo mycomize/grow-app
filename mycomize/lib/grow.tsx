@@ -41,7 +41,6 @@ import { AuthContext } from '~/lib/AuthContext';
 import { useContext, useEffect, useState } from 'react';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import { useRouter } from 'expo-router';
-import { InventoryItem } from '~/lib/inventory';
 import { IoTGateway } from '~/lib/iot';
 
 export interface Grow {
@@ -59,7 +58,6 @@ export interface Grow {
   harvestDryWeight: number;
   harvestWetWeight: number;
   age: number;
-  inventoryList: InventoryItem[];
   iotGatewayList: IoTGateway[];
 }
 
@@ -209,7 +207,6 @@ export const GrowForm: React.FC<GrowFormProps> = ({ growArg }) => {
     harvestDryWeight: 0,
     harvestWetWeight: 0,
     age: 0,
-    inventoryList: [],
     iotGatewayList: [],
   });
 
@@ -239,7 +236,6 @@ export const GrowForm: React.FC<GrowFormProps> = ({ growArg }) => {
         harvestDryWeight: growArg.harvestDryWeight || 0,
         harvestWetWeight: growArg.harvestWetWeight || 0,
         age: growArg.age || 0,
-        inventoryList: growArg.inventoryList || [],
         iotGatewayList: growArg.iotGatewayList || [],
       });
     }

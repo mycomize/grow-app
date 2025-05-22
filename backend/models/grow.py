@@ -49,8 +49,5 @@ class Grow(Base):
     # Relationship with User (back reference)
     user = relationship("User", back_populates="grows")
     
-    # One-to-many relationship with inventory items (inventory items have a foreign key to grow)
-    inventory_items = relationship("InventoryItem", back_populates="grow", cascade="all")
-    
     # One-to-many relationship with IoT gateways
     iot_gateways = relationship("IoTGateway", back_populates="grow", cascade="all, delete-orphan")

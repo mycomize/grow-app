@@ -2,7 +2,6 @@ from pydantic import BaseModel, Field, validator
 from typing import Optional, List
 from datetime import date, datetime
 from backend.schemas.iot import IoTGateway
-from backend.schemas.inventory import InventoryItem
 
 class GrowBase(BaseModel):
     name: str
@@ -89,16 +88,10 @@ class GrowWithIoTGateways(Grow):
 class GrowComplete(Grow):
     """Schema for returning a complete grow with all related data"""
     iotGatewayList: List[IoTGateway] = []
-    inventoryList: List[InventoryItem] = []
     
     @validator("iotGatewayList", always=True)
     def set_iot_gateway_list(cls, v, values):
         from_values = values.get("iot_gateways")
-        return from_values if from_values is not None else v
-    
-    @validator("inventoryList", always=True)
-    def set_inventory_list(cls, v, values):
-        from_values = values.get("inventory_items")
         return from_values if from_values is not None else v
 
 class GrowUpdate(BaseModel):

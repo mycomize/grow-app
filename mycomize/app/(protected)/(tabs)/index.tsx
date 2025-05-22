@@ -1,13 +1,6 @@
-import { Stack } from 'expo-router';
+import { Redirect } from 'expo-router';
 
-export default function Home() {
-  return (
-    <>
-      <Stack.Screen options={{ title: 'Home' }} />
-    </>
-  );
+export default function Index() {
+  // This will immediately redirect to the grows tab
+  return <Redirect href="/grows" />;
 }
-
-const styles = {
-  container: 'flex-1 p-24',
-};
