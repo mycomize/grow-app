@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
-import { CircuitBoard, User, Shrub, ThumbsUp } from 'lucide-react-native';
+import { CircuitBoard, User, Shrub } from 'lucide-react-native';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
+import MushroomIcon from '~/components/icons/MushroomIcon';
 
 export default function TabLayout() {
   const { theme } = useTheme();
@@ -24,6 +25,8 @@ export default function TabLayout() {
 
   const headerTintColor = theme === 'dark' ? '#ffffff' : '#000000';
 
+  const iconColor = theme === 'dark' ? '#ffffff' : '#000000';
+
   return (
     <Tabs
       screenOptions={{
@@ -41,7 +44,7 @@ export default function TabLayout() {
         options={{
           title: 'Grows',
           tabBarLabel: 'Grows',
-          tabBarIcon: ({ color, size }) => <Shrub size={size} color={color} />,
+          tabBarIcon: ({ color }) => <MushroomIcon height={24} width={24} color={color} />,
           headerShown: false,
         }}
       />

@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, Dimensions, View, Animated, FlatList } from 'react-native';
-import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Box } from '~/components/ui/box';
@@ -10,7 +9,8 @@ import { Card } from '~/components/ui/card';
 import { Text } from '~/components/ui/text';
 import { Center } from '~/components/ui/center';
 import { Spinner } from '~/components/ui/spinner';
-import { Check, ArrowRight } from 'lucide-react-native';
+import { Check, ArrowLeft, ArrowRight } from 'lucide-react-native';
+import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 
 import { GrowTimeline, GrowWizardStep } from '~/components/grow/GrowTimeline';
 import { GrowWizardProvider, useGrowWizard } from '~/lib/GrowWizardContext';
@@ -28,8 +28,7 @@ const { width: screenWidth } = Dimensions.get('window');
 // This is the container component that renders the appropriate step
 const GrowWizardStepContainer: React.FC = () => {
   const { step, id } = useLocalSearchParams<{ step: GrowWizardStep; id: string }>();
-  const { isLoading, error, saveGrow, finalSaveGrow } = useGrowWizard();
-  const router = useRouter();
+  const { isLoading, error, finalSaveGrow } = useGrowWizard();
 
   // Steps configuration
   const steps: GrowWizardStep[] = ['basics', 'syringe', 'spawn', 'bulk', 'fruiting', 'harvest'];
@@ -52,9 +51,6 @@ const GrowWizardStepContainer: React.FC = () => {
   const currentStep = steps[currentIndex];
   const nextStep = currentIndex < steps.length - 1 ? steps[currentIndex + 1] : null;
   const prevStep = currentIndex > 0 ? steps[currentIndex - 1] : null;
-
-  // We don't update the URL anymore to avoid re-renders
-  // The URL will stay at the initial step but the UI will scroll smoothly
 
   // Scroll to index
   const scrollToIndex = (index: number) => {
@@ -98,6 +94,8 @@ const GrowWizardStepContainer: React.FC = () => {
     );
   }
 
+  const { theme } = useTheme();
+
   // Render a single step
   const renderStep = ({ item }: { item: { key: string; component: React.ReactNode } }) => (
     <View style={{ width: screenWidth, backgroundColor: 'transparent' }}>
@@ -119,7 +117,15 @@ const GrowWizardStepContainer: React.FC = () => {
                 className="w-5/12 rounded-md border-success-300"
                 onPress={handleBack}
                 disabled={isScrolling}>
-                <ButtonText>Back</ButtonText>
+                <ButtonIcon
+                  as={ArrowLeft}
+                  className={
+                    theme === 'dark' ? 'text-typography-900' : 'text-success-300'
+                  }></ButtonIcon>
+                <ButtonText
+                  className={theme === 'dark' ? 'text-typography-900' : 'text-success-300'}>
+                  Back
+                </ButtonText>
               </Button>
             ) : (
               <Box className="w-5/12" />

@@ -5,7 +5,7 @@ import { Input, InputField, InputIcon } from '~/components/ui/input';
 import { Text } from '~/components/ui/text';
 import { Pressable } from '~/components/ui/pressable';
 import { Icon } from '~/components/ui/icon';
-import { CalendarDays, DollarSign, Droplets } from 'lucide-react-native';
+import { CalendarDays, DollarSign, Droplets, Syringe } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useGrowWizard } from '~/lib/GrowWizardContext';
 
@@ -33,7 +33,10 @@ export const SyringeStep: React.FC = () => {
 
   return (
     <VStack space="md">
-      <Text className="text-xl font-bold">Syringe Information</Text>
+      <HStack className="items-center justify-between">
+        <Text className="text-xl font-bold">Syringe</Text>
+        <Icon as={Syringe} size="xl" className="text-typography-400" />
+      </HStack>
 
       <VStack space="xs">
         <Text className="text-bold text-lg text-typography-500">Vendor</Text>
@@ -44,6 +47,7 @@ export const SyringeStep: React.FC = () => {
             placeholder="Enter vendor name"
             value={syringe.vendor}
             onChangeText={(value) => setSyringe({ vendor: value })}
+            className="placeholder:text-typography-200"
           />
         </Input>
       </VStack>
@@ -57,6 +61,7 @@ export const SyringeStep: React.FC = () => {
             placeholder="Enter species"
             value={syringe.species}
             onChangeText={(value) => setSyringe({ species: value })}
+            className="placeholder:text-typography-200"
           />
         </Input>
       </VStack>
@@ -70,6 +75,7 @@ export const SyringeStep: React.FC = () => {
             placeholder="Enter strain"
             value={syringe.strain}
             onChangeText={(value) => setSyringe({ strain: value })}
+            className="placeholder:text-typography-200"
           />
         </Input>
       </VStack>
@@ -83,6 +89,7 @@ export const SyringeStep: React.FC = () => {
             placeholder="Enter volume in mL"
             value={syringe.volumeMl ? syringe.volumeMl.toString() : ''}
             onChangeText={(value) => setSyringe({ volumeMl: parseFloat(value) || 0 })}
+            className="placeholder:text-typography-200"
           />
           <InputIcon as={Droplets} size="xl" className="ml-auto mr-4" />
         </Input>
@@ -97,6 +104,7 @@ export const SyringeStep: React.FC = () => {
             placeholder="Enter cost"
             value={syringe.cost ? syringe.cost.toString() : ''}
             onChangeText={(value) => setSyringe({ cost: parseFloat(value) || 0 })}
+            className="placeholder:text-typography-200"
           />
           <InputIcon as={DollarSign} size="xl" className="ml-auto mr-4" />
         </Input>
@@ -106,7 +114,7 @@ export const SyringeStep: React.FC = () => {
         <Text className="text-bold text-lg text-typography-500">Created Date</Text>
         <HStack className="flex flex-row items-center justify-between">
           <Input className="mt-2 w-11/12" isDisabled={false} isInvalid={false} isReadOnly={false}>
-            <InputField>
+            <InputField className={!syringe.createdAt ? 'text-typography-200' : ''}>
               {syringe.createdAt ? syringe.createdAt.toDateString() : 'Select date'}
             </InputField>
           </Input>
@@ -127,7 +135,7 @@ export const SyringeStep: React.FC = () => {
         <Text className="text-bold text-lg text-typography-500">Expiration Date</Text>
         <HStack className="flex flex-row items-center justify-between">
           <Input className="mt-2 w-11/12" isDisabled={false} isInvalid={false} isReadOnly={false}>
-            <InputField>
+            <InputField className={!syringe.expirationDate ? 'text-typography-200' : ''}>
               {syringe.expirationDate ? syringe.expirationDate.toDateString() : 'Select date'}
             </InputField>
           </Input>

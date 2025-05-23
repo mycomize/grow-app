@@ -7,6 +7,7 @@ import { Pressable } from '~/components/ui/pressable';
 import { Icon } from '~/components/ui/icon';
 import { CalendarDays } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import MushroomIcon from '~/components/icons/MushroomIcon';
 import {
   Select,
   SelectTrigger,
@@ -56,13 +57,16 @@ export const FruitingStep: React.FC = () => {
 
   return (
     <VStack space="md">
-      <Text className="text-xl font-bold">Fruiting Information</Text>
+      <HStack className="items-center justify-between">
+        <Text className="text-xl font-bold">Fruiting</Text>
+        <MushroomIcon height={24} width={24} color="#9ca3af" strokeWidth={2} />
+      </HStack>
 
       <VStack space="xs">
         <Text className="text-bold text-lg text-typography-500">Fruiting Start Date</Text>
         <HStack className="flex flex-row items-center justify-between">
           <Input className="mt-2 w-11/12" isDisabled={false} isInvalid={false} isReadOnly={false}>
-            <InputField>
+            <InputField className={!fruiting.startDate ? 'text-typography-200' : ''}>
               {fruiting.startDate ? fruiting.startDate.toDateString() : 'Select date'}
             </InputField>
           </Input>
@@ -83,7 +87,7 @@ export const FruitingStep: React.FC = () => {
         <Text className="text-bold text-lg text-typography-500">Pin Date</Text>
         <HStack className="flex flex-row items-center justify-between">
           <Input className="mt-2 w-11/12" isDisabled={false} isInvalid={false} isReadOnly={false}>
-            <InputField>
+            <InputField className={!fruiting.pinDate ? 'text-typography-200' : ''}>
               {fruiting.pinDate ? fruiting.pinDate.toDateString() : 'Select date'}
             </InputField>
           </Input>
@@ -107,7 +111,7 @@ export const FruitingStep: React.FC = () => {
           onValueChange={(value) => setFruiting({ mistFrequency: value })}>
           <SelectTrigger variant="underlined" size="xl">
             <SelectInput
-              className="ml-3"
+              className="ml-3 placeholder:text-typography-200"
               value={fruiting.mistFrequency}
               placeholder="Select frequency"
             />
@@ -134,7 +138,7 @@ export const FruitingStep: React.FC = () => {
           onValueChange={(value) => setFruiting({ fanFrequency: value })}>
           <SelectTrigger variant="underlined" size="xl">
             <SelectInput
-              className="ml-3"
+              className="ml-3 placeholder:text-typography-200"
               value={fruiting.fanFrequency}
               placeholder="Select frequency"
             />

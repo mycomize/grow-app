@@ -7,7 +7,15 @@ import { Pressable } from '~/components/ui/pressable';
 import { Icon } from '~/components/ui/icon';
 import { Button, ButtonIcon, ButtonText } from '~/components/ui/button';
 import { Card } from '~/components/ui/card';
-import { CalendarDays, DollarSign, Weight, Plus, Trash2, Zap } from 'lucide-react-native';
+import {
+  CalendarDays,
+  DollarSign,
+  Weight,
+  Plus,
+  Trash2,
+  Zap,
+  ShoppingBasket,
+} from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   Select,
@@ -45,13 +53,16 @@ export const HarvestStep: React.FC = () => {
 
   return (
     <VStack space="md">
-      <Text className="text-xl font-bold">Harvest Information</Text>
+      <HStack className="items-center justify-between">
+        <Text className="text-xl font-bold">Harvest</Text>
+        <Icon as={ShoppingBasket} size="xl" className="text-typography-400" />
+      </HStack>
       <Text className="text-sm text-gray-500">
         Record each flush as it becomes available. You can add multiple flushes over time.
       </Text>
 
       {flushes.map((flush, index) => (
-        <Card key={flush.id} className="mb-4 p-4">
+        <Card key={flush.id} className="mb-4 gap-5 p-4">
           <HStack className="mb-2 justify-between">
             <Text className="text-lg font-bold">Flush #{index + 1}</Text>
             {flushes.length > 1 && (
@@ -69,7 +80,7 @@ export const HarvestStep: React.FC = () => {
                 isDisabled={false}
                 isInvalid={false}
                 isReadOnly={false}>
-                <InputField>
+                <InputField className={!flush.harvestDate ? 'text-typography-200' : ''}>
                   {flush.harvestDate ? flush.harvestDate.toDateString() : 'Select date'}
                 </InputField>
               </Input>
@@ -93,6 +104,7 @@ export const HarvestStep: React.FC = () => {
                 autoCapitalize="none"
                 inputMode="decimal"
                 placeholder="Enter wet weight in grams"
+                className="placeholder:text-typography-200"
                 value={flush.wetWeightG ? flush.wetWeightG.toString() : ''}
                 onChangeText={(value) =>
                   updateFlush(flush.id, { wetWeightG: parseFloat(value) || 0 })
@@ -109,6 +121,7 @@ export const HarvestStep: React.FC = () => {
                 autoCapitalize="none"
                 inputMode="decimal"
                 placeholder="Enter dry weight in grams"
+                className="placeholder:text-typography-200"
                 value={flush.dryWeightG ? flush.dryWeightG.toString() : ''}
                 onChangeText={(value) =>
                   updateFlush(flush.id, { dryWeightG: parseFloat(value) || 0 })
@@ -124,7 +137,11 @@ export const HarvestStep: React.FC = () => {
               selectedValue={flush.potency}
               onValueChange={(value) => updateFlush(flush.id, { potency: value })}>
               <SelectTrigger variant="underlined" size="xl">
-                <SelectInput className="ml-3" value={flush.potency} placeholder="Select potency" />
+                <SelectInput
+                  className="ml-3 placeholder:text-typography-200"
+                  value={flush.potency}
+                  placeholder="Select potency"
+                />
                 <SelectIcon className="ml-auto mr-3" as={ChevronDown}></SelectIcon>
               </SelectTrigger>
               <SelectPortal>
@@ -143,15 +160,15 @@ export const HarvestStep: React.FC = () => {
         </Card>
       ))}
 
-      <Button variant="outline" className="mt-2" onPress={addFlush}>
+      <Button variant="outline" className="mt-2 border-success-400" onPress={addFlush}>
         <HStack space="xs" className="items-center">
           <ButtonIcon as={Plus} />
-          <ButtonText>Add Another Flush</ButtonText>
+          <ButtonText>Add Flush</ButtonText>
         </HStack>
       </Button>
 
       {flushes.length > 0 && (
-        <VStack className="mt-4 rounded-md bg-primary-50 p-4">
+        <VStack className="mt-4 gap-1 rounded-md bg-background-100 p-4">
           <HStack className="justify-between">
             <Text className="font-bold">Total Wet Weight:</Text>
             <Text>

@@ -5,7 +5,7 @@ import { Input, InputField, InputIcon } from '~/components/ui/input';
 import { Text } from '~/components/ui/text';
 import { Pressable } from '~/components/ui/pressable';
 import { Icon } from '~/components/ui/icon';
-import { CalendarDays, DollarSign, Weight } from 'lucide-react-native';
+import { CalendarDays, DollarSign, Weight, Wheat } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useGrowWizard } from '~/lib/GrowWizardContext';
 
@@ -25,7 +25,10 @@ export const SpawnStep: React.FC = () => {
 
   return (
     <VStack space="md">
-      <Text className="text-xl font-bold">Spawn Information</Text>
+      <HStack className="items-center justify-between">
+        <Text className="text-xl font-bold">Spawn</Text>
+        <Icon as={Wheat} size="xl" className="text-typography-400" />
+      </HStack>
 
       <VStack space="xs">
         <Text className="text-bold text-lg text-typography-500">Type</Text>
@@ -36,6 +39,7 @@ export const SpawnStep: React.FC = () => {
             placeholder="Enter spawn type (e.g., Rye Grain)"
             value={spawn.type || ''}
             onChangeText={(value) => setSpawn({ type: value })}
+            className="placeholder:text-typography-200"
           />
         </Input>
       </VStack>
@@ -49,6 +53,7 @@ export const SpawnStep: React.FC = () => {
             placeholder="Enter weight in pounds"
             value={spawn.weightLbs ? spawn.weightLbs.toString() : ''}
             onChangeText={(value) => setSpawn({ weightLbs: parseFloat(value) || 0 })}
+            className="placeholder:text-typography-200"
           />
           <InputIcon as={Weight} size="xl" className="ml-auto mr-4" />
         </Input>
@@ -63,6 +68,7 @@ export const SpawnStep: React.FC = () => {
             placeholder="Enter cost"
             value={spawn.cost ? spawn.cost.toString() : ''}
             onChangeText={(value) => setSpawn({ cost: parseFloat(value) || 0 })}
+            className="placeholder:text-typography-200"
           />
           <InputIcon as={DollarSign} size="xl" className="ml-auto mr-4" />
         </Input>
@@ -77,6 +83,7 @@ export const SpawnStep: React.FC = () => {
             placeholder="Enter vendor name"
             value={spawn.vendor}
             onChangeText={(value) => setSpawn({ vendor: value })}
+            className="placeholder:text-typography-200"
           />
         </Input>
       </VStack>
@@ -85,7 +92,7 @@ export const SpawnStep: React.FC = () => {
         <Text className="text-bold text-lg text-typography-500">Inoculation Date</Text>
         <HStack className="flex flex-row items-center justify-between">
           <Input className="mt-2 w-11/12" isDisabled={false} isInvalid={false} isReadOnly={false}>
-            <InputField>
+            <InputField className={!spawn.inoculationDate ? 'text-typography-200' : ''}>
               {spawn.inoculationDate ? spawn.inoculationDate.toDateString() : 'Select date'}
             </InputField>
           </Input>

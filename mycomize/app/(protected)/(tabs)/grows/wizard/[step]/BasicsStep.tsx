@@ -1,8 +1,11 @@
 import React from 'react';
 import { VStack } from '~/components/ui/vstack';
+import { HStack } from '~/components/ui/hstack';
 import { Input, InputField } from '~/components/ui/input';
 import { Textarea, TextareaInput } from '~/components/ui/textarea';
 import { Text } from '~/components/ui/text';
+import { Icon } from '~/components/ui/icon';
+import { FileText } from 'lucide-react-native';
 import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
 import {
   Select,
@@ -25,7 +28,10 @@ export const BasicsStep: React.FC = () => {
 
   return (
     <VStack space="md">
-      <Text className="text-xl font-bold">Basic Information</Text>
+      <HStack className="items-center justify-between">
+        <Text className="text-xl font-bold">Basics</Text>
+        <Icon as={FileText} size="xl" className="text-typography-400" />
+      </HStack>
 
       <VStack space="xs">
         <Text className="text-bold text-lg text-typography-500">Name</Text>
@@ -36,6 +42,7 @@ export const BasicsStep: React.FC = () => {
             placeholder="Enter grow name"
             value={name}
             onChangeText={setName}
+            className="placeholder:text-typography-200"
           />
         </Input>
       </VStack>
@@ -68,7 +75,7 @@ export const BasicsStep: React.FC = () => {
         <Textarea className="mt-2">
           <TextareaInput
             textAlignVertical="top"
-            className="mx-1"
+            className="mx-1 placeholder:text-typography-200"
             placeholder="Enter any notes about this grow"
             value={notes}
             onChangeText={setNotes}
