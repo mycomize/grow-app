@@ -4,9 +4,9 @@ from datetime import date, datetime
 from backend.schemas.iot import IoTGateway
 
 class GrowBase(BaseModel):
-    name: str
-    species: str
-    variant: str
+    name: Optional[str] = "New Grow"  # Default name instead of required
+    species: Optional[str] = "Unknown"  # Default species instead of required
+    variant: Optional[str] = "Unknown"  # Default variant instead of required
     inoculation_date: Optional[date] = None
     tek: str = "Monotub"  # Default to monotub tek
     stage: str = "spawn_colonization"  # Default to spawn colonization
@@ -21,23 +21,8 @@ class GrowBase(BaseModel):
 
 class GrowCreate(GrowBase):
     """Schema for creating a new grow"""
-    @validator('name')
-    def name_must_not_be_empty(cls, v):
-        if not v or not v.strip():
-            raise ValueError('Name cannot be empty')
-        return v.strip()
-        
-    @validator('species')
-    def species_must_not_be_empty(cls, v):
-        if not v or not v.strip():
-            raise ValueError('Species cannot be empty')
-        return v.strip()
-    
-    @validator('variant')
-    def variant_must_not_be_empty(cls, v):
-        if not v or not v.strip():
-            raise ValueError('Variant cannot be empty')
-        return v.strip()
+    # Removed strict validators to allow partially completed grows
+    # during the wizard flow
 
 class Grow(GrowBase):
     """Schema for returning a grow"""
