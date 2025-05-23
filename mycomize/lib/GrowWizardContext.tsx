@@ -73,43 +73,44 @@ interface GrowWizardContextType {
   // Functions
   isLoading: boolean;
   error: string | null;
-  saveGrow: (nextStep?: string) => Promise<void>;
+  saveGrow: () => Promise<void>;
+  finalSaveGrow: () => Promise<void>;
   deleteGrow: () => Promise<void>;
   calculateTotalCost: () => number;
 }
 
 const defaultSyringeData: SyringeData = {
   vendor: '',
-  volumeMl: 10,
+  volumeMl: 0,
   cost: 0,
   species: '',
   strain: '',
-  createdAt: new Date(),
+  createdAt: null,
   expirationDate: null,
 };
 
 const defaultSpawnData: SpawnData = {
-  type: 'Rye Grain',
-  weightLbs: 1,
+  type: '',
+  weightLbs: 0,
   cost: 0,
   vendor: '',
-  inoculationDate: new Date(),
+  inoculationDate: null,
 };
 
 const defaultBulkData: BulkData = {
-  type: 'Coco Coir',
-  weightLbs: 1,
+  type: '',
+  weightLbs: 0,
   cost: 0,
   vendor: '',
-  createdAt: new Date(),
+  createdAt: null,
   expirationDate: null,
 };
 
 const defaultFruitingData: FruitingData = {
   startDate: null,
   pinDate: null,
-  mistFrequency: 'Twice daily',
-  fanFrequency: 'Twice daily',
+  mistFrequency: '',
+  fanFrequency: '',
 };
 
 // Generate a unique ID for harvest flushes
@@ -120,7 +121,7 @@ const defaultHarvestFlush: HarvestFlush = {
   harvestDate: null,
   wetWeightG: 0,
   dryWeightG: 0,
-  potency: 'Medium',
+  potency: '',
 };
 
 // Create the context with a default undefined value
@@ -245,25 +246,76 @@ export const GrowWizardProvider: React.FC<{
     fetchGrow();
   }, [growId, token]);
 
-  // Save grow data
-  const saveGrow = async (nextStep?: string) => {
+  // Save grow data - only for existing grows being edited
+  const saveGrow = async () => {
+    if (!growId) return; // Only save if editing existing grow
+
     setIsLoading(true);
     setError(null);
 
     try {
-      // Build grow data for backend - with the updated backend schema, we can save partial data
+      // Build grow data for backend
       const growData = {
-        name: name || undefined, // Let backend use defaults if empty
+        name: name || undefined,
         tek,
         notes,
-        species: syringe.species || undefined, // Let backend use defaults if empty
-        variant: syringe.strain || undefined, // Let backend use defaults if empty
+        species: syringe.species || undefined,
+        variant: syringe.strain || undefined,
         cost: calculateTotalCost(),
         inoculation_date: spawn.inoculationDate?.toISOString().split('T')[0],
         harvest_date: flushes[0]?.harvestDate?.toISOString().split('T')[0] || null,
         harvest_dry_weight_grams: flushes.reduce((sum, flush) => sum + (flush.dryWeightG || 0), 0),
         harvest_wet_weight_grams: flushes.reduce((sum, flush) => sum + (flush.wetWeightG || 0), 0),
-        // Determine stage based on the furthest step that has data
+        stage: fruiting.startDate
+          ? growStages.FRUITING
+          : bulk.createdAt
+            ? growStages.BULK_COLONIZATION
+            : spawn.inoculationDate
+              ? growStages.SPAWN_COLONIZATION
+              : growStages.SPAWN_COLONIZATION,
+        status: growStatuses.GROWING,
+      };
+
+      const response = await fetch(`${getBackendUrl()}/grows/${growId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(growData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API Error:', errorData);
+        throw new Error(`Failed to update grow: ${response.status} ${response.statusText}`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      console.error('Error saving grow:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Final save grow data - called only on the last step
+  const finalSaveGrow = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Build grow data for backend
+      const growData = {
+        name: name || undefined,
+        tek,
+        notes,
+        species: syringe.species || undefined,
+        variant: syringe.strain || undefined,
+        cost: calculateTotalCost(),
+        inoculation_date: spawn.inoculationDate?.toISOString().split('T')[0],
+        harvest_date: flushes[0]?.harvestDate?.toISOString().split('T')[0] || null,
+        harvest_dry_weight_grams: flushes.reduce((sum, flush) => sum + (flush.dryWeightG || 0), 0),
+        harvest_wet_weight_grams: flushes.reduce((sum, flush) => sum + (flush.wetWeightG || 0), 0),
         stage: fruiting.startDate
           ? growStages.FRUITING
           : bulk.createdAt
@@ -296,18 +348,8 @@ export const GrowWizardProvider: React.FC<{
           throw new Error(`Failed to create grow: ${response.status} ${response.statusText}`);
         }
 
-        const savedGrow = await response.json();
-
-        // Navigate to the next step with the new grow ID
-        if (nextStep) {
-          router.push({
-            pathname: '/(protected)/(tabs)/grows/wizard/[step]',
-            params: { step: nextStep, id: savedGrow.id },
-          });
-        } else {
-          // Navigate back to the grows list if no next step
-          router.push('/grows');
-        }
+        // Navigate back to the grows list
+        router.push('/grows');
       }
       // If we're editing an existing grow
       else {
@@ -326,20 +368,13 @@ export const GrowWizardProvider: React.FC<{
           throw new Error(`Failed to update grow: ${response.status} ${response.statusText}`);
         }
 
-        // Navigate to the next step or back to the list
-        if (nextStep) {
-          router.push({
-            pathname: '/(protected)/(tabs)/grows/wizard/[step]',
-            params: { step: nextStep, id: growId },
-          });
-        } else {
-          // Navigate back to the grows list if no next step
-          router.push('/grows');
-        }
+        // Navigate back to the grows list
+        router.push('/grows');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
       console.error('Error saving grow:', err);
+      throw err; // Re-throw to allow handling in the UI
     } finally {
       setIsLoading(false);
     }
@@ -401,6 +436,7 @@ export const GrowWizardProvider: React.FC<{
     isLoading,
     error,
     saveGrow,
+    finalSaveGrow,
     deleteGrow,
     calculateTotalCost,
   };

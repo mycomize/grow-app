@@ -7,6 +7,7 @@ import { AuthProvider } from '~/lib/AuthContext';
 import { ThemeProvider, useTheme } from '@/components/ui/themeprovider/themeprovider';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Wrapper component to use the theme context
 function ThemedApp() {
@@ -51,12 +52,12 @@ function ThemedApp() {
 
 export default function RootLayout() {
   return (
-    <>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
         <ThemeProvider>
           <ThemedApp />
         </ThemeProvider>
       </AuthProvider>
-    </>
+    </GestureHandlerRootView>
   );
 }

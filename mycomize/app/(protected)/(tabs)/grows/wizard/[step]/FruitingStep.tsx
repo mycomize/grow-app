@@ -106,7 +106,11 @@ export const FruitingStep: React.FC = () => {
           selectedValue={fruiting.mistFrequency}
           onValueChange={(value) => setFruiting({ mistFrequency: value })}>
           <SelectTrigger variant="underlined" size="xl">
-            <SelectInput className="ml-3" value={fruiting.mistFrequency} />
+            <SelectInput
+              className="ml-3"
+              value={fruiting.mistFrequency}
+              placeholder="Select frequency"
+            />
             <SelectIcon className="ml-auto mr-3" as={ChevronDown}></SelectIcon>
           </SelectTrigger>
           <SelectPortal>
@@ -129,7 +133,11 @@ export const FruitingStep: React.FC = () => {
           selectedValue={fruiting.fanFrequency}
           onValueChange={(value) => setFruiting({ fanFrequency: value })}>
           <SelectTrigger variant="underlined" size="xl">
-            <SelectInput className="ml-3" value={fruiting.fanFrequency} />
+            <SelectInput
+              className="ml-3"
+              value={fruiting.fanFrequency}
+              placeholder="Select frequency"
+            />
             <SelectIcon className="ml-auto mr-3" as={ChevronDown}></SelectIcon>
           </SelectTrigger>
           <SelectPortal>

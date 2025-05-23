@@ -81,7 +81,7 @@ export const SyringeStep: React.FC = () => {
             autoCapitalize="none"
             inputMode="decimal"
             placeholder="Enter volume in mL"
-            value={syringe.volumeMl.toString()}
+            value={syringe.volumeMl ? syringe.volumeMl.toString() : ''}
             onChangeText={(value) => setSyringe({ volumeMl: parseFloat(value) || 0 })}
           />
           <InputIcon as={Droplets} size="xl" className="ml-auto mr-4" />
@@ -95,7 +95,7 @@ export const SyringeStep: React.FC = () => {
             autoCapitalize="none"
             inputMode="decimal"
             placeholder="Enter cost"
-            value={syringe.cost.toString()}
+            value={syringe.cost ? syringe.cost.toString() : ''}
             onChangeText={(value) => setSyringe({ cost: parseFloat(value) || 0 })}
           />
           <InputIcon as={DollarSign} size="xl" className="ml-auto mr-4" />

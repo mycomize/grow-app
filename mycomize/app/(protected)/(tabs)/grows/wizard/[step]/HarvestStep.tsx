@@ -93,7 +93,7 @@ export const HarvestStep: React.FC = () => {
                 autoCapitalize="none"
                 inputMode="decimal"
                 placeholder="Enter wet weight in grams"
-                value={flush.wetWeightG.toString()}
+                value={flush.wetWeightG ? flush.wetWeightG.toString() : ''}
                 onChangeText={(value) =>
                   updateFlush(flush.id, { wetWeightG: parseFloat(value) || 0 })
                 }
@@ -109,7 +109,7 @@ export const HarvestStep: React.FC = () => {
                 autoCapitalize="none"
                 inputMode="decimal"
                 placeholder="Enter dry weight in grams"
-                value={flush.dryWeightG.toString()}
+                value={flush.dryWeightG ? flush.dryWeightG.toString() : ''}
                 onChangeText={(value) =>
                   updateFlush(flush.id, { dryWeightG: parseFloat(value) || 0 })
                 }
@@ -124,7 +124,7 @@ export const HarvestStep: React.FC = () => {
               selectedValue={flush.potency}
               onValueChange={(value) => updateFlush(flush.id, { potency: value })}>
               <SelectTrigger variant="underlined" size="xl">
-                <SelectInput className="ml-3" value={flush.potency} />
+                <SelectInput className="ml-3" value={flush.potency} placeholder="Select potency" />
                 <SelectIcon className="ml-auto mr-3" as={ChevronDown}></SelectIcon>
               </SelectTrigger>
               <SelectPortal>

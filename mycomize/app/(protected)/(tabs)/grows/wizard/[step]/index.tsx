@@ -1,6 +1,7 @@
-import React from 'react';
-import { useLocalSearchParams } from 'expo-router';
-import { ScrollView } from 'react-native';
+import React, { useRef, useState, useEffect } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ScrollView, Dimensions, View, Animated, FlatList } from 'react-native';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Box } from '~/components/ui/box';
@@ -22,43 +23,69 @@ import { BulkStep } from './BulkStep';
 import { FruitingStep } from './FruitingStep';
 import { HarvestStep } from './HarvestStep';
 
+const { width: screenWidth } = Dimensions.get('window');
+
 // This is the container component that renders the appropriate step
 const GrowWizardStepContainer: React.FC = () => {
   const { step, id } = useLocalSearchParams<{ step: GrowWizardStep; id: string }>();
-  const { isLoading, error, saveGrow } = useGrowWizard();
+  const { isLoading, error, saveGrow, finalSaveGrow } = useGrowWizard();
+  const router = useRouter();
 
-  const currentStep = step || 'basics';
-
-  // Map step names to components
-  const stepComponents: Record<GrowWizardStep, React.ReactNode> = {
-    basics: <BasicsStep />,
-    syringe: <SyringeStep />,
-    spawn: <SpawnStep />,
-    bulk: <BulkStep />,
-    fruiting: <FruitingStep />,
-    harvest: <HarvestStep />,
-  };
-
-  // Get next and previous steps
+  // Steps configuration
   const steps: GrowWizardStep[] = ['basics', 'syringe', 'spawn', 'bulk', 'fruiting', 'harvest'];
-  const currentIndex = steps.indexOf(currentStep);
+  const initialIndex = steps.indexOf(step || 'basics');
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+
+  const scrollRef = useRef<FlatList>(null);
+  const [isScrolling, setIsScrolling] = useState(false);
+
+  // Step components array
+  const stepComponents = [
+    { key: 'basics', component: <BasicsStep /> },
+    { key: 'syringe', component: <SyringeStep /> },
+    { key: 'spawn', component: <SpawnStep /> },
+    { key: 'bulk', component: <BulkStep /> },
+    { key: 'fruiting', component: <FruitingStep /> },
+    { key: 'harvest', component: <HarvestStep /> },
+  ];
+
+  const currentStep = steps[currentIndex];
   const nextStep = currentIndex < steps.length - 1 ? steps[currentIndex + 1] : null;
   const prevStep = currentIndex > 0 ? steps[currentIndex - 1] : null;
+
+  // We don't update the URL anymore to avoid re-renders
+  // The URL will stay at the initial step but the UI will scroll smoothly
+
+  // Scroll to index
+  const scrollToIndex = (index: number) => {
+    if (scrollRef.current && index >= 0 && index < steps.length) {
+      setIsScrolling(true);
+      scrollRef.current.scrollToIndex({ index, animated: true });
+      setTimeout(() => {
+        setCurrentIndex(index);
+        setIsScrolling(false);
+      }, 300);
+    }
+  };
 
   // Handle next button click
   const handleNext = async () => {
     if (nextStep) {
-      await saveGrow(nextStep);
+      scrollToIndex(currentIndex + 1);
     } else {
       // If on last step, save and return to grows list
-      await saveGrow();
+      try {
+        await finalSaveGrow();
+      } catch (err) {
+        // Error is already set in context
+      }
     }
   };
 
   // Handle back button click
   const handleBack = async () => {
     if (prevStep) {
-      await saveGrow(prevStep);
+      scrollToIndex(currentIndex - 1);
     }
   };
 
@@ -71,28 +98,27 @@ const GrowWizardStepContainer: React.FC = () => {
     );
   }
 
-  return (
-    <Box className="h-full w-full bg-background-50">
-      {/* Just the timeline and content */}
-      <GrowTimeline currentStep={currentStep} growId={id} editable={true} />
-
-      <ScrollView className="flex-1">
-        <VStack className="flex-1 p-4">
+  // Render a single step
+  const renderStep = ({ item }: { item: { key: string; component: React.ReactNode } }) => (
+    <View style={{ width: screenWidth, backgroundColor: 'transparent' }}>
+      <ScrollView className="flex-1 bg-transparent">
+        <VStack className="flex-1 bg-transparent p-4">
           {error && (
             <Box className="mb-4 rounded-md bg-error-100 p-3">
               <Text className="text-error-600">{error}</Text>
             </Box>
           )}
 
-          <Card className="mb-4 p-4">{stepComponents[currentStep]}</Card>
+          <Card className="mb-4 p-4">{item.component}</Card>
 
           {/* Navigation Buttons */}
           <HStack className="mt-4 justify-between">
-            {prevStep ? (
+            {currentIndex > 0 ? (
               <Button
                 variant="outline"
                 className="w-5/12 rounded-md border-success-300"
-                onPress={handleBack}>
+                onPress={handleBack}
+                disabled={isScrolling}>
                 <ButtonText>Back</ButtonText>
               </Button>
             ) : (
@@ -102,16 +128,71 @@ const GrowWizardStepContainer: React.FC = () => {
             <Button
               variant="solid"
               className="w-5/12 rounded-md bg-success-300"
-              onPress={handleNext}>
+              onPress={handleNext}
+              disabled={isScrolling}>
               <HStack space="xs" className="items-center">
-                <ButtonText className="text-white">{nextStep ? 'Next' : 'Save'}</ButtonText>
-                {nextStep && <ButtonIcon className="text-white" as={ArrowRight} />}
-                {!nextStep && <ButtonIcon className="text-white" as={Check} />}
+                <ButtonText className="text-white">
+                  {currentIndex < steps.length - 1 ? 'Next' : 'Save'}
+                </ButtonText>
+                {currentIndex < steps.length - 1 && (
+                  <ButtonIcon className="text-white" as={ArrowRight} />
+                )}
+                {currentIndex === steps.length - 1 && (
+                  <ButtonIcon className="text-white" as={Check} />
+                )}
               </HStack>
             </Button>
           </HStack>
         </VStack>
       </ScrollView>
+    </View>
+  );
+
+  // Handle timeline step press
+  const handleTimelineStepPress = (step: GrowWizardStep) => {
+    const targetIndex = steps.indexOf(step);
+    if (targetIndex >= 0 && targetIndex < steps.length) {
+      scrollToIndex(targetIndex);
+    }
+  };
+
+  return (
+    <Box className="h-full w-full bg-background-50">
+      {/* Timeline */}
+      <GrowTimeline
+        currentStep={currentStep}
+        growId={id}
+        editable={true}
+        onStepPress={handleTimelineStepPress}
+      />
+
+      {/* Horizontal scroll view for steps */}
+      <Box className="flex-1 bg-background-50">
+        <FlatList
+          ref={scrollRef}
+          data={stepComponents}
+          renderItem={renderStep}
+          horizontal
+          pagingEnabled
+          scrollEnabled={!isScrolling}
+          showsHorizontalScrollIndicator={false}
+          initialScrollIndex={initialIndex}
+          getItemLayout={(data, index) => ({
+            length: screenWidth,
+            offset: screenWidth * index,
+            index,
+          })}
+          onMomentumScrollEnd={(event) => {
+            const newIndex = Math.round(event.nativeEvent.contentOffset.x / screenWidth);
+            if (newIndex !== currentIndex && newIndex >= 0 && newIndex < steps.length) {
+              setCurrentIndex(newIndex);
+            }
+          }}
+          keyExtractor={(item) => item.key}
+          style={{ backgroundColor: 'transparent' }}
+          contentContainerStyle={{ backgroundColor: 'transparent' }}
+        />
+      </Box>
     </Box>
   );
 };

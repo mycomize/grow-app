@@ -42,7 +42,7 @@ export const BulkStep: React.FC = () => {
             autoCapitalize="none"
             inputMode="text"
             placeholder="Enter substrate type (e.g., Coco Coir)"
-            value={bulk.type}
+            value={bulk.type || ''}
             onChangeText={(value) => setBulk({ type: value })}
           />
         </Input>
@@ -55,7 +55,7 @@ export const BulkStep: React.FC = () => {
             autoCapitalize="none"
             inputMode="decimal"
             placeholder="Enter weight in pounds"
-            value={bulk.weightLbs.toString()}
+            value={bulk.weightLbs ? bulk.weightLbs.toString() : ''}
             onChangeText={(value) => setBulk({ weightLbs: parseFloat(value) || 0 })}
           />
           <InputIcon as={Weight} size="xl" className="ml-auto mr-4" />
@@ -69,7 +69,7 @@ export const BulkStep: React.FC = () => {
             autoCapitalize="none"
             inputMode="decimal"
             placeholder="Enter cost"
-            value={bulk.cost.toString()}
+            value={bulk.cost ? bulk.cost.toString() : ''}
             onChangeText={(value) => setBulk({ cost: parseFloat(value) || 0 })}
           />
           <InputIcon as={DollarSign} size="xl" className="ml-auto mr-4" />

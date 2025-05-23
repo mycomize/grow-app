@@ -34,7 +34,7 @@ export const SpawnStep: React.FC = () => {
             autoCapitalize="none"
             inputMode="text"
             placeholder="Enter spawn type (e.g., Rye Grain)"
-            value={spawn.type}
+            value={spawn.type || ''}
             onChangeText={(value) => setSpawn({ type: value })}
           />
         </Input>
@@ -47,7 +47,7 @@ export const SpawnStep: React.FC = () => {
             autoCapitalize="none"
             inputMode="decimal"
             placeholder="Enter weight in pounds"
-            value={spawn.weightLbs.toString()}
+            value={spawn.weightLbs ? spawn.weightLbs.toString() : ''}
             onChangeText={(value) => setSpawn({ weightLbs: parseFloat(value) || 0 })}
           />
           <InputIcon as={Weight} size="xl" className="ml-auto mr-4" />
@@ -61,7 +61,7 @@ export const SpawnStep: React.FC = () => {
             autoCapitalize="none"
             inputMode="decimal"
             placeholder="Enter cost"
-            value={spawn.cost.toString()}
+            value={spawn.cost ? spawn.cost.toString() : ''}
             onChangeText={(value) => setSpawn({ cost: parseFloat(value) || 0 })}
           />
           <InputIcon as={DollarSign} size="xl" className="ml-auto mr-4" />

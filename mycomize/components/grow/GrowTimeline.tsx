@@ -6,7 +6,6 @@ import { Text } from '~/components/ui/text';
 import { Icon } from '~/components/ui/icon';
 import { Center } from '~/components/ui/center';
 import { Pressable } from '~/components/ui/pressable';
-import { useRouter } from 'expo-router';
 import { Check, Pencil } from 'lucide-react-native';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 
@@ -16,15 +15,16 @@ interface GrowTimelineProps {
   currentStep: GrowWizardStep;
   growId?: string | null;
   editable?: boolean;
+  onStepPress?: (step: GrowWizardStep) => void;
 }
 
 export const GrowTimeline: React.FC<GrowTimelineProps> = ({
   currentStep,
   growId = null,
   editable = true,
+  onStepPress,
 }) => {
   const { theme } = useTheme();
-  const router = useRouter();
 
   const steps: { key: GrowWizardStep; label: string }[] = [
     { key: 'basics', label: 'Basics' },
@@ -38,23 +38,9 @@ export const GrowTimeline: React.FC<GrowTimelineProps> = ({
   const navigateToStep = (step: GrowWizardStep) => {
     if (!editable) return;
 
-    // For new grow (no growId), only allow navigation to previous steps
-    if (!growId) {
-      const currentIndex = steps.findIndex((s) => s.key === currentStep);
-      const targetIndex = steps.findIndex((s) => s.key === step);
-      if (targetIndex > currentIndex) return;
-    }
-
-    if (growId) {
-      router.push({
-        pathname: '/(protected)/(tabs)/grows/wizard/[step]',
-        params: { step, id: growId },
-      });
-    } else {
-      router.push({
-        pathname: '/(protected)/(tabs)/grows/wizard/[step]',
-        params: { step },
-      });
+    // Call the callback if provided
+    if (onStepPress) {
+      onStepPress(step);
     }
   };
 
