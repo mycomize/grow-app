@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { CircuitBoard, User, Shrub } from 'lucide-react-native';
+import { CircuitBoard, User, Shrub, ThumbsUp } from 'lucide-react-native';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
 
 export default function TabLayout() {
@@ -35,17 +35,13 @@ export default function TabLayout() {
         tabBarHideOnKeyboard: true,
       }}
       initialRouteName="grows">
-      <Tabs.Screen
-        name="index"
-        options={{
-          href: null,
-        }}
-      />
+      <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen
         name="grows"
         options={{
           title: 'Grows',
-          tabBarIcon: ({ color }) => <Shrub color={color} />,
+          tabBarLabel: 'Grows',
+          tabBarIcon: ({ color, size }) => <Shrub size={size} color={color} />,
           headerShown: false,
         }}
       />

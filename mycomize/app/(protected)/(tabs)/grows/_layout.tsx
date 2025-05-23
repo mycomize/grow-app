@@ -12,15 +12,10 @@ export default function GrowsLayout() {
   const headerTintColor = theme === 'dark' ? '#ffffff' : '#000000';
 
   return (
-    <Stack
-      screenOptions={{
-        headerStyle,
-        headerTintColor,
-        headerTitleAlign: 'center',
-      }}>
-      <Stack.Screen name="index" options={{ title: 'Grows', headerShown: true }} />
-      <Stack.Screen name="new" options={{ title: 'Add Grow', headerShown: true }} />
-      <Stack.Screen name="[id]/edit" options={{ title: 'Edit Grow', headerShown: true }} />
+    <Stack>
+      <Stack.Screen name="index" options={{ title: 'Grows', headerShown: false }} />
+      <Stack.Screen name="new" options={{ title: 'Add Grow', headerShown: false }} />
+      <Stack.Screen name="wizard" options={{ headerShown: false }} />
     </Stack>
   );
 }

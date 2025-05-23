@@ -77,7 +77,7 @@ const GrowCard: React.FC<{ grow: Grow }> = ({ grow }) => {
           <Pressable
             onPress={() => {
               router.push({
-                pathname: `/grows/[id]/edit`,
+                pathname: `/grows/[id]`,
                 params: { id: grow.id },
               });
             }}>
