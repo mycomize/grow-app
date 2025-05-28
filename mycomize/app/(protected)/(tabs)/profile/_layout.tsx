@@ -19,6 +19,10 @@ export default function ProfileLayout() {
         headerTitleAlign: 'center',
       }}>
       <Stack.Screen name="index" options={{ title: 'Profile', headerShown: true }} />
+      <Stack.Screen
+        name="change-password"
+        options={{ title: 'Change Password', headerShown: true }}
+      />
     </Stack>
   );
 }

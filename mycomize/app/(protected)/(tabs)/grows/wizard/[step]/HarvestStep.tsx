@@ -62,8 +62,8 @@ export const HarvestStep: React.FC = () => {
       </Text>
 
       {flushes.map((flush, index) => (
-        <Card key={flush.id} className="mb-4 gap-5 p-4">
-          <HStack className="mb-2 justify-between">
+        <Card key={flush.id} className="mb-4 gap-4 p-4">
+          <HStack className="justify-between">
             <Text className="text-lg font-bold">Flush #{index + 1}</Text>
             {flushes.length > 1 && (
               <Pressable onPress={() => removeFlush(flush.id)}>
@@ -168,7 +168,7 @@ export const HarvestStep: React.FC = () => {
       </Button>
 
       {flushes.length > 0 && (
-        <VStack className="mt-4 gap-1 rounded-md bg-background-100 p-4">
+        <VStack className="mt-4 gap-4 rounded-md  p-4">
           <HStack className="justify-between">
             <Text className="font-bold">Total Wet Weight:</Text>
             <Text>

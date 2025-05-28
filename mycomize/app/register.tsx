@@ -7,7 +7,8 @@ import { AuthContext } from '~/lib/AuthContext';
 import { Button, ButtonText } from '~/components/ui/button';
 import { FormControl } from '@/components/ui/form-control';
 import { Heading } from '@/components/ui/heading';
-import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
+import { Input, InputField } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Center } from '@/components/ui/center';
 import { VStack } from '@/components/ui/vstack';
 import { HStack } from '@/components/ui/hstack';
@@ -16,7 +17,7 @@ import { Link, LinkText } from '@/components/ui/link';
 import { Text } from '~/components/ui/text';
 import { useToast, Toast, ToastTitle, ToastDescription } from '@/components/ui/toast';
 import { useRouter } from 'expo-router';
-import { CircleX, EyeIcon, EyeOffIcon } from 'lucide-react-native';
+import { CircleX } from 'lucide-react-native';
 import { Icon } from '@/components/ui/icon';
 
 import MycomizeLogo from '~/assets/mycomize-logo.svg';
@@ -31,20 +32,10 @@ export default function SignUpScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [confirmFocused, setConfirmFocused] = useState(false);
   const [passwordsMatch, setPasswordsMatch] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-
-  const handleShowPassword = () => {
-    setShowPassword((show) => !show);
-  };
-
-  const handleShowConfirmPassword = () => {
-    setShowConfirmPassword((show) => !show);
-  };
 
   const handleConfirmPassword = (text: string) => {
     setConfirmPassword(text);
@@ -138,33 +129,24 @@ export default function SignUpScreen() {
                 </VStack>
                 <VStack space="xs">
                   <Text className="text-typography-700">Password</Text>
-                  <Input className="text-center">
-                    <InputField
-                      type={showPassword ? 'text' : 'password'}
-                      autoCapitalize="none"
-                      onChangeText={setPassword}
-                      value={password}
-                      onFocus={() => setConfirmFocused(false)}
-                    />
-                    <InputSlot className="pr-3" onPress={handleShowPassword}>
-                      <InputIcon as={showPassword ? EyeIcon : EyeOffIcon} size="lg" />
-                    </InputSlot>
-                  </Input>
+                  <PasswordInput
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Enter password"
+                    onFocus={() => setConfirmFocused(false)}
+                    className="min-w-[250px]"
+                  />
                 </VStack>
                 <VStack space="xs">
                   <Text className="text-typography-700">Confirm Password</Text>
-                  <Input className="text-center" isInvalid={!passwordsMatch && confirmFocused}>
-                    <InputField
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      autoCapitalize="none"
-                      onChangeText={handleConfirmPassword}
-                      value={confirmPassword}
-                      onFocus={() => setConfirmFocused(true)}
-                    />
-                    <InputSlot className="pr-3" onPress={handleShowConfirmPassword}>
-                      <InputIcon as={showConfirmPassword ? EyeIcon : EyeOffIcon} size="lg" />
-                    </InputSlot>
-                  </Input>
+                  <PasswordInput
+                    value={confirmPassword}
+                    onChangeText={handleConfirmPassword}
+                    placeholder="Confirm password"
+                    isInvalid={!passwordsMatch && confirmFocused}
+                    onFocus={() => setConfirmFocused(true)}
+                    className="min-w-[250px]"
+                  />
                 </VStack>
                 <Button
                   className="mx-auto"

@@ -32,6 +32,17 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: Optional[str] = None
 
+class ChangePassword(BaseModel):
+    current_password: str
+    new_password: str
+
+    @validator('new_password')
+    def new_password_strength(cls, v):
+        """Validate new password strength"""
+        if len(v) < 8:
+            raise ValueError('New password must be at least 8 characters long')
+        return v
+
 class UserResponse(UserBase):
     created_at: datetime
 

@@ -12,6 +12,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { AuthContext } from '@/lib/AuthContext';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
 import { useContext, useState } from 'react';
+import { useRouter } from 'expo-router';
 
 import { ArrowRightIcon } from 'lucide-react-native';
 
@@ -39,28 +40,33 @@ export default function ProfileScreen() {
   const { theme, toggleTheme } = useTheme();
   const { trackFalse, trackTrue, thumbColor } = getSwitchColors(theme);
   const [darkModeEnabled, setDarkModeEnabled] = useState(theme === 'dark');
+  const router = useRouter();
 
   const handleDarkModeToggle = () => {
     setDarkModeEnabled((prev) => !prev);
     toggleTheme();
   };
 
+  const navigateToChangePassword = () => {
+    router.push('/profile/change-password');
+  };
+
   return (
     <VStack className="flex-1 items-center gap-3 bg-background-50 py-3">
       {/* Account card */}
       <Card className="w-11/12 bg-background-0">
-        <Heading className="mb-3">ACCOUNT</Heading>
-        <HStack className="flex w-full flex-row">
-          <Text className="text-lg">Change password</Text>
-          <Pressable className="ml-auto mt-1" onPress={() => {}}>
-            <Icon className="mr-2 h-6 w-6" as={ArrowRightIcon} />
-          </Pressable>
-        </HStack>
+        <Heading className="mb-3 text-typography-400">ACCOUNT</Heading>
+        <Pressable onPress={navigateToChangePassword}>
+          <HStack className="flex w-full flex-row items-center py-2">
+            <Text className="text-lg">Change password</Text>
+            <Icon className="ml-auto h-6 w-6 text-typography-500" as={ArrowRightIcon} />
+          </HStack>
+        </Pressable>
       </Card>
 
       {/* Display card */}
       <Card className="w-11/12 bg-background-0">
-        <Heading className="mb-3">DISPLAY</Heading>
+        <Heading className="mb-3 text-typography-400">DISPLAY</Heading>
         <HStack className="flex w-full flex-row">
           <Text className="text-lg">Dark mode</Text>
           <Switch
