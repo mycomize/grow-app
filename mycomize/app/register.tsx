@@ -153,7 +153,7 @@ export default function SignUpScreen() {
                   action="positive"
                   onPress={handleSignUp}
                   isDisabled={isLoading}>
-                  <ButtonText className="text-typography-0">Sign Up</ButtonText>
+                  <ButtonText className="text-white">Sign Up</ButtonText>
                 </Button>
               </VStack>
             </FormControl>
