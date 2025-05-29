@@ -38,11 +38,13 @@ import {
   PlugZap,
   ChevronsLeftRightEllipsis,
   View,
+  Zap,
+  ZapOff,
 } from 'lucide-react-native';
 
 import { AuthContext } from '~/lib/AuthContext';
 import { getBackendUrl } from '~/lib/backendUrl';
-import { IoTGateway, IoTGatewayUpdate, IoTEntity } from '~/lib/iot';
+import { IoTGateway, IoTGatewayUpdate, IoTEntity, HAState } from '~/lib/iot';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import { getSwitchColors } from '~/lib/switchUtils';
 
@@ -71,6 +73,8 @@ export default function IoTIntegrationDetailScreen() {
   });
   const [stateCount, setEntityCount] = useState(0);
   const [enabledStates, setEnabledStates] = useState<string[]>([]);
+  const [currentStates, setCurrentStates] = useState<HAState[]>([]);
+  const [isControlling, setIsControlling] = useState<Set<string>>(new Set());
 
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
@@ -86,27 +90,62 @@ export default function IoTIntegrationDetailScreen() {
   });
 
   // Fetch enabled entities from backend
-  const fetchEnabledEntities = useCallback(async () => {
-    if (!id) return;
+  const fetchEnabledEntities = useCallback(
+    async (gatewayData?: IoTGateway) => {
+      if (!id) return;
 
+      try {
+        const url = getBackendUrl();
+        const response = await fetch(`${url}/iot-gateways/${id}/entities`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const entities: IoTEntity[] = await response.json();
+          setEnabledStates(entities.filter((e) => e.is_enabled).map((e) => e.entity_id));
+
+          // Fetch current states for enabled entities
+          if (gatewayData && gatewayData.is_active) {
+            await fetchCurrentStates(
+              gatewayData,
+              entities.filter((e) => e.is_enabled)
+            );
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch enabled entities:', err);
+      }
+    },
+    [id, token]
+  );
+
+  // Fetch current states for enabled entities
+  const fetchCurrentStates = async (gateway: IoTGateway, entities: IoTEntity[]) => {
     try {
-      const url = getBackendUrl();
-      const response = await fetch(`${url}/iot-gateways/${id}/entities`, {
+      const response = await fetch(`${gateway.api_url}/api/states`, {
         method: 'GET',
         headers: {
+          Authorization: `Bearer ${gateway.api_key}`,
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
       });
 
       if (response.ok) {
-        const entities: IoTEntity[] = await response.json();
-        setEnabledStates(entities.filter((e) => e.is_enabled).map((e) => e.entity_id));
+        const allStates: HAState[] = await response.json();
+        const enabledEntityIds = entities.map((e) => e.entity_id);
+        const filteredStates = allStates.filter((state) =>
+          enabledEntityIds.includes(state.entity_id)
+        );
+        setCurrentStates(filteredStates);
       }
     } catch (err) {
-      console.error('Failed to fetch enabled entities:', err);
+      console.error('Failed to fetch current states:', err);
     }
-  }, [id, token]);
+  };
 
   // Fetch gateway details
   const fetchGateway = useCallback(async () => {
@@ -148,7 +187,7 @@ export default function IoTIntegrationDetailScreen() {
       }
 
       // Fetch enabled entities
-      await fetchEnabledEntities();
+      await fetchEnabledEntities(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -336,6 +375,76 @@ export default function IoTIntegrationDetailScreen() {
     setSuccess(null);
   };
 
+  // Control entity functions
+  const controlEntity = async (
+    entityId: string,
+    domain: string,
+    service: string,
+    serviceData?: Record<string, any>
+  ) => {
+    if (!gateway) return;
+
+    setIsControlling((prev) => new Set(prev).add(entityId));
+
+    try {
+      const serviceUrl = `${gateway.api_url}/api/services/${domain}/${service}`;
+      const payload = {
+        entity_id: entityId,
+        ...serviceData,
+      };
+
+      const response = await fetch(serviceUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${gateway.api_key}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        // Refresh states to get updated values
+        if (gateway.is_active) {
+          const url = getBackendUrl();
+          const entitiesResponse = await fetch(`${url}/iot-gateways/${gateway.id}/entities`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (entitiesResponse.ok) {
+            const entities: IoTEntity[] = await entitiesResponse.json();
+            await fetchCurrentStates(
+              gateway,
+              entities.filter((e) => e.is_enabled)
+            );
+          }
+        }
+      } else {
+        setError('Failed to control entity');
+      }
+    } catch (err) {
+      setError('Failed to control entity');
+    } finally {
+      setIsControlling((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(entityId);
+        return newSet;
+      });
+    }
+  };
+
+  // Handle switch/automation toggle
+  const handleToggle = async (entityId: string, domain: string, currentState: string) => {
+    const service = currentState === 'on' ? 'turn_off' : 'turn_on';
+    await controlEntity(entityId, domain, service);
+  };
+
+  // Handle number input
+  const handleNumberChange = async (entityId: string, value: string) => {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      await controlEntity(entityId, 'number', 'set_value', { value: numValue });
+    }
+  };
+
   // Navigate to state search/selection
   const navigateToEntitySearch = () => {
     const gatewayId = Array.isArray(id) ? id[0] : id;
@@ -425,8 +534,10 @@ export default function IoTIntegrationDetailScreen() {
   // Refresh enabled entities when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      fetchEnabledEntities();
-    }, [fetchEnabledEntities])
+      if (gateway) {
+        fetchEnabledEntities(gateway);
+      }
+    }, [fetchEnabledEntities, gateway])
   );
 
   // Show toasts when error or success state changes
@@ -460,6 +571,17 @@ export default function IoTIntegrationDetailScreen() {
     );
   }
 
+  // Group states by domain
+  const groupedStates = currentStates.reduce(
+    (acc, state) => {
+      const domain = state.entity_id.split('.')[0];
+      if (!acc[domain]) acc[domain] = [];
+      acc[domain].push(state);
+      return acc;
+    },
+    {} as Record<string, HAState[]>
+  );
+
   return (
     <>
       <ScrollView
@@ -475,13 +597,9 @@ export default function IoTIntegrationDetailScreen() {
         }>
         <Heading className="bg-background-0 pb-5 pt-8 text-center">IoT Gateway</Heading>
         <VStack className="p-4" space="md">
-          {/* Header Card */}
-
-          {/* Messages - Now handled via toasts */}
-
           {/* Connection Details Panel */}
           <Card className="bg-background-0">
-            <VStack className="p-4" space="md">
+            <VStack className="p-2" space="md">
               <HStack className="items-center justify-between">
                 <Heading size="lg">Details</Heading>
                 {!isEditing ? (
@@ -605,9 +723,9 @@ export default function IoTIntegrationDetailScreen() {
 
           {/* Connection Status Panel */}
           <Card className="bg-background-0">
-            <VStack className="p-4" space="md">
+            <VStack className="p-2" space="md">
               <HStack className="mb-2 items-center justify-between">
-                <Heading size="lg">Status</Heading>
+                <Heading size="lg">Connection</Heading>
                 {connectionInfo.connected ? (
                   <HStack className="items-center rounded-sm bg-success-50 px-3 py-1">
                     <Icon as={PlugZap} className="mr-2 text-success-700" />
@@ -654,11 +772,11 @@ export default function IoTIntegrationDetailScreen() {
 
           {/* Enabled States Section */}
           <Card className="bg-background-0">
-            <VStack className="p-4" space="md">
+            <VStack className="p-2" space="md">
               <HStack className="items-center justify-between">
-                <Heading size="lg">Enabled States</Heading>
+                <Heading size="lg">Enabled Entities</Heading>
                 <Badge variant="outline" action="muted">
-                  <Text size="xs">{enabledStates.length} enabled</Text>
+                  <Text size="sm">{enabledStates.length} enabled</Text>
                 </Badge>
               </HStack>
 
@@ -679,27 +797,93 @@ export default function IoTIntegrationDetailScreen() {
                 </VStack>
               ) : (
                 <VStack space="sm">
-                  {enabledStates.map((stateId) => (
-                    <Card key={stateId} className="bg-background-50 p-3">
-                      <HStack className="items-center justify-between">
-                        <Text className="flex-1 font-medium">{stateId}</Text>
-                        <Switch
-                          trackColor={{ false: trackFalse, true: trackTrue }}
-                          thumbColor={thumbColor}
-                          ios_backgroundColor={trackFalse}
-                          value={true}
-                          onValueChange={(value) => {
-                            if (!value) {
-                              setEnabledStates((prev) => prev.filter((id) => id !== stateId));
-                            }
-                          }}
-                        />
-                      </HStack>
-                    </Card>
+                  {/* Group states by domain */}
+                  {Object.entries(groupedStates).map(([domain, domainStates]) => (
+                    <VStack key={domain} space="md">
+                      <Text className="text-md mt-2 font-semibold capitalize text-typography-600">
+                        {domain} ({domainStates.length})
+                      </Text>
+                      {domainStates.map((state) => {
+                        const friendlyName = state.attributes.friendly_name || state.entity_id;
+                        const isEntityControlling = isControlling.has(state.entity_id);
+                        const stateIcon = state.state === 'on' ? '🟢' : '🔴';
+
+                        return (
+                          <Card key={state.entity_id} className="bg-background-50 p-4">
+                            <HStack className="items-center" space="sm">
+                              {/* State Icon for switches and automations */}
+                              {(domain === 'switch' || domain === 'automation') &&
+                                (state.state === 'on' ? (
+                                  <Icon as={Zap} className="text-green-500" />
+                                ) : (
+                                  <Icon as={ZapOff} className="text-red-500" />
+                                ))}
+
+                              {/* Entity Name */}
+                              <VStack className="flex-1">
+                                <Text className="font-medium">{friendlyName}</Text>
+
+                                {/* Sensor display with value and unit */}
+                                {domain === 'sensor' && (
+                                  <Text className="text-sm text-typography-500">
+                                    {state.state}
+                                    {state.attributes.unit_of_measurement &&
+                                      ` ${state.attributes.unit_of_measurement}`}
+                                  </Text>
+                                )}
+
+                                {/* Number display with current value */}
+                                {domain === 'number' && (
+                                  <Text className="text-sm text-typography-500">
+                                    Current: {state.state}
+                                    {state.attributes.unit_of_measurement &&
+                                      ` ${state.attributes.unit_of_measurement}`}
+                                  </Text>
+                                )}
+                              </VStack>
+
+                              {/* Domain-specific controls */}
+                              <HStack className="items-center" space="sm">
+                                {isEntityControlling && <Spinner size="small" />}
+
+                                {/* Switch and Automation Toggle */}
+                                {(domain === 'switch' || domain === 'automation') && (
+                                  <Switch
+                                    trackColor={{ false: trackFalse, true: trackTrue }}
+                                    thumbColor={thumbColor}
+                                    ios_backgroundColor={trackFalse}
+                                    value={state.state === 'on'}
+                                    onValueChange={() =>
+                                      handleToggle(state.entity_id, domain, state.state)
+                                    }
+                                    disabled={isEntityControlling}
+                                  />
+                                )}
+
+                                {/* Number Input */}
+                                {domain === 'number' && (
+                                  <Input className="w-20">
+                                    <InputField
+                                      value={state.state}
+                                      onChangeText={(value) =>
+                                        handleNumberChange(state.entity_id, value)
+                                      }
+                                      keyboardType="numeric"
+                                      editable={!isEntityControlling}
+                                    />
+                                  </Input>
+                                )}
+                              </HStack>
+                            </HStack>
+                          </Card>
+                        );
+                      })}
+                    </VStack>
                   ))}
+
                   <Button variant="outline" onPress={navigateToEntitySearch} className="mt-2">
-                    <ButtonIcon as={Plus} className="mr-2" />
-                    <ButtonText>Add More States</ButtonText>
+                    <ButtonIcon as={Settings} />
+                    <ButtonText>Manage Entities</ButtonText>
                   </Button>
                 </VStack>
               )}

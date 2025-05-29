@@ -14,13 +14,19 @@ import { Spinner } from '~/components/ui/spinner';
 import { Pressable } from '~/components/ui/pressable';
 import { Badge } from '~/components/ui/badge';
 import { Alert, AlertIcon, AlertText } from '~/components/ui/alert';
-import { Search, X, Activity, AlertCircle, Filter } from 'lucide-react-native';
+import { Search, X, Activity, AlertCircle, Filter, Settings } from 'lucide-react-native';
+import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 
 import { AuthContext } from '~/lib/AuthContext';
 import { getBackendUrl } from '~/lib/backendUrl';
 import { IoTGateway, HAState, IoTEntity, IoTEntityCreate } from '~/lib/iot';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import { getSwitchColors } from '~/lib/switchUtils';
+import {
+  getUserPreferences,
+  updateIoTFilterPreferences,
+  IoTFilterPreferences,
+} from '~/lib/userPreferences';
 
 export default function EntityStatesScreen() {
   const { id } = useLocalSearchParams();
@@ -39,6 +45,13 @@ export default function EntityStatesScreen() {
   const [enabledStates, setEnabledStates] = useState<Set<string>>(new Set());
   const [filterEnabled, setFilterEnabled] = useState(false);
   const [isControlling, setIsControlling] = useState<Set<string>>(new Set());
+
+  // Filter preferences
+  const [filterPreferences, setFilterPreferences] = useState<IoTFilterPreferences>({
+    domains: ['switch', 'automation', 'sensor', 'number'],
+    showAllDomains: false,
+  });
+  const [showFilters, setShowFilters] = useState(false);
 
   // Fetch gateway details
   const fetchGateway = useCallback(async () => {
@@ -263,11 +276,28 @@ export default function EntityStatesScreen() {
     }
   }, [gateway]);
 
-  // Filter states based on search and enabled filter
+  // Filter states based on search, enabled filter, and domain preferences
   const filteredStates = states.filter((state) => {
-    const matchesSearch = state.entity_id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = !filterEnabled || enabledStates.has(state.entity_id);
-    return matchesSearch && matchesFilter;
+    const domain = state.entity_id.split('.')[0];
+    const friendlyName = state.attributes.friendly_name || '';
+
+    // Domain filter
+    const matchesDomain =
+      filterPreferences.showAllDomains || filterPreferences.domains.includes(domain);
+
+    // Search filter (entity_id, friendly_name, device_class)
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch =
+      searchQuery === '' ||
+      state.entity_id.toLowerCase().includes(searchLower) ||
+      friendlyName.toLowerCase().includes(searchLower) ||
+      (state.attributes.device_class &&
+        state.attributes.device_class.toLowerCase().includes(searchLower));
+
+    // Enabled filter
+    const matchesEnabledFilter = !filterEnabled || enabledStates.has(state.entity_id);
+
+    return matchesDomain && matchesSearch && matchesEnabledFilter;
   });
 
   // Group states by domain
@@ -282,6 +312,38 @@ export default function EntityStatesScreen() {
     },
     {} as Record<string, HAState[]>
   );
+
+  // Get all available domains from states
+  const availableDomains = Array.from(
+    new Set(states.map((state) => state.entity_id.split('.')[0]))
+  ).sort();
+
+  // Toggle domain filter
+  const toggleDomainFilter = async (domain: string) => {
+    const newDomains = filterPreferences.domains.includes(domain)
+      ? filterPreferences.domains.filter((d) => d !== domain)
+      : [...filterPreferences.domains, domain];
+
+    const newPrefs = { ...filterPreferences, domains: newDomains };
+    setFilterPreferences(newPrefs);
+    await updateIoTFilterPreferences(newPrefs);
+  };
+
+  // Toggle show all domains
+  const toggleShowAllDomains = async () => {
+    const newPrefs = { ...filterPreferences, showAllDomains: !filterPreferences.showAllDomains };
+    setFilterPreferences(newPrefs);
+    await updateIoTFilterPreferences(newPrefs);
+  };
+
+  // Load user preferences
+  useEffect(() => {
+    const loadPreferences = async () => {
+      const prefs = await getUserPreferences();
+      setFilterPreferences(prefs.iotFilters);
+    };
+    loadPreferences();
+  }, []);
 
   useEffect(() => {
     fetchGateway();
@@ -365,6 +427,54 @@ export default function EntityStatesScreen() {
                   onValueChange={setFilterEnabled}
                 />
               </HStack>
+
+              {/* Domain Filters */}
+              <VStack space="sm">
+                <HStack className="items-center justify-between">
+                  <Text className="text-sm font-medium">Domain Filters</Text>
+                  <Button variant="outline" size="sm" onPress={() => setShowFilters(!showFilters)}>
+                    <ButtonIcon as={Settings} />
+                    <ButtonText>Configure</ButtonText>
+                  </Button>
+                </HStack>
+
+                {showFilters && (
+                  <VStack space="sm">
+                    <HStack className="items-center justify-between">
+                      <Text className="text-sm">Show all domains</Text>
+                      <Switch
+                        trackColor={{ false: trackFalse, true: trackTrue }}
+                        thumbColor={thumbColor}
+                        ios_backgroundColor={trackFalse}
+                        value={filterPreferences.showAllDomains}
+                        onValueChange={toggleShowAllDomains}
+                      />
+                    </HStack>
+
+                    {!filterPreferences.showAllDomains && (
+                      <VStack space="xs">
+                        <Text className="text-xs text-typography-500">
+                          Select domains to display:
+                        </Text>
+                        <VStack space="xs">
+                          {availableDomains.map((domain) => (
+                            <HStack key={domain} className="items-center justify-between">
+                              <Text className="text-sm capitalize">{domain}</Text>
+                              <Switch
+                                trackColor={{ false: trackFalse, true: trackTrue }}
+                                thumbColor={thumbColor}
+                                ios_backgroundColor={trackFalse}
+                                value={filterPreferences.domains.includes(domain)}
+                                onValueChange={() => toggleDomainFilter(domain)}
+                              />
+                            </HStack>
+                          ))}
+                        </VStack>
+                      </VStack>
+                    )}
+                  </VStack>
+                )}
+              </VStack>
             </VStack>
 
             {/* Enabled count */}
@@ -428,26 +538,6 @@ export default function EntityStatesScreen() {
                           />
                         </VStack>
                       </HStack>
-
-                      {/* Control Toggle (only for enabled switches) */}
-                      {isEnabled && isSwitch && (
-                        <HStack className="items-center justify-between border-t border-background-200 pt-3">
-                          <Text className="text-sm font-medium">Control Switch</Text>
-                          <HStack className="items-center" space="sm">
-                            {isEntityControlling && <Spinner size="small" />}
-                            <Switch
-                              trackColor={{ false: trackFalse, true: trackTrue }}
-                              thumbColor={thumbColor}
-                              ios_backgroundColor={trackFalse}
-                              value={state.state === 'on'}
-                              onValueChange={() =>
-                                handleSwitchControl(state.entity_id, state.state)
-                              }
-                              disabled={isEntityControlling}
-                            />
-                          </HStack>
-                        </HStack>
-                      )}
                     </VStack>
                   </Card>
                 );
