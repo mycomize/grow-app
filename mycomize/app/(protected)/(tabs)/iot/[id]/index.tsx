@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext, useCallback } from 'react';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { ScrollView } from '~/components/ui/scroll-view';
 import { RefreshControl } from '~/components/ui/refresh-control';
 import { VStack } from '~/components/ui/vstack';
@@ -42,7 +42,9 @@ import {
 
 import { AuthContext } from '~/lib/AuthContext';
 import { getBackendUrl } from '~/lib/backendUrl';
-import { IoTGateway, IoTGatewayUpdate } from '~/lib/iot';
+import { IoTGateway, IoTGatewayUpdate, IoTEntity } from '~/lib/iot';
+import { useTheme } from '~/components/ui/themeprovider/themeprovider';
+import { getSwitchColors } from '~/lib/switchUtils';
 
 interface ConnectionInfo {
   connected: boolean;
@@ -54,6 +56,8 @@ export default function IoTIntegrationDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { token } = useContext(AuthContext);
+  const { theme } = useTheme();
+  const { trackFalse, trackTrue, thumbColor } = getSwitchColors(theme);
   const toast = useToast();
   const [toastId, setToastId] = useState(0);
   const [gateway, setGateway] = useState<IoTGateway | null>(null);
@@ -80,6 +84,29 @@ export default function IoTIntegrationDetailScreen() {
     api_url: '',
     api_key: '',
   });
+
+  // Fetch enabled entities from backend
+  const fetchEnabledEntities = useCallback(async () => {
+    if (!id) return;
+
+    try {
+      const url = getBackendUrl();
+      const response = await fetch(`${url}/iot-gateways/${id}/entities`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const entities: IoTEntity[] = await response.json();
+        setEnabledStates(entities.filter((e) => e.is_enabled).map((e) => e.entity_id));
+      }
+    } catch (err) {
+      console.error('Failed to fetch enabled entities:', err);
+    }
+  }, [id, token]);
 
   // Fetch gateway details
   const fetchGateway = useCallback(async () => {
@@ -119,13 +146,16 @@ export default function IoTIntegrationDetailScreen() {
       if (data.is_active) {
         checkHomeAssistantConnection(data);
       }
+
+      // Fetch enabled entities
+      await fetchEnabledEntities();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [id, token, router]);
+  }, [id, token, router, fetchEnabledEntities]);
 
   // Check Home Assistant connection via REST API
   const checkHomeAssistantConnection = async (gateway: IoTGateway) => {
@@ -392,6 +422,13 @@ export default function IoTIntegrationDetailScreen() {
     fetchGateway();
   }, [fetchGateway]);
 
+  // Refresh enabled entities when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchEnabledEntities();
+    }, [fetchEnabledEntities])
+  );
+
   // Show toasts when error or success state changes
   useEffect(() => {
     if (error) {
@@ -553,14 +590,12 @@ export default function IoTIntegrationDetailScreen() {
                   </HStack>
                   <HStack className="justify-between">
                     <Text className="font-medium">Token:</Text>
-                    <Text className="text-typography-500">••••••••••••••••</Text>
+                    <Text>••••••••••••••••</Text>
                   </HStack>
                   {gateway.created_at && (
                     <HStack className="justify-between">
                       <Text className="font-medium">Created:</Text>
-                      <Text className="text-typography-500">
-                        {gateway.created_at.toLocaleDateString()}
-                      </Text>
+                      <Text>{gateway.created_at.toLocaleDateString()}</Text>
                     </HStack>
                   )}
                 </VStack>
@@ -645,10 +680,13 @@ export default function IoTIntegrationDetailScreen() {
               ) : (
                 <VStack space="sm">
                   {enabledStates.map((stateId) => (
-                    <Card key={stateId} className="bg-gray-50 p-3">
+                    <Card key={stateId} className="bg-background-50 p-3">
                       <HStack className="items-center justify-between">
                         <Text className="flex-1 font-medium">{stateId}</Text>
                         <Switch
+                          trackColor={{ false: trackFalse, true: trackTrue }}
+                          thumbColor={thumbColor}
+                          ios_backgroundColor={trackFalse}
                           value={true}
                           onValueChange={(value) => {
                             if (!value) {
@@ -667,16 +705,6 @@ export default function IoTIntegrationDetailScreen() {
               )}
             </VStack>
           </Card>
-
-          {/* Entity Count Stats */}
-          {connectionInfo.connected && (
-            <Card className="bg-background-0 p-4">
-              <VStack className="items-center">
-                <Text className="text-2xl font-bold">{stateCount}</Text>
-                <Text className="text-sm text-typography-500">Total Available States</Text>
-              </VStack>
-            </Card>
-          )}
         </VStack>
       </ScrollView>
     </>

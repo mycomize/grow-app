@@ -78,3 +78,30 @@ export interface HAWebSocketCommand {
   type: string;
   [key: string]: any;
 }
+
+// IoT Entity management types
+export interface IoTEntity {
+  id: number;
+  gateway_id: number;
+  entity_id: string;
+  entity_type: string;
+  friendly_name?: string;
+  is_enabled: boolean;
+  last_state?: string;
+  last_attributes?: Record<string, any>;
+  last_updated?: string;
+  created_at: string;
+}
+
+export interface IoTEntityCreate {
+  gateway_id: number;
+  entity_id: string;
+  entity_type: string;
+  friendly_name?: string;
+  is_enabled: boolean;
+}
+
+export interface IoTEntityUpdate {
+  friendly_name?: string;
+  is_enabled?: boolean;
+}

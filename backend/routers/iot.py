@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from backend.models.iot import IoTGateway
+from backend.models.iot_entity import IoTEntity
 from backend.models.grow import Grow
 from backend.models.user import User
 from backend.schemas.iot import (
@@ -10,12 +11,19 @@ from backend.schemas.iot import (
     IoTGatewayCreate,
     IoTGatewayUpdate,
 )
+from backend.schemas.iot_entity import (
+    IoTEntity as IoTEntitySchema,
+    IoTEntityCreate,
+    IoTEntityUpdate,
+)
 from backend.database import get_grow_db, grow_engine
 from backend.security import get_current_active_user
 
 # Create the models
 from backend.models.iot import Base
+from backend.models.iot_entity import Base as EntityBase
 Base.metadata.create_all(bind=grow_engine)
+EntityBase.metadata.create_all(bind=grow_engine)
 
 router = APIRouter(
     prefix="/iot-gateways",
@@ -72,6 +80,120 @@ async def read_iot_gateway(
     if gateway is None:
         raise HTTPException(status_code=404, detail="IoT gateway not found")
     return gateway
+
+# === IoT ENTITY ROUTES ===
+
+@router.get("/{gateway_id}/entities", response_model=List[IoTEntitySchema])
+async def get_gateway_entities(
+    gateway_id: int,
+    db: Session = Depends(get_grow_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get all enabled entities for a gateway"""
+    # Verify gateway exists and belongs to user
+    gateway = db.query(IoTGateway).filter(IoTGateway.id == gateway_id, IoTGateway.user_id == current_user.id).first()
+    if gateway is None:
+        raise HTTPException(status_code=404, detail="IoT gateway not found")
+    
+    entities = db.query(IoTEntity).filter(IoTEntity.gateway_id == gateway_id).all()
+    return entities
+
+@router.post("/{gateway_id}/entities", response_model=IoTEntitySchema, status_code=status.HTTP_201_CREATED)
+async def add_entity_to_gateway(
+    gateway_id: int,
+    entity: IoTEntityCreate,
+    db: Session = Depends(get_grow_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Add an entity to a gateway"""
+    # Verify gateway exists and belongs to user
+    gateway = db.query(IoTGateway).filter(IoTGateway.id == gateway_id, IoTGateway.user_id == current_user.id).first()
+    if gateway is None:
+        raise HTTPException(status_code=404, detail="IoT gateway not found")
+    
+    # Check if entity already exists
+    existing_entity = db.query(IoTEntity).filter(
+        IoTEntity.gateway_id == gateway_id,
+        IoTEntity.entity_id == entity.entity_id
+    ).first()
+    
+    if existing_entity:
+        raise HTTPException(status_code=400, detail="Entity already exists for this gateway")
+    
+    # Create new entity
+    db_entity = IoTEntity(
+        gateway_id=gateway_id,
+        entity_id=entity.entity_id,
+        entity_type=entity.entity_type,
+        friendly_name=entity.friendly_name,
+        is_enabled=entity.is_enabled
+    )
+    
+    db.add(db_entity)
+    db.commit()
+    db.refresh(db_entity)
+    
+    return db_entity
+
+@router.put("/{gateway_id}/entities/{entity_id}", response_model=IoTEntitySchema)
+async def update_entity(
+    gateway_id: int,
+    entity_id: int,
+    entity_update: IoTEntityUpdate,
+    db: Session = Depends(get_grow_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Update an entity"""
+    # Verify gateway exists and belongs to user
+    gateway = db.query(IoTGateway).filter(IoTGateway.id == gateway_id, IoTGateway.user_id == current_user.id).first()
+    if gateway is None:
+        raise HTTPException(status_code=404, detail="IoT gateway not found")
+    
+    # Get entity
+    db_entity = db.query(IoTEntity).filter(
+        IoTEntity.id == entity_id,
+        IoTEntity.gateway_id == gateway_id
+    ).first()
+    
+    if not db_entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    
+    # Update entity attributes
+    entity_data = entity_update.dict(exclude_unset=True)
+    for key, value in entity_data.items():
+        setattr(db_entity, key, value)
+    
+    db.commit()
+    db.refresh(db_entity)
+    return db_entity
+
+@router.delete("/{gateway_id}/entities/{entity_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_entity_from_gateway(
+    gateway_id: int,
+    entity_id: int,
+    db: Session = Depends(get_grow_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Remove an entity from a gateway"""
+    # Verify gateway exists and belongs to user
+    gateway = db.query(IoTGateway).filter(IoTGateway.id == gateway_id, IoTGateway.user_id == current_user.id).first()
+    if gateway is None:
+        raise HTTPException(status_code=404, detail="IoT gateway not found")
+    
+    # Get and delete entity
+    db_entity = db.query(IoTEntity).filter(
+        IoTEntity.id == entity_id,
+        IoTEntity.gateway_id == gateway_id
+    ).first()
+    
+    if not db_entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    
+    db.delete(db_entity)
+    db.commit()
+    
+    return {"detail": "Entity removed"}
+
 
 @router.put("/{gateway_id}", response_model=IoTGatewaySchema)
 async def update_iot_gateway(

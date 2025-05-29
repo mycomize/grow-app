@@ -19,11 +19,15 @@ import { Search, X, Power, AlertCircle, Filter, ChevronRight } from 'lucide-reac
 import { AuthContext } from '~/lib/AuthContext';
 import { getBackendUrl } from '~/lib/backendUrl';
 import { IoTGateway, HAService } from '~/lib/iot';
+import { useTheme } from '~/components/ui/themeprovider/themeprovider';
+import { getSwitchColors } from '~/lib/switchUtils';
 
 export default function ServicesScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { token } = useContext(AuthContext);
+  const { theme } = useTheme();
+  const { trackFalse, trackTrue, thumbColor } = getSwitchColors(theme);
   const [gateway, setGateway] = useState<IoTGateway | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -209,7 +213,13 @@ export default function ServicesScreen() {
                   <Icon as={Filter} size="sm" className="text-typography-500" />
                   <Text className="text-sm">Show enabled only</Text>
                 </HStack>
-                <Switch value={filterEnabled} onValueChange={setFilterEnabled} />
+                <Switch
+                  trackColor={{ false: trackFalse, true: trackTrue }}
+                  thumbColor={thumbColor}
+                  ios_backgroundColor={trackFalse}
+                  value={filterEnabled}
+                  onValueChange={setFilterEnabled}
+                />
               </HStack>
             </VStack>
 
@@ -247,6 +257,9 @@ export default function ServicesScreen() {
                   </HStack>
                 </Pressable>
                 <Switch
+                  trackColor={{ false: trackFalse, true: trackTrue }}
+                  thumbColor={thumbColor}
+                  ios_backgroundColor={trackFalse}
                   value={enabledServices.has(service.domain)}
                   onValueChange={(value) => {
                     setEnabledServices((prev) => {
