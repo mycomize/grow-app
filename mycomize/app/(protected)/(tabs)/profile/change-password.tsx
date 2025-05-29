@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { View } from 'react-native';
 import { ScrollView } from '@/components/ui/scroll-view';
 import { Box } from '@/components/ui/box';
@@ -14,10 +14,29 @@ import { useRouter } from 'expo-router';
 import { CircleX, CheckCircle, ArrowLeft } from 'lucide-react-native';
 import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
+import { Avatar, AvatarFallbackText } from '@/components/ui/avatar';
 
 import { AuthContext } from '@/lib/AuthContext';
 import { getBackendUrl } from '@/lib/backendUrl';
 import { PasswordInput } from '@/components/ui/password-input';
+
+// Function to decode JWT token and extract username
+function getUsernameFromToken(token: string | null | undefined): string {
+  if (!token) return 'User';
+
+  try {
+    // JWT tokens have 3 parts separated by dots: header.payload.signature
+    const payload = token.split('.')[1];
+    if (!payload) return 'User';
+
+    // Decode base64 payload
+    const decodedPayload = JSON.parse(atob(payload));
+    return decodedPayload.sub || decodedPayload.username || 'User';
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return 'User';
+  }
+}
 
 export default function ChangePasswordScreen() {
   const router = useRouter();
@@ -25,6 +44,7 @@ export default function ChangePasswordScreen() {
   const { token } = useContext(AuthContext);
 
   const [toastId, setToastId] = useState(0);
+  const [username, setUsername] = useState('User');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -32,6 +52,16 @@ export default function ChangePasswordScreen() {
   const [passwordsMatch, setPasswordsMatch] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    const extractedUsername = getUsernameFromToken(token);
+    setUsername(extractedUsername);
+  }, [token]);
+
+  // Get the first two letters of username for avatar fallback
+  const getAvatarFallback = (name: string) => {
+    return name.length >= 2 ? name.substring(0, 2).toUpperCase() : name.toUpperCase();
+  };
 
   const handleConfirmPassword = (text: string) => {
     setConfirmPassword(text);
@@ -129,13 +159,18 @@ export default function ChangePasswordScreen() {
           <Toast
             action="success"
             variant="outline"
-            className="mx-auto mt-20 flex w-[90%] max-w-[95%] justify-between gap-6 border-success-500 p-4 shadow-hard-5">
+            className="mx-auto mb-20 w-11/12 border-success-500 p-4 shadow-hard-5 dark:border-success-400 dark:bg-background-900">
             <VStack space="xs" className="w-full">
               <HStack className="flex-row gap-2">
-                <Icon as={CheckCircle} className="mt-0.5 stroke-success-500"></Icon>
-                <ToastTitle className="font-semibold text-success-700">Success</ToastTitle>
+                <Icon
+                  as={CheckCircle}
+                  className="mt-0.5 stroke-success-500 dark:stroke-success-400"
+                />
+                <ToastTitle className="font-semibold text-success-700 dark:text-success-300">
+                  Success
+                </ToastTitle>
               </HStack>
-              <ToastDescription className="flex-wrap break-words text-typography-700">
+              <ToastDescription className="text-typography-700 dark:text-typography-300">
                 Password changed successfully!
               </ToastDescription>
             </VStack>
@@ -158,13 +193,15 @@ export default function ChangePasswordScreen() {
           <Toast
             action="error"
             variant="outline"
-            className="mx-auto mt-20 flex w-[90%] max-w-[95%] justify-between gap-6 border-error-500 p-4 shadow-hard-5">
+            className="mx-auto mt-20 w-11/12 border-error-500 p-4 shadow-hard-5 dark:border-error-400 dark:bg-background-900">
             <VStack space="xs" className="w-full">
               <HStack className="flex-row gap-2">
-                <Icon as={CircleX} className="mt-0.5 stroke-error-500"></Icon>
-                <ToastTitle className="font-semibold text-error-700">Error</ToastTitle>
+                <Icon as={CircleX} className="mt-0.5 stroke-error-500 dark:stroke-error-400" />
+                <ToastTitle className="font-semibold text-error-700 dark:text-error-300">
+                  Error
+                </ToastTitle>
               </HStack>
-              <ToastDescription className="flex-wrap break-words text-typography-700">
+              <ToastDescription className="text-typography-700 dark:text-typography-300">
                 {errorMessage}
               </ToastDescription>
             </VStack>
@@ -179,6 +216,14 @@ export default function ChangePasswordScreen() {
       <ScrollView>
         <View className="mt-16 flex items-center">
           <VStack space="xl" className="w-full max-w-[350px] ">
+            {/* Avatar and Username Section */}
+            <VStack className="items-center gap-3 py-4">
+              <Avatar size="xl">
+                <AvatarFallbackText>{getAvatarFallback(username)}</AvatarFallbackText>
+              </Avatar>
+              <Text className="text-lg font-medium text-typography-900">{username}</Text>
+            </VStack>
+
             <FormControl className="rounded-lg border border-outline-300 p-4">
               <VStack space="xl">
                 <VStack space="xs">
@@ -232,7 +277,7 @@ export default function ChangePasswordScreen() {
 
                   <Button
                     variant="outline"
-                    className="mx-auto w-11/12 border-success-400"
+                    className="mx-auto w-11/12 border-background-800"
                     onPress={() => router.back()}
                     isDisabled={isLoading}>
                     <ButtonText className="text-typography-700">Cancel</ButtonText>

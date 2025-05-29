@@ -85,13 +85,15 @@ export default function SignUpScreen() {
           <Toast
             action="error"
             variant="outline"
-            className="mx-auto mb-20 flex w-[90%] max-w-[95%] justify-between gap-6 border-error-500 p-4 shadow-hard-5">
+            className="mx-auto mb-20 w-11/12 border-error-500 p-4 shadow-hard-5 dark:border-error-400 dark:bg-background-900">
             <VStack space="xs" className="w-full">
               <HStack className="flex-row gap-2">
-                <Icon as={CircleX} className="mt-0.5 stroke-error-500"></Icon>
-                <ToastTitle className="font-semibold text-error-700">Error</ToastTitle>
+                <Icon as={CircleX} className="mt-0.5 stroke-error-500 dark:stroke-error-400" />
+                <ToastTitle className="font-semibold text-error-700 dark:text-error-300">
+                  Error
+                </ToastTitle>
               </HStack>
-              <ToastDescription className="flex-wrap break-words text-typography-700">
+              <ToastDescription className="text-typography-700 dark:text-typography-300">
                 {errorMessage}
               </ToastDescription>
             </VStack>
