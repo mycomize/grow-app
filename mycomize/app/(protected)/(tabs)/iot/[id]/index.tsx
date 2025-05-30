@@ -34,12 +34,15 @@ import {
   Eye,
   EyeOff,
   TestTube,
-  Plus,
+  CirclePlus,
+  CircleMinus,
   PlugZap,
   ChevronsLeftRightEllipsis,
   View,
   Zap,
   ZapOff,
+  Thermometer,
+  Droplet,
 } from 'lucide-react-native';
 
 import { AuthContext } from '~/lib/AuthContext';
@@ -75,6 +78,7 @@ export default function IoTIntegrationDetailScreen() {
   const [enabledStates, setEnabledStates] = useState<string[]>([]);
   const [currentStates, setCurrentStates] = useState<HAState[]>([]);
   const [isControlling, setIsControlling] = useState<Set<string>>(new Set());
+  const [pendingValues, setPendingValues] = useState<Record<string, string>>({});
 
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
@@ -437,11 +441,39 @@ export default function IoTIntegrationDetailScreen() {
     await controlEntity(entityId, domain, service);
   };
 
-  // Handle number input
-  const handleNumberChange = async (entityId: string, value: string) => {
-    const numValue = parseFloat(value);
+  // Handle number input change (just update local state)
+  const handleNumberChange = (entityId: string, value: string) => {
+    setPendingValues((prev) => ({
+      ...prev,
+      [entityId]: value,
+    }));
+  };
+
+  // Handle increment/decrement
+  const adjustNumberValue = (entityId: string, increment: boolean, currentValue: string) => {
+    const currentNum = parseFloat(currentValue);
+    if (isNaN(currentNum)) return;
+
+    const step = increment ? 1 : -1;
+    const newValue = (currentNum + step).toString();
+
+    setPendingValues((prev) => ({
+      ...prev,
+      [entityId]: newValue,
+    }));
+  };
+
+  // Save pending value to Home Assistant
+  const saveNumberValue = async (entityId: string, pendingValue: string) => {
+    const numValue = parseFloat(pendingValue);
     if (!isNaN(numValue)) {
       await controlEntity(entityId, 'number', 'set_value', { value: numValue });
+      // Clear pending value after successful save
+      setPendingValues((prev) => {
+        const updated = { ...prev };
+        delete updated[entityId];
+        return updated;
+      });
     }
   };
 
@@ -463,7 +495,7 @@ export default function IoTIntegrationDetailScreen() {
       toast.show({
         id: 'error-toast-' + newId,
         placement: 'bottom',
-        duration: 4000,
+        duration: 3000,
         render: ({ id }) => {
           return (
             <Toast
@@ -499,26 +531,16 @@ export default function IoTIntegrationDetailScreen() {
       toast.show({
         id: 'success-toast-' + newId,
         placement: 'bottom',
-        duration: 4000,
+        duration: 3000,
         render: ({ id }) => {
           return (
-            <Toast
-              action="success"
-              variant="outline"
-              className="mx-auto mb-20 w-11/12 border-success-500 p-4 shadow-hard-5 dark:border-success-400 dark:bg-background-900">
+            <Toast className="mx-auto mb-28 w-full p-4 ">
               <VStack space="xs" className="w-full">
                 <HStack className="flex-row gap-2">
-                  <Icon
-                    as={CheckCircle}
-                    className="mt-0.5 stroke-success-500 dark:stroke-success-400"
-                  />
-                  <ToastTitle className="font-semibold text-success-700 dark:text-success-300">
-                    Success
-                  </ToastTitle>
+                  <Icon as={CheckCircle} className="mt-0.5 stroke-green-600" />
+                  <ToastTitle className="font-semibold text-green-600 ">Success</ToastTitle>
                 </HStack>
-                <ToastDescription className="text-typography-700 dark:text-typography-300">
-                  {message}
-                </ToastDescription>
+                <ToastDescription className="text-typography-200 ">{message}</ToastDescription>
               </VStack>
             </Toast>
           );
@@ -727,13 +749,13 @@ export default function IoTIntegrationDetailScreen() {
               <HStack className="mb-2 items-center justify-between">
                 <Heading size="lg">Connection</Heading>
                 {connectionInfo.connected ? (
-                  <HStack className="items-center rounded-sm bg-success-50 px-3 py-1">
-                    <Icon as={PlugZap} className="mr-2 text-success-700" />
+                  <HStack className="items-center rounded-sm bg-success-50 px-3 py-2">
+                    <Icon as={PlugZap} className="mr-2 text-success-700" size="xl" />
                     <Text className="text-sm text-success-700">CONNECTED</Text>
                   </HStack>
                 ) : (
-                  <HStack className="items-center rounded-sm bg-error-50 px-3 py-1">
-                    <Icon as={PowerOff} className="mr-2 text-error-700" />
+                  <HStack className="items-center rounded-sm bg-error-50 px-3 py-2">
+                    <Icon as={PowerOff} className="mr-2 text-error-700" size="xl" />
                     <Text className="text-sm text-error-700">DISCONNECTED</Text>
                   </HStack>
                 )}
@@ -748,12 +770,13 @@ export default function IoTIntegrationDetailScreen() {
               {/* Connection Controls */}
               <HStack space="sm">
                 <Button
-                  variant="solid"
-                  action={gateway.is_active ? 'negative' : 'positive'}
                   onPress={toggleGatewayStatus}
-                  className="flex-1">
-                  <ButtonIcon as={gateway.is_active ? PowerOff : Power} className="text-white" />
-                  <ButtonText className="text-white">
+                  className={gateway.is_active ? 'flex-1 bg-error-200' : 'flex-1 bg-success-300'}>
+                  <ButtonIcon
+                    as={gateway.is_active ? PowerOff : Power}
+                    className={gateway.is_active ? 'text-typography-700' : 'text-white'}
+                  />
+                  <ButtonText className={gateway.is_active ? 'text-typography-700' : 'text-white'}>
                     {gateway.is_active ? 'Disconnect' : 'Connect'}
                   </ButtonText>
                 </Button>
@@ -763,7 +786,7 @@ export default function IoTIntegrationDetailScreen() {
                   onPress={testConnection}
                   isDisabled={isTestingConnection || !gateway.is_active}
                   className="flex-1">
-                  <ButtonIcon as={ChevronsLeftRightEllipsis} className="mr-0" />
+                  <ButtonIcon as={ChevronsLeftRightEllipsis} />
                   <ButtonText>{isTestingConnection ? 'Testing...' : 'Test'}</ButtonText>
                 </Button>
               </HStack>
@@ -776,7 +799,7 @@ export default function IoTIntegrationDetailScreen() {
               <HStack className="items-center justify-between">
                 <Heading size="lg">Enabled Entities</Heading>
                 <Badge variant="outline" action="muted">
-                  <Text size="sm">{enabledStates.length} enabled</Text>
+                  <Text size="md">{enabledStates.length} enabled</Text>
                 </Badge>
               </HStack>
 
@@ -806,7 +829,6 @@ export default function IoTIntegrationDetailScreen() {
                       {domainStates.map((state) => {
                         const friendlyName = state.attributes.friendly_name || state.entity_id;
                         const isEntityControlling = isControlling.has(state.entity_id);
-                        const stateIcon = state.state === 'on' ? '🟢' : '🔴';
 
                         return (
                           <Card key={state.entity_id} className="bg-background-50 p-4">
@@ -821,30 +843,45 @@ export default function IoTIntegrationDetailScreen() {
 
                               {/* Entity Name */}
                               <VStack className="flex-1">
-                                <Text className="font-medium">{friendlyName}</Text>
-
-                                {/* Sensor display with value and unit */}
+                                {/* Sensor display with icon and value */}
                                 {domain === 'sensor' && (
-                                  <Text className="text-sm text-typography-500">
-                                    {state.state}
-                                    {state.attributes.unit_of_measurement &&
-                                      ` ${state.attributes.unit_of_measurement}`}
-                                  </Text>
+                                  <HStack>
+                                    {state.attributes.device_class === 'temperature' && (
+                                      <Icon as={Thermometer} />
+                                    )}
+                                    {state.attributes.device_class === 'humidity' && (
+                                      <Icon as={Droplet} />
+                                    )}
+                                    <Text className="ml-3 font-medium">{friendlyName}</Text>
+                                    <Text className="text-md ml-auto text-typography-500">
+                                      {state.state}
+                                      {state.attributes.unit_of_measurement &&
+                                        ` ${state.attributes.unit_of_measurement}`}
+                                    </Text>
+                                  </HStack>
                                 )}
 
-                                {/* Number display with current value */}
-                                {domain === 'number' && (
-                                  <Text className="text-sm text-typography-500">
-                                    Current: {state.state}
-                                    {state.attributes.unit_of_measurement &&
-                                      ` ${state.attributes.unit_of_measurement}`}
-                                  </Text>
+                                {/* Other domains display friendly name */}
+                                {domain !== 'sensor' && (
+                                  <>
+                                    <Text className="font-medium">{friendlyName}</Text>
+
+                                    {domain === 'number' && (
+                                      <Text className="text-md mt-1 text-typography-500">
+                                        Current: {state.state}
+                                        {state.attributes.unit_of_measurement &&
+                                          ` ${state.attributes.unit_of_measurement}`}
+                                      </Text>
+                                    )}
+                                  </>
                                 )}
                               </VStack>
 
                               {/* Domain-specific controls */}
                               <HStack className="items-center" space="sm">
-                                {isEntityControlling && <Spinner size="small" />}
+                                {isEntityControlling && (
+                                  <Spinner size="large" className="mr-6 mt-3 text-success-500" />
+                                )}
 
                                 {/* Switch and Automation Toggle */}
                                 {(domain === 'switch' || domain === 'automation') && (
@@ -861,10 +898,10 @@ export default function IoTIntegrationDetailScreen() {
                                 )}
 
                                 {/* Number Input */}
-                                {domain === 'number' && (
-                                  <Input className="w-20">
+                                {domain === 'number' && !isEntityControlling && (
+                                  <Input className="mt-4 w-20">
                                     <InputField
-                                      value={state.state}
+                                      value={pendingValues[state.entity_id] ?? state.state}
                                       onChangeText={(value) =>
                                         handleNumberChange(state.entity_id, value)
                                       }
@@ -875,6 +912,50 @@ export default function IoTIntegrationDetailScreen() {
                                 )}
                               </HStack>
                             </HStack>
+                            {/* Number input controls */}
+                            {domain === 'number' && (
+                              <HStack className=" mt-3 gap-9">
+                                <Pressable
+                                  onPress={() =>
+                                    adjustNumberValue(
+                                      state.entity_id,
+                                      false,
+                                      pendingValues[state.entity_id] ?? state.state
+                                    )
+                                  }
+                                  disabled={isEntityControlling}>
+                                  <Icon
+                                    as={CircleMinus}
+                                    size="xl"
+                                    className="text-typography-600"
+                                  />
+                                </Pressable>
+                                <Pressable
+                                  onPress={() =>
+                                    adjustNumberValue(
+                                      state.entity_id,
+                                      true,
+                                      pendingValues[state.entity_id] ?? state.state
+                                    )
+                                  }
+                                  disabled={isEntityControlling}>
+                                  <Icon as={CirclePlus} size="xl" className="text-typography-600" />
+                                </Pressable>
+                                {pendingValues[state.entity_id] && (
+                                  <Pressable
+                                    className="ml-auto"
+                                    onPress={() =>
+                                      saveNumberValue(
+                                        state.entity_id,
+                                        pendingValues[state.entity_id]
+                                      )
+                                    }
+                                    disabled={isEntityControlling}>
+                                    <Icon as={Save} size="xl" className="text-typography-600" />
+                                  </Pressable>
+                                )}
+                              </HStack>
+                            )}
                           </Card>
                         );
                       })}
