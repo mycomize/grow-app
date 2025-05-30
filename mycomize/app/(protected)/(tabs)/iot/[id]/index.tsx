@@ -23,6 +23,9 @@ import {
   WifiOff,
   Settings,
   Activity,
+  Bot,
+  Calculator,
+  ToggleRight,
   Power,
   PowerOff,
   Search,
@@ -749,7 +752,7 @@ export default function IoTIntegrationDetailScreen() {
               <HStack className="mb-2 items-center justify-between">
                 <Heading size="lg">Connection</Heading>
                 {connectionInfo.connected ? (
-                  <HStack className="items-center rounded-sm bg-success-50 px-3 py-2">
+                  <HStack className="items-center rounded-sm bg-success-50 px-3 py-1">
                     <Icon as={PlugZap} className="mr-2 text-success-700" size="xl" />
                     <Text className="text-sm text-success-700">CONNECTED</Text>
                   </HStack>
@@ -823,9 +826,23 @@ export default function IoTIntegrationDetailScreen() {
                   {/* Group states by domain */}
                   {Object.entries(groupedStates).map(([domain, domainStates]) => (
                     <VStack key={domain} space="md">
-                      <Text className="text-md mt-2 font-semibold capitalize text-typography-600">
-                        {domain} ({domainStates.length})
-                      </Text>
+                      <HStack className="mt-4">
+                        {domain === 'sensor' && (
+                          <Icon as={Activity} className="text-typography-500" />
+                        )}
+                        {domain === 'number' && (
+                          <Icon as={Calculator} className="text-typography-500" />
+                        )}
+                        {domain === 'automation' && (
+                          <Icon as={Bot} className="text-typography-500" />
+                        )}
+                        {domain === 'switch' && (
+                          <Icon as={ToggleRight} className="text-typography-500" />
+                        )}
+                        <Text className="text-md ml-2 font-semibold capitalize text-typography-600">
+                          {domain} ({domainStates.length})
+                        </Text>
+                      </HStack>
                       {domainStates.map((state) => {
                         const friendlyName = state.attributes.friendly_name || state.entity_id;
                         const isEntityControlling = isControlling.has(state.entity_id);
@@ -836,9 +853,9 @@ export default function IoTIntegrationDetailScreen() {
                               {/* State Icon for switches and automations */}
                               {(domain === 'switch' || domain === 'automation') &&
                                 (state.state === 'on' ? (
-                                  <Icon as={Zap} className="text-green-500" />
+                                  <Icon as={Zap} className="text-blue-500" />
                                 ) : (
-                                  <Icon as={ZapOff} className="text-red-500" />
+                                  <Icon as={ZapOff} className="text-typography-400" />
                                 ))}
 
                               {/* Entity Name */}
@@ -880,22 +897,23 @@ export default function IoTIntegrationDetailScreen() {
                               {/* Domain-specific controls */}
                               <HStack className="items-center" space="sm">
                                 {isEntityControlling && (
-                                  <Spinner size="large" className="mr-6 mt-3 text-success-500" />
+                                  <Spinner size="small" className="mr-6 mt-2 text-success-500" />
                                 )}
 
                                 {/* Switch and Automation Toggle */}
-                                {(domain === 'switch' || domain === 'automation') && (
-                                  <Switch
-                                    trackColor={{ false: trackFalse, true: trackTrue }}
-                                    thumbColor={thumbColor}
-                                    ios_backgroundColor={trackFalse}
-                                    value={state.state === 'on'}
-                                    onValueChange={() =>
-                                      handleToggle(state.entity_id, domain, state.state)
-                                    }
-                                    disabled={isEntityControlling}
-                                  />
-                                )}
+                                {(domain === 'switch' || domain === 'automation') &&
+                                  !isEntityControlling && (
+                                    <Switch
+                                      trackColor={{ false: trackFalse, true: trackTrue }}
+                                      thumbColor={thumbColor}
+                                      ios_backgroundColor={trackFalse}
+                                      value={state.state === 'on'}
+                                      onValueChange={() =>
+                                        handleToggle(state.entity_id, domain, state.state)
+                                      }
+                                      disabled={isEntityControlling}
+                                    />
+                                  )}
 
                                 {/* Number Input */}
                                 {domain === 'number' && !isEntityControlling && (

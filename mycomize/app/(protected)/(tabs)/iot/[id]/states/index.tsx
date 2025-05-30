@@ -14,7 +14,18 @@ import { Spinner } from '~/components/ui/spinner';
 import { Pressable } from '~/components/ui/pressable';
 import { Badge } from '~/components/ui/badge';
 import { Alert, AlertIcon, AlertText } from '~/components/ui/alert';
-import { Search, X, Activity, AlertCircle, Filter, Settings } from 'lucide-react-native';
+import {
+  Search,
+  X,
+  Activity,
+  AlertCircle,
+  Filter,
+  ChevronDown,
+  Bot,
+  SlidersHorizontal,
+  Calculator,
+  ToggleRight,
+} from 'lucide-react-native';
 import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 
 import { AuthContext } from '~/lib/AuthContext';
@@ -390,17 +401,28 @@ export default function EntityStatesScreen() {
       }>
       <VStack className="p-4" space="md">
         <Card className="bg-background-0">
-          <VStack className="p-4" space="xl">
+          <VStack className="p-2" space="xl">
             <HStack className="items-center justify-between">
-              <Heading size="xl">Entity States</Heading>
-              <HStack className="items-center rounded-sm bg-success-50 px-3 py-1">
-                <Text className="text-sm text-success-700">{filteredStates.length} STATES</Text>
-              </HStack>
+              <Heading size="xl">Home Assistant Entities</Heading>
             </HStack>
+            <HStack className="items-center gap-2">
+              <HStack className="items-center rounded-sm bg-success-200 px-3 py-1">
+                <Text className="text-success-700">{filteredStates.length} ENTITIES</Text>
+              </HStack>
+              {/* Enabled count */}
+              {enabledStates.size > 0 && (
+                <HStack className="items-center rounded-sm bg-green-600 px-3 py-1">
+                  <Text className="text-green-200">{enabledStates.size} ENABLED</Text>
+                </HStack>
+              )}
+            </HStack>
+            <Text>
+              Select home assistant entities from the list below to add to your IoT Gateway{' '}
+            </Text>
 
             {/* Search and Filter Controls */}
             <VStack space="sm">
-              <Input>
+              <Input className="mb-4 mt-2">
                 <InputIcon as={Search} className="ml-3" />
                 <InputField
                   placeholder="Search entities..."
@@ -414,58 +436,54 @@ export default function EntityStatesScreen() {
                 )}
               </Input>
 
-              <HStack className="mt-2 items-center justify-between">
-                <HStack className="mt-0 items-center" space="xs">
-                  <Icon as={Filter} size="sm" className="text-typography-500" />
-                  <Text className="ml-2 text-sm">Show enabled only</Text>
-                </HStack>
+              <HStack className="items-center">
+                <Icon as={Filter} size="lg" className="text-typography-500" />
+                <Text className="ml-2">Show enabled only</Text>
                 <Switch
                   trackColor={{ false: trackFalse, true: trackTrue }}
                   thumbColor={thumbColor}
                   ios_backgroundColor={trackFalse}
                   value={filterEnabled}
                   onValueChange={setFilterEnabled}
+                  className="ml-auto"
                 />
               </HStack>
 
               {/* Domain Filters */}
               <VStack space="sm">
-                <HStack className="items-center justify-between">
-                  <Text className="text-sm font-medium">Domain Filters</Text>
-                  <Button variant="outline" size="sm" onPress={() => setShowFilters(!showFilters)}>
-                    <ButtonIcon as={Settings} />
+                <HStack className="mt-1 items-center ">
+                  <Icon as={Filter} size="lg" className="text-typography-500" />
+                  <Text className="ml-2">Domain Filters</Text>
+                  <Button
+                    className="ml-auto"
+                    variant="solid"
+                    action="primary"
+                    size="sm"
+                    onPress={() => setShowFilters(!showFilters)}>
                     <ButtonText>Configure</ButtonText>
+                    {showFilters && <ButtonIcon as={ChevronDown} size="sm" />}
+                    {!showFilters && <ButtonIcon as={SlidersHorizontal} size="sm" />}
                   </Button>
                 </HStack>
 
                 {showFilters && (
                   <VStack space="sm">
-                    <HStack className="items-center justify-between">
-                      <Text className="text-sm">Show all domains</Text>
-                      <Switch
-                        trackColor={{ false: trackFalse, true: trackTrue }}
-                        thumbColor={thumbColor}
-                        ios_backgroundColor={trackFalse}
-                        value={filterPreferences.showAllDomains}
-                        onValueChange={toggleShowAllDomains}
-                      />
-                    </HStack>
-
-                    {!filterPreferences.showAllDomains && (
+                    {true && (
                       <VStack space="xs">
-                        <Text className="text-xs text-typography-500">
-                          Select domains to display:
-                        </Text>
+                        <Text className="text-typography-500">Select domains to display:</Text>
                         <VStack space="xs">
                           {availableDomains.map((domain) => (
-                            <HStack key={domain} className="items-center justify-between">
-                              <Text className="text-sm capitalize">{domain}</Text>
+                            <HStack
+                              key={domain}
+                              className="my-1 ml-5 items-center justify-between border-b border-background-200">
+                              <Text className="text-md mb-2 capitalize">{domain}</Text>
                               <Switch
                                 trackColor={{ false: trackFalse, true: trackTrue }}
                                 thumbColor={thumbColor}
                                 ios_backgroundColor={trackFalse}
                                 value={filterPreferences.domains.includes(domain)}
                                 onValueChange={() => toggleDomainFilter(domain)}
+                                className="mb-2"
                               />
                             </HStack>
                           ))}
@@ -476,33 +494,36 @@ export default function EntityStatesScreen() {
                 )}
               </VStack>
             </VStack>
-
-            {/* Enabled count */}
-            {enabledStates.size > 0 && (
-              <Badge variant="outline" action="success">
-                <Text size="xs">{enabledStates.size} enabled</Text>
-              </Badge>
-            )}
           </VStack>
         </Card>
 
         {/* Grouped States */}
         {Object.entries(groupedStates).map(([domain, domainStates]) => (
           <Card key={domain} className="bg-background-0">
-            <VStack className="p-4" space="sm">
-              <HStack className="mb-2 items-center justify-between">
-                <Heading size="md" className="capitalize">
+            <VStack className="p-2" space="sm">
+              <HStack className="mb-2 items-center">
+                {domain === 'sensor' && (
+                  <Icon as={Activity} size="lg" className="text-typography-500" />
+                )}
+                {domain === 'automation' && (
+                  <Icon as={Bot} size="xl" className="text-typography-500" />
+                )}
+                {domain === 'number' && (
+                  <Icon as={Calculator} size="lg" className="text-typography-500" />
+                )}
+                {domain === 'switch' && (
+                  <Icon as={ToggleRight} size="lg" className="text-typography-500" />
+                )}
+                <Heading size="md" className="ml-2 capitalize">
                   {domain}
                 </Heading>
-                <Badge variant="outline" action="muted">
+                <Badge className="ml-auto" variant="outline" action="muted">
                   <Text size="xs">{domainStates.length}</Text>
                 </Badge>
               </HStack>
 
               {domainStates.map((state) => {
                 const isEnabled = enabledStates.has(state.entity_id);
-                const isSwitch = domain === 'switch';
-                const isEntityControlling = isControlling.has(state.entity_id);
                 const friendlyName = state.attributes.friendly_name || state.entity_id;
 
                 return (
@@ -511,19 +532,15 @@ export default function EntityStatesScreen() {
                       {/* Entity Info and Enable Toggle */}
                       <HStack className="items-center justify-between">
                         <VStack className="mr-2 flex-1">
-                          <Text className="text-sm font-semibold">{state.entity_id}</Text>
-                          <HStack className="mt-1 items-center" space="xs">
-                            <Badge variant="solid" action="muted" size="sm">
-                              <Text size="xs" className="text-white">
-                                {state.state}
+                          <Text className="font-semibold">{friendlyName}</Text>
+                          {state.attributes.device_class && (
+                            <HStack>
+                              <Text className="ml-2 text-typography-400">Device Class: </Text>
+                              <Text className="capitalize italic text-typography-400">
+                                {state.attributes.device_class}
                               </Text>
-                            </Badge>
-                            {state.attributes.friendly_name && (
-                              <Text className="text-xs text-typography-500">
-                                {state.attributes.friendly_name}
-                              </Text>
-                            )}
-                          </HStack>
+                            </HStack>
+                          )}
                         </VStack>
                         {/* Enable/Disable Toggle */}
                         <VStack className="items-end" space="xs">
