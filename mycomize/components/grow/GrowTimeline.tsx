@@ -48,7 +48,7 @@ export const GrowTimeline: React.FC<GrowTimelineProps> = ({
   const currentStepIndex = steps.findIndex((s) => s.key === currentStep);
 
   return (
-    <View className="mx-5 mt-8 text-background-50">
+    <View className="mx-5 mt-3 text-background-50">
       <HStack className="relative z-10 items-center justify-between px-2 py-4">
         {steps.map((step, index) => {
           const isActive = step.key === currentStep;

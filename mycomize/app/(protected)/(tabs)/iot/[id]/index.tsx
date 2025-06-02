@@ -620,7 +620,6 @@ export default function IoTIntegrationDetailScreen() {
             }}
           />
         }>
-        <Heading className="bg-background-0 pb-5 pt-8 text-center">IoT Gateway</Heading>
         <VStack className="p-4" space="md">
           {/* Connection Details Panel */}
           <Card className="bg-background-0">
@@ -853,7 +852,7 @@ export default function IoTIntegrationDetailScreen() {
                               {/* State Icon for switches and automations */}
                               {(domain === 'switch' || domain === 'automation') &&
                                 (state.state === 'on' ? (
-                                  <Icon as={Zap} className="text-blue-500" />
+                                  <Icon as={Zap} className="text-green-500" />
                                 ) : (
                                   <Icon as={ZapOff} className="text-typography-400" />
                                 ))}

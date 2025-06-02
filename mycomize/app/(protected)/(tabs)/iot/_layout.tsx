@@ -20,10 +20,7 @@ export default function IoTGatewayLayout() {
       }}>
       <Stack.Screen name="index" options={{ title: 'IoT Gateway', headerShown: true }} />
       <Stack.Screen name="new" options={{ title: 'New IoT Gateway', headerShown: true }} />
-      <Stack.Screen
-        name="[id]/index"
-        options={{ title: 'IoT Gateway Details', headerShown: false }}
-      />
+      <Stack.Screen name="[id]/index" options={{ title: 'IoT Gateway', headerShown: true }} />
       <Stack.Screen name="[id]/states/index" options={{ title: '', headerShown: false }} />
     </Stack>
   );

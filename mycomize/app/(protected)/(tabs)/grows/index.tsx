@@ -229,6 +229,7 @@ export default function GrowScreen() {
 
   return grows.length == 0 ? (
     <VStack className="flex-1 items-center justify-center gap-2 bg-background-50">
+      <Text className="text-lg">Add Grow</Text>
       <AddGrowButton title="Add Grow" initial={true} />
     </VStack>
   ) : (
