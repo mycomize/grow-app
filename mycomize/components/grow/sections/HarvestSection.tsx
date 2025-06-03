@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Input, InputField, InputIcon } from '~/components/ui/input';
@@ -9,14 +9,13 @@ import { Button, ButtonIcon, ButtonText } from '~/components/ui/button';
 import { Card } from '~/components/ui/card';
 import {
   CalendarDays,
-  DollarSign,
   Weight,
   Plus,
   Trash2,
-  Zap,
   ShoppingBasket,
+  ChevronDown,
 } from 'lucide-react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
 import {
   Select,
   SelectTrigger,
@@ -29,35 +28,40 @@ import {
   SelectDragIndicator,
   SelectItem,
 } from '~/components/ui/select';
-import { ChevronDown } from 'lucide-react-native';
-import { useGrowWizard } from '~/lib/GrowWizardContext';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
-export const HarvestStep: React.FC = () => {
-  const { flushes, addFlush, updateFlush, removeFlush } = useGrowWizard();
+interface HarvestFlush {
+  id: string;
+  harvestDate: Date | null;
+  wetWeightG: number;
+  dryWeightG: number;
+  potency: string;
+}
 
-  // Date picker states (separate for each flush)
-  const [activeHarvestDatePickerIndex, setActiveHarvestDatePickerIndex] = useState<string | null>(
-    null
-  );
+interface HarvestSectionProps {
+  flushes: HarvestFlush[];
+  addFlush: () => void;
+  updateFlush: (id: string, data: Partial<HarvestFlush>) => void;
+  removeFlush: (id: string) => void;
+  activeDatePicker: string | null;
+  setActiveDatePicker: (field: string | null) => void;
+  handleDateChange: (field: string, date?: Date) => void;
+}
 
-  // Handle date change
-  const onChangeHarvestDate = (event: any, selectedDate?: Date, flushId?: string) => {
-    setActiveHarvestDatePickerIndex(null);
-    if (selectedDate && flushId) {
-      updateFlush(flushId, { harvestDate: selectedDate });
-    }
-  };
+const potencyOptions = ['Low', 'Medium', 'High', 'Very High', 'Unknown'];
 
-  // Potency options
-  const potencyOptions = ['Low', 'Medium', 'High', 'Very High', 'Unknown'];
-
+export const HarvestSection: React.FC<HarvestSectionProps> = ({
+  flushes,
+  addFlush,
+  updateFlush,
+  removeFlush,
+  activeDatePicker,
+  setActiveDatePicker,
+  handleDateChange,
+}) => {
   return (
-    <VStack space="md">
-      <HStack className="items-center justify-between">
-        <Text className="text-xl font-bold">Harvest</Text>
-        <Icon as={ShoppingBasket} size="xl" className="text-typography-400" />
-      </HStack>
-      <Text className="text-sm text-gray-500">
+    <VStack space="md" className="bg-background-0 p-4">
+      <Text className="text-sm text-typography-500">
         Record each flush as it becomes available. You can add multiple flushes over time.
       </Text>
 
@@ -72,77 +76,76 @@ export const HarvestStep: React.FC = () => {
             )}
           </HStack>
 
-          <VStack space="xs">
-            <Text className="text-bold text-lg text-typography-500">Harvest Date</Text>
-            <HStack className="flex flex-row items-center justify-between">
-              <Input
-                className="mt-2 w-11/12"
-                isDisabled={false}
-                isInvalid={false}
-                isReadOnly={false}>
-                <InputField className={!flush.harvestDate ? 'text-typography-200' : ''}>
-                  {flush.harvestDate ? flush.harvestDate.toDateString() : 'Select date'}
-                </InputField>
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>Harvest Date</FormControlLabelText>
+            </FormControlLabel>
+            <Pressable onPress={() => setActiveDatePicker(`flush_${flush.id}`)}>
+              <Input isReadOnly>
+                <InputField
+                  value={flush.harvestDate?.toDateString() || 'Select date'}
+                  className={!flush.harvestDate ? 'text-typography-400' : ''}
+                />
+                <InputIcon as={CalendarDays} className="mr-2" />
               </Input>
-              <Pressable onPress={() => setActiveHarvestDatePickerIndex(flush.id)}>
-                <Icon as={CalendarDays} size="xl" className="mt-2 text-typography-400" />
-              </Pressable>
-            </HStack>
-            {activeHarvestDatePickerIndex === flush.id && (
+            </Pressable>
+            {activeDatePicker === `flush_${flush.id}` && (
               <DateTimePicker
                 value={flush.harvestDate || new Date()}
                 mode="date"
-                onChange={(event, date) => onChangeHarvestDate(event, date, flush.id)}
+                onChange={(event, date) => handleDateChange(`flush_${flush.id}`, date)}
               />
             )}
-          </VStack>
+          </FormControl>
 
-          <VStack space="xs">
-            <Text className="text-bold text-lg text-typography-500">Wet Weight (g)</Text>
-            <Input isDisabled={false} variant="underlined" size="xl" className="pl-3">
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>Wet Weight (g)</FormControlLabelText>
+            </FormControlLabel>
+            <Input>
               <InputField
-                autoCapitalize="none"
-                inputMode="decimal"
                 placeholder="Enter wet weight in grams"
-                className="placeholder:text-typography-200"
                 value={flush.wetWeightG ? flush.wetWeightG.toString() : ''}
                 onChangeText={(value) =>
                   updateFlush(flush.id, { wetWeightG: parseFloat(value) || 0 })
                 }
+                keyboardType="numeric"
               />
-              <InputIcon as={Weight} size="xl" className="ml-auto mr-4" />
+              <InputIcon as={Weight} className="mr-2" />
             </Input>
-          </VStack>
+          </FormControl>
 
-          <VStack space="xs">
-            <Text className="text-bold text-lg text-typography-500">Dry Weight (g)</Text>
-            <Input isDisabled={false} variant="underlined" size="xl" className="pl-3">
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>Dry Weight (g)</FormControlLabelText>
+            </FormControlLabel>
+            <Input>
               <InputField
-                autoCapitalize="none"
-                inputMode="decimal"
                 placeholder="Enter dry weight in grams"
-                className="placeholder:text-typography-200"
                 value={flush.dryWeightG ? flush.dryWeightG.toString() : ''}
                 onChangeText={(value) =>
                   updateFlush(flush.id, { dryWeightG: parseFloat(value) || 0 })
                 }
+                keyboardType="numeric"
               />
-              <InputIcon as={Weight} size="xl" className="ml-auto mr-4" />
+              <InputIcon as={Weight} className="mr-2" />
             </Input>
-          </VStack>
+          </FormControl>
 
-          <VStack space="xs">
-            <Text className="text-bold text-lg text-typography-500">Potency</Text>
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>Potency</FormControlLabelText>
+            </FormControlLabel>
             <Select
               selectedValue={flush.potency}
               onValueChange={(value) => updateFlush(flush.id, { potency: value })}>
-              <SelectTrigger variant="underlined" size="xl">
+              <SelectTrigger variant="outline" size="md" className="">
                 <SelectInput
-                  className="ml-3 placeholder:text-typography-200"
                   value={flush.potency}
                   placeholder="Select potency"
+                  className="placeholder:text-sm"
                 />
-                <SelectIcon className="ml-auto mr-3" as={ChevronDown}></SelectIcon>
+                <SelectIcon as={ChevronDown} className="ml-auto mr-2" />
               </SelectTrigger>
               <SelectPortal>
                 <SelectBackdrop />
@@ -156,7 +159,7 @@ export const HarvestStep: React.FC = () => {
                 </SelectContent>
               </SelectPortal>
             </Select>
-          </VStack>
+          </FormControl>
         </Card>
       ))}
 
@@ -168,7 +171,7 @@ export const HarvestStep: React.FC = () => {
       </Button>
 
       {flushes.length > 0 && (
-        <VStack className="mt-4 gap-4 rounded-md  p-4">
+        <VStack className="mt-4 gap-4 rounded-md p-4">
           <HStack className="justify-between">
             <Text className="font-bold">Total Wet Weight:</Text>
             <Text>

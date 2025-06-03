@@ -20,7 +20,7 @@ export default function GrowsLayout() {
       }}>
       <Stack.Screen name="index" options={{ title: 'Grows', headerShown: true }} />
       <Stack.Screen name="new" options={{ title: 'Add Grow', headerShown: false }} />
-      <Stack.Screen name="wizard" options={{ title: 'Grows', headerShown: true }} />
+      <Stack.Screen name="[id]/edit" options={{ title: 'Edit Grow', headerShown: true }} />
     </Stack>
   );
 }

@@ -9,18 +9,19 @@ export default function GrowDetailsScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to the wizard view with the grow id
+    // Redirect to the unified edit screen with the grow id
     if (id) {
+      const growId = Array.isArray(id) ? id[0] : id;
       router.replace({
-        pathname: '/(protected)/(tabs)/grows/wizard/[step]',
-        params: { step: 'basics', id },
+        pathname: '/(protected)/(tabs)/grows/[id]/edit',
+        params: { id: growId },
       });
     }
   }, [id, router]);
 
   return (
     <Center className="h-full">
-      <Spinner size="large" color="$primary500" />
+      <Spinner size="large" />
       <Text className="mt-4">Loading grow details...</Text>
     </Center>
   );

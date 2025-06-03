@@ -4,20 +4,47 @@ from datetime import date, datetime
 from backend.schemas.iot import IoTGateway
 
 class GrowBase(BaseModel):
-    name: Optional[str] = "New Grow"  # Default name instead of required
-    species: Optional[str] = "Unknown"  # Default species instead of required
-    variant: Optional[str] = "Unknown"  # Default variant instead of required
+    name: Optional[str] = None
+    species: Optional[str] = None
+    variant: Optional[str] = None
     inoculation_date: Optional[date] = None
-    tek: str = "Monotub"  # Default to monotub tek
-    stage: str = "spawn_colonization"  # Default to spawn colonization
-    status: str = "growing"  # Default to growing status
+    tek: str = "Monotub"
+    stage: str = "spawn_colonization"
+    status: str = "growing"
     notes: Optional[str] = None
     cost: Optional[float] = 0
     
-    # Harvest fields directly in the Grow model
+    # Harvest fields
     harvest_date: Optional[date] = None
     harvest_dry_weight_grams: Optional[float] = 0
     harvest_wet_weight_grams: Optional[float] = 0
+    
+    # Syringe fields
+    syringe_vendor: Optional[str] = None
+    syringe_volume_ml: Optional[float] = None
+    syringe_cost: Optional[float] = None
+    syringe_created_at: Optional[date] = None
+    syringe_expiration_date: Optional[date] = None
+    
+    # Spawn fields
+    spawn_type: Optional[str] = None
+    spawn_weight_lbs: Optional[float] = None
+    spawn_cost: Optional[float] = None
+    spawn_vendor: Optional[str] = None
+    
+    # Bulk substrate fields
+    bulk_type: Optional[str] = None
+    bulk_weight_lbs: Optional[float] = None
+    bulk_cost: Optional[float] = None
+    bulk_vendor: Optional[str] = None
+    bulk_created_at: Optional[date] = None
+    bulk_expiration_date: Optional[date] = None
+    
+    # Fruiting fields
+    fruiting_start_date: Optional[date] = None
+    fruiting_pin_date: Optional[date] = None
+    fruiting_mist_frequency: Optional[str] = None
+    fruiting_fan_frequency: Optional[str] = None
 
 class GrowCreate(GrowBase):
     """Schema for creating a new grow"""
@@ -96,20 +123,29 @@ class GrowUpdate(BaseModel):
     harvest_dry_weight_grams: Optional[float] = None
     harvest_wet_weight_grams: Optional[float] = None
     
-    @validator('name')
-    def name_must_not_be_empty(cls, v):
-        if v is not None and not v.strip():
-            raise ValueError('Name cannot be empty')
-        return v.strip() if v else v
+    # Syringe fields
+    syringe_vendor: Optional[str] = None
+    syringe_volume_ml: Optional[float] = None
+    syringe_cost: Optional[float] = None
+    syringe_created_at: Optional[date] = None
+    syringe_expiration_date: Optional[date] = None
     
-    @validator('species')
-    def species_must_not_be_empty(cls, v):
-        if v is not None and not v.strip():
-            raise ValueError('Species cannot be empty')
-        return v.strip() if v else v
+    # Spawn fields
+    spawn_type: Optional[str] = None
+    spawn_weight_lbs: Optional[float] = None
+    spawn_cost: Optional[float] = None
+    spawn_vendor: Optional[str] = None
     
-    @validator('variant')
-    def variant_must_not_be_empty(cls, v):
-        if v is not None and not v.strip():
-            raise ValueError('Variant cannot be empty')
-        return v.strip() if v else v
+    # Bulk substrate fields
+    bulk_type: Optional[str] = None
+    bulk_weight_lbs: Optional[float] = None
+    bulk_cost: Optional[float] = None
+    bulk_vendor: Optional[str] = None
+    bulk_created_at: Optional[date] = None
+    bulk_expiration_date: Optional[date] = None
+    
+    # Fruiting fields
+    fruiting_start_date: Optional[date] = None
+    fruiting_pin_date: Optional[date] = None
+    fruiting_mist_frequency: Optional[str] = None
+    fruiting_fan_frequency: Optional[str] = None

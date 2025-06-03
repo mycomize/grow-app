@@ -8,17 +8,17 @@ export default function NewGrowScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to the wizard flow
+    // Redirect to the unified edit screen for new grow
     router.replace({
-      pathname: '/(protected)/(tabs)/grows/wizard/[step]',
-      params: { step: 'basics' },
+      pathname: '/(protected)/(tabs)/grows/[id]/edit',
+      params: { id: 'new' },
     });
   }, [router]);
 
   return (
     <Center className="h-full w-full">
       <Spinner size="large" />
-      <Text className="mt-4">Redirecting to grow wizard...</Text>
+      <Text className="mt-4">Creating new grow...</Text>
     </Center>
   );
 }

@@ -31,7 +31,7 @@ import {
   growTeks,
   statusLabels,
   growStatuses,
-} from '~/lib/grow';
+} from '~/lib/growTypes';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 
 interface AddGrowButtonProps {
