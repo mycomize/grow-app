@@ -156,18 +156,13 @@ export default function ChangePasswordScreen() {
       duration: 3000,
       render: ({ id }) => {
         return (
-          <Toast variant="outline" className="mx-auto mb-20 w-full p-4">
+          <Toast variant="outline" className="mx-auto mt-28 w-full bg-background-0 p-4">
             <VStack space="xs" className="w-full">
               <HStack className="flex-row gap-2">
-                <Icon
-                  as={CheckCircle}
-                  className="mt-0.5 stroke-success-500 dark:stroke-success-400"
-                />
-                <ToastTitle className="font-semibold text-success-700 dark:text-success-300">
-                  Success
-                </ToastTitle>
+                <Icon as={CheckCircle} className="mt-0.5 stroke-green-600 " />
+                <ToastTitle className="font-semibold text-green-600">Success</ToastTitle>
               </HStack>
-              <ToastDescription className="text-typography-700 dark:text-typography-300">
+              <ToastDescription className="text-typography-200">
                 Password changed successfully!
               </ToastDescription>
             </VStack>
@@ -187,20 +182,13 @@ export default function ChangePasswordScreen() {
       duration: 3000,
       render: ({ id }) => {
         return (
-          <Toast
-            action="error"
-            variant="outline"
-            className="mx-auto mt-20 w-11/12 border-error-500 p-4 shadow-hard-5 dark:border-error-400 dark:bg-background-900">
+          <Toast action="error" variant="outline" className="mx-auto mt-20 w-full p-4 ">
             <VStack space="xs" className="w-full">
               <HStack className="flex-row gap-2">
-                <Icon as={CircleX} className="mt-0.5 stroke-error-500 dark:stroke-error-400" />
-                <ToastTitle className="font-semibold text-error-700 dark:text-error-300">
-                  Error
-                </ToastTitle>
+                <Icon as={CircleX} className="mt-0.5 stroke-error-500 " />
+                <ToastTitle className="font-semibold text-error-500">Error</ToastTitle>
               </HStack>
-              <ToastDescription className="text-typography-700 dark:text-typography-300">
-                {errorMessage}
-              </ToastDescription>
+              <ToastDescription className="text-typography-200">{errorMessage}</ToastDescription>
             </VStack>
           </Toast>
         );

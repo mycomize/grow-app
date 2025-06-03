@@ -78,24 +78,17 @@ export default function SignUpScreen() {
 
     toast.show({
       id: 'toast-' + newId,
-      placement: 'bottom',
+      placement: 'top',
       duration: 3000,
       render: ({ id }) => {
         return (
-          <Toast
-            action="error"
-            variant="outline"
-            className="mx-auto mb-20 w-11/12 border-error-500 p-4 shadow-hard-5 dark:border-error-400 dark:bg-background-900">
+          <Toast variant="outline" className="mx-auto mt-28 w-full bg-background-0 p-4">
             <VStack space="xs" className="w-full">
               <HStack className="flex-row gap-2">
-                <Icon as={CircleX} className="mt-0.5 stroke-error-500 dark:stroke-error-400" />
-                <ToastTitle className="font-semibold text-error-700 dark:text-error-300">
-                  Error
-                </ToastTitle>
+                <Icon as={CircleX} className="mt-0.5 stroke-error-500 " />
+                <ToastTitle className="font-semibold text-error-500 ">Error</ToastTitle>
               </HStack>
-              <ToastDescription className="text-typography-700 dark:text-typography-300">
-                {errorMessage}
-              </ToastDescription>
+              <ToastDescription className="text-typography-200 ">{errorMessage}</ToastDescription>
             </VStack>
           </Toast>
         );

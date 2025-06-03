@@ -253,7 +253,6 @@ export default function IoTScreen() {
   return gateways.length == 0 ? (
     <VStack className="flex-1 items-center justify-center gap-2 bg-background-50">
       <Text className="mb-4 text-center text-lg text-typography-600">
-        No IoT integrations yet.{'\n'}
         Add your first Home Assistant integration!
       </Text>
       <AddIntegrationButton title="Add Integration" initial={true} />

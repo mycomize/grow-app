@@ -497,27 +497,17 @@ export default function IoTIntegrationDetailScreen() {
     if (!toast.isActive('error-toast-' + newId)) {
       toast.show({
         id: 'error-toast-' + newId,
-        placement: 'bottom',
+        placement: 'top',
         duration: 3000,
         render: ({ id }) => {
           return (
-            <Toast
-              action="error"
-              variant="outline"
-              className="mx-auto mb-20 w-11/12 border-error-500 p-4 shadow-hard-5 dark:border-error-400 dark:bg-background-900">
+            <Toast variant="outline" className="mx-auto mt-28 w-full p-4">
               <VStack space="xs" className="w-full">
                 <HStack className="flex-row gap-2">
-                  <Icon
-                    as={AlertCircle}
-                    className="mt-0.5 stroke-error-500 dark:stroke-error-400"
-                  />
-                  <ToastTitle className="font-semibold text-error-700 dark:text-error-300">
-                    Error
-                  </ToastTitle>
+                  <Icon as={AlertCircle} className="mt-0.5 stroke-error-500" />
+                  <ToastTitle className="font-semibold text-error-500">Error</ToastTitle>
                 </HStack>
-                <ToastDescription className="text-typography-700 dark:text-typography-300">
-                  {message}
-                </ToastDescription>
+                <ToastDescription className="text-typography-200">{message}</ToastDescription>
               </VStack>
             </Toast>
           );
@@ -533,17 +523,17 @@ export default function IoTIntegrationDetailScreen() {
     if (!toast.isActive('success-toast-' + newId)) {
       toast.show({
         id: 'success-toast-' + newId,
-        placement: 'bottom',
+        placement: 'top',
         duration: 3000,
         render: ({ id }) => {
           return (
-            <Toast className="mx-auto mb-28 w-full p-4 ">
+            <Toast className="mx-auto mt-28 w-full p-4">
               <VStack space="xs" className="w-full">
                 <HStack className="flex-row gap-2">
                   <Icon as={CheckCircle} className="mt-0.5 stroke-green-600" />
-                  <ToastTitle className="font-semibold text-green-600 ">Success</ToastTitle>
+                  <ToastTitle className="font-semibold text-green-600">Success</ToastTitle>
                 </HStack>
-                <ToastDescription className="text-typography-200 ">{message}</ToastDescription>
+                <ToastDescription className="text-typography-200">{message}</ToastDescription>
               </VStack>
             </Toast>
           );
