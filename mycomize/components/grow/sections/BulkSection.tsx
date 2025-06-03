@@ -1,7 +1,7 @@
 import React from 'react';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
-import { Input, InputField, InputIcon } from '~/components/ui/input';
+import { Input, InputField, InputIcon, InputSlot } from '~/components/ui/input';
 import { Text } from '~/components/ui/text';
 import { Pressable } from '~/components/ui/pressable';
 import { Icon } from '~/components/ui/icon';
@@ -11,8 +11,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface GrowData {
   bulk_type?: string;
-  bulk_weight_lbs?: number;
-  bulk_cost?: number;
+  bulk_weight_lbs?: string;
+  bulk_cost?: string;
   bulk_vendor?: string;
   bulk_created_at?: string;
   bulk_expiration_date?: string;
@@ -57,9 +57,8 @@ export const BulkSection: React.FC<BulkSectionProps> = ({
         <Input>
           <InputField
             placeholder="Enter weight in pounds"
-            value={growData.bulk_weight_lbs?.toString() || ''}
-            onChangeText={(value) => updateField('bulk_weight_lbs', parseFloat(value) || 0)}
-            keyboardType="numeric"
+            value={growData.bulk_weight_lbs || ''}
+            onChangeText={(value) => updateField('bulk_weight_lbs', value)}
           />
           <InputIcon as={Weight} className="mr-2" />
         </Input>
@@ -72,9 +71,8 @@ export const BulkSection: React.FC<BulkSectionProps> = ({
         <Input>
           <InputField
             placeholder="Enter cost"
-            value={growData.bulk_cost?.toString() || ''}
-            onChangeText={(value) => updateField('bulk_cost', parseFloat(value) || 0)}
-            keyboardType="numeric"
+            value={growData.bulk_cost || ''}
+            onChangeText={(value) => updateField('bulk_cost', value)}
           />
           <InputIcon as={DollarSign} className="mr-2" />
         </Input>
@@ -97,15 +95,15 @@ export const BulkSection: React.FC<BulkSectionProps> = ({
         <FormControlLabel>
           <FormControlLabelText>Created Date</FormControlLabelText>
         </FormControlLabel>
-        <Pressable onPress={() => setActiveDatePicker('bulk_created_at')}>
-          <Input isReadOnly>
-            <InputField
-              value={parseDate(growData.bulk_created_at)?.toDateString() || 'Select date'}
-              className={!growData.bulk_created_at ? 'text-typography-400' : ''}
-            />
+        <Input isReadOnly>
+          <InputField
+            value={parseDate(growData.bulk_created_at)?.toDateString() || 'Select date'}
+            className={!growData.bulk_created_at ? 'text-typography-400' : ''}
+          />
+          <InputSlot onPress={() => setActiveDatePicker('bulk_created_at')}>
             <InputIcon as={CalendarDays} className="mr-2" />
-          </Input>
-        </Pressable>
+          </InputSlot>
+        </Input>
         {activeDatePicker === 'bulk_created_at' && (
           <DateTimePicker
             value={parseDate(growData.bulk_created_at) || new Date()}
@@ -119,15 +117,15 @@ export const BulkSection: React.FC<BulkSectionProps> = ({
         <FormControlLabel>
           <FormControlLabelText>Expiration Date</FormControlLabelText>
         </FormControlLabel>
-        <Pressable onPress={() => setActiveDatePicker('bulk_expiration_date')}>
-          <Input isReadOnly>
-            <InputField
-              value={parseDate(growData.bulk_expiration_date)?.toDateString() || 'Select date'}
-              className={!growData.bulk_expiration_date ? 'text-typography-400' : ''}
-            />
+        <Input isReadOnly>
+          <InputField
+            value={parseDate(growData.bulk_expiration_date)?.toDateString() || 'Select date'}
+            className={!growData.bulk_expiration_date ? 'text-typography-400' : ''}
+          />
+          <InputSlot onPress={() => setActiveDatePicker('bulk_expiration_date')}>
             <InputIcon as={CalendarDays} className="mr-2" />
-          </Input>
-        </Pressable>
+          </InputSlot>
+        </Input>
         {activeDatePicker === 'bulk_expiration_date' && (
           <DateTimePicker
             value={parseDate(growData.bulk_expiration_date) || new Date()}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
-import { Input, InputField, InputIcon } from '~/components/ui/input';
+import { Input, InputField, InputIcon, InputSlot } from '~/components/ui/input';
 import { Text } from '~/components/ui/text';
 import { Pressable } from '~/components/ui/pressable';
 import { Icon } from '~/components/ui/icon';
@@ -11,8 +11,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface GrowData {
   spawn_type?: string;
-  spawn_weight_lbs?: number;
-  spawn_cost?: number;
+  spawn_weight_lbs?: string;
+  spawn_cost?: string;
   spawn_vendor?: string;
   inoculation_date?: string;
 }
@@ -56,9 +56,8 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
         <Input>
           <InputField
             placeholder="Enter weight in pounds"
-            value={growData.spawn_weight_lbs?.toString() || ''}
-            onChangeText={(value) => updateField('spawn_weight_lbs', parseFloat(value) || 0)}
-            keyboardType="numeric"
+            value={growData.spawn_weight_lbs || ''}
+            onChangeText={(value) => updateField('spawn_weight_lbs', value)}
           />
           <InputIcon as={Weight} className="mr-2" />
         </Input>
@@ -71,9 +70,8 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
         <Input>
           <InputField
             placeholder="Enter cost"
-            value={growData.spawn_cost?.toString() || ''}
-            onChangeText={(value) => updateField('spawn_cost', parseFloat(value) || 0)}
-            keyboardType="numeric"
+            value={growData.spawn_cost || ''}
+            onChangeText={(value) => updateField('spawn_cost', value)}
           />
           <InputIcon as={DollarSign} className="mr-2" />
         </Input>
@@ -96,15 +94,15 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
         <FormControlLabel>
           <FormControlLabelText>Inoculation Date</FormControlLabelText>
         </FormControlLabel>
-        <Pressable onPress={() => setActiveDatePicker('inoculation_date')}>
-          <Input isReadOnly>
-            <InputField
-              value={parseDate(growData.inoculation_date)?.toDateString() || 'Select date'}
-              className={!growData.inoculation_date ? 'text-typography-400' : ''}
-            />
+        <Input isReadOnly>
+          <InputField
+            value={parseDate(growData.inoculation_date)?.toDateString() || 'Select date'}
+            className={!growData.inoculation_date ? 'text-typography-400' : ''}
+          />
+          <InputSlot onPress={() => setActiveDatePicker('inoculation_date')}>
             <InputIcon as={CalendarDays} className="mr-2" />
-          </Input>
-        </Pressable>
+          </InputSlot>
+        </Input>
         {activeDatePicker === 'inoculation_date' && (
           <DateTimePicker
             value={parseDate(growData.inoculation_date) || new Date()}

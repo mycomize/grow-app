@@ -62,21 +62,21 @@ interface GrowData {
 
   // Syringe fields
   syringe_vendor?: string;
-  syringe_volume_ml?: number;
-  syringe_cost?: number;
+  syringe_volume_ml?: string;
+  syringe_cost?: string;
   syringe_created_at?: string;
   syringe_expiration_date?: string;
 
   // Spawn fields
   spawn_type?: string;
-  spawn_weight_lbs?: number;
-  spawn_cost?: number;
+  spawn_weight_lbs?: string;
+  spawn_cost?: string;
   spawn_vendor?: string;
 
   // Bulk substrate fields
   bulk_type?: string;
-  bulk_weight_lbs?: number;
-  bulk_cost?: number;
+  bulk_weight_lbs?: string;
+  bulk_cost?: string;
   bulk_vendor?: string;
   bulk_created_at?: string;
   bulk_expiration_date?: string;
@@ -91,8 +91,8 @@ interface GrowData {
 interface HarvestFlush {
   id: string;
   harvestDate: Date | null;
-  wetWeightG: number;
-  dryWeightG: number;
+  wetWeightG: string;
+  dryWeightG: string;
   potency: string;
 }
 
@@ -101,8 +101,8 @@ const generateId = () => Math.random().toString(36).substring(2, 11);
 const defaultHarvestFlush: HarvestFlush = {
   id: generateId(),
   harvestDate: null,
-  wetWeightG: 0,
-  dryWeightG: 0,
+  wetWeightG: '',
+  dryWeightG: '',
   potency: '',
 };
 
@@ -219,7 +219,11 @@ export default function GrowEditScreen() {
 
   // Calculate total cost
   const calculateTotalCost = () => {
-    return (growData.syringe_cost || 0) + (growData.spawn_cost || 0) + (growData.bulk_cost || 0);
+    return (
+      (parseFloat(growData.syringe_cost || '0') || 0) +
+      (parseFloat(growData.spawn_cost || '0') || 0) +
+      (parseFloat(growData.bulk_cost || '0') || 0)
+    );
   };
 
   // Save grow
@@ -230,8 +234,14 @@ export default function GrowEditScreen() {
 
     try {
       // Calculate total harvest weights from flushes
-      const totalWetWeight = flushes.reduce((sum, flush) => sum + (flush.wetWeightG || 0), 0);
-      const totalDryWeight = flushes.reduce((sum, flush) => sum + (flush.dryWeightG || 0), 0);
+      const totalWetWeight = flushes.reduce(
+        (sum, flush) => sum + (parseFloat(flush.wetWeightG) || 0),
+        0
+      );
+      const totalDryWeight = flushes.reduce(
+        (sum, flush) => sum + (parseFloat(flush.dryWeightG) || 0),
+        0
+      );
       const firstHarvestDate = flushes.find((f) => f.harvestDate)?.harvestDate;
 
       // Prepare data for API
@@ -298,47 +308,31 @@ export default function GrowEditScreen() {
   // Toast functions
   const showToast = (message: string, type: 'error' | 'success') => {
     const toastId = Math.random().toString();
-    const borderColor =
-      type === 'error'
-        ? theme === 'dark'
-          ? 'border-error-400'
-          : 'border-error-500'
-        : theme === 'dark'
-          ? 'border-success-400'
-          : 'border-success-500';
-    const bgColor = theme === 'dark' ? 'bg-background-900' : 'bg-background-0';
-    const iconColor =
-      type === 'error'
-        ? theme === 'dark'
-          ? 'stroke-error-400'
-          : 'stroke-error-500'
-        : theme === 'dark'
-          ? 'stroke-success-400'
-          : 'stroke-success-500';
+
+    const bgColor = 'bg-background-0';
+
     const textColor =
       type === 'error'
         ? theme === 'dark'
-          ? 'text-error-300'
+          ? 'text-error-600'
           : 'text-error-700'
         : theme === 'dark'
-          ? 'text-success-300'
-          : 'text-success-700';
-    const descColor = theme === 'dark' ? 'text-typography-300' : 'text-typography-700';
+          ? 'text-green-600'
+          : 'text-green-700';
+
+    const descColor = 'text-typography-300';
 
     toast.show({
       id: `${type}-toast-${toastId}`,
-      placement: 'bottom',
+      placement: 'top',
       duration: 3000,
       render: () => (
-        <Toast
-          action={type}
-          variant="outline"
-          className={`mx-auto mb-20 w-11/12 p-4 shadow-hard-5 ${borderColor} ${bgColor}`}>
+        <Toast variant="outline" className={`mx-auto mt-28 w-full p-4 ${bgColor}`}>
           <VStack space="xs" className="w-full">
             <HStack className="flex-row gap-2">
               <Icon
                 as={type === 'error' ? AlertCircle : CheckCircle}
-                className={`mt-0.5 ${iconColor}`}
+                className={`mt-0.5 ${textColor}`}
               />
               <Text className={`font-semibold ${textColor}`}>
                 {type === 'error' ? 'Error' : 'Success'}

@@ -156,10 +156,7 @@ export default function ChangePasswordScreen() {
       duration: 3000,
       render: ({ id }) => {
         return (
-          <Toast
-            action="success"
-            variant="outline"
-            className="mx-auto mb-20 w-11/12 border-success-500 p-4 shadow-hard-5 dark:border-success-400 dark:bg-background-900">
+          <Toast variant="outline" className="mx-auto mb-20 w-full p-4">
             <VStack space="xs" className="w-full">
               <HStack className="flex-row gap-2">
                 <Icon

@@ -1,7 +1,7 @@
 import React from 'react';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
-import { Input, InputField, InputIcon } from '~/components/ui/input';
+import { Input, InputField, InputIcon, InputSlot } from '~/components/ui/input';
 import { Text } from '~/components/ui/text';
 import { Pressable } from '~/components/ui/pressable';
 import { Icon } from '~/components/ui/icon';
@@ -11,8 +11,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface GrowData {
   syringe_vendor?: string;
-  syringe_volume_ml?: number;
-  syringe_cost?: number;
+  syringe_volume_ml?: string;
+  syringe_cost?: string;
   syringe_created_at?: string;
   syringe_expiration_date?: string;
 }
@@ -56,9 +56,8 @@ export const SyringeSection: React.FC<SyringeSectionProps> = ({
         <Input>
           <InputField
             placeholder="Enter volume in mL"
-            value={growData.syringe_volume_ml?.toString() || ''}
-            onChangeText={(value) => updateField('syringe_volume_ml', parseFloat(value) || 0)}
-            keyboardType="numeric"
+            value={growData.syringe_volume_ml || ''}
+            onChangeText={(value) => updateField('syringe_volume_ml', value)}
           />
           <InputIcon as={Droplets} className="mr-2" />
         </Input>
@@ -71,9 +70,8 @@ export const SyringeSection: React.FC<SyringeSectionProps> = ({
         <Input>
           <InputField
             placeholder="Enter cost"
-            value={growData.syringe_cost?.toString() || ''}
-            onChangeText={(value) => updateField('syringe_cost', parseFloat(value) || 0)}
-            keyboardType="numeric"
+            value={growData.syringe_cost || ''}
+            onChangeText={(value) => updateField('syringe_cost', value)}
           />
           <InputIcon as={DollarSign} className="mr-2" />
         </Input>
@@ -83,15 +81,15 @@ export const SyringeSection: React.FC<SyringeSectionProps> = ({
         <FormControlLabel>
           <FormControlLabelText>Created Date</FormControlLabelText>
         </FormControlLabel>
-        <Pressable onPress={() => setActiveDatePicker('syringe_created_at')}>
-          <Input isReadOnly>
-            <InputField
-              value={parseDate(growData.syringe_created_at)?.toDateString() || 'Select date'}
-              className={!growData.syringe_created_at ? 'text-typography-400' : ''}
-            />
+        <Input isReadOnly>
+          <InputField
+            value={parseDate(growData.syringe_created_at)?.toDateString() || 'Select date'}
+            className={!growData.syringe_created_at ? 'text-typography-400' : ''}
+          />
+          <InputSlot onPress={() => setActiveDatePicker('syringe_created_at')}>
             <InputIcon as={CalendarDays} className="mr-2" />
-          </Input>
-        </Pressable>
+          </InputSlot>
+        </Input>
         {activeDatePicker === 'syringe_created_at' && (
           <DateTimePicker
             value={parseDate(growData.syringe_created_at) || new Date()}
@@ -105,15 +103,15 @@ export const SyringeSection: React.FC<SyringeSectionProps> = ({
         <FormControlLabel>
           <FormControlLabelText>Expiration Date</FormControlLabelText>
         </FormControlLabel>
-        <Pressable onPress={() => setActiveDatePicker('syringe_expiration_date')}>
-          <Input isReadOnly>
-            <InputField
-              value={parseDate(growData.syringe_expiration_date)?.toDateString() || 'Select date'}
-              className={!growData.syringe_expiration_date ? 'text-typography-400' : ''}
-            />
+        <Input isReadOnly>
+          <InputField
+            value={parseDate(growData.syringe_expiration_date)?.toDateString() || 'Select date'}
+            className={!growData.syringe_expiration_date ? 'text-typography-400' : ''}
+          />
+          <InputSlot onPress={() => setActiveDatePicker('syringe_expiration_date')}>
             <InputIcon as={CalendarDays} className="mr-2" />
-          </Input>
-        </Pressable>
+          </InputSlot>
+        </Input>
         {activeDatePicker === 'syringe_expiration_date' && (
           <DateTimePicker
             value={parseDate(growData.syringe_expiration_date) || new Date()}

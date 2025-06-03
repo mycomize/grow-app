@@ -1,7 +1,7 @@
 import React from 'react';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
-import { Input, InputField, InputIcon } from '~/components/ui/input';
+import { Input, InputField, InputIcon, InputSlot } from '~/components/ui/input';
 import { Text } from '~/components/ui/text';
 import { Pressable } from '~/components/ui/pressable';
 import { Icon } from '~/components/ui/icon';
@@ -33,8 +33,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 interface HarvestFlush {
   id: string;
   harvestDate: Date | null;
-  wetWeightG: number;
-  dryWeightG: number;
+  wetWeightG: string;
+  dryWeightG: string;
   potency: string;
 }
 
@@ -80,15 +80,15 @@ export const HarvestSection: React.FC<HarvestSectionProps> = ({
             <FormControlLabel>
               <FormControlLabelText>Harvest Date</FormControlLabelText>
             </FormControlLabel>
-            <Pressable onPress={() => setActiveDatePicker(`flush_${flush.id}`)}>
-              <Input isReadOnly>
-                <InputField
-                  value={flush.harvestDate?.toDateString() || 'Select date'}
-                  className={!flush.harvestDate ? 'text-typography-400' : ''}
-                />
+            <Input isReadOnly>
+              <InputField
+                value={flush.harvestDate?.toDateString() || 'Select date'}
+                className={!flush.harvestDate ? 'text-typography-400' : ''}
+              />
+              <InputSlot onPress={() => setActiveDatePicker(`flush_${flush.id}`)}>
                 <InputIcon as={CalendarDays} className="mr-2" />
-              </Input>
-            </Pressable>
+              </InputSlot>
+            </Input>
             {activeDatePicker === `flush_${flush.id}` && (
               <DateTimePicker
                 value={flush.harvestDate || new Date()}
@@ -105,11 +105,8 @@ export const HarvestSection: React.FC<HarvestSectionProps> = ({
             <Input>
               <InputField
                 placeholder="Enter wet weight in grams"
-                value={flush.wetWeightG ? flush.wetWeightG.toString() : ''}
-                onChangeText={(value) =>
-                  updateFlush(flush.id, { wetWeightG: parseFloat(value) || 0 })
-                }
-                keyboardType="numeric"
+                value={flush.wetWeightG || ''}
+                onChangeText={(value) => updateFlush(flush.id, { wetWeightG: value })}
               />
               <InputIcon as={Weight} className="mr-2" />
             </Input>
@@ -122,11 +119,8 @@ export const HarvestSection: React.FC<HarvestSectionProps> = ({
             <Input>
               <InputField
                 placeholder="Enter dry weight in grams"
-                value={flush.dryWeightG ? flush.dryWeightG.toString() : ''}
-                onChangeText={(value) =>
-                  updateFlush(flush.id, { dryWeightG: parseFloat(value) || 0 })
-                }
-                keyboardType="numeric"
+                value={flush.dryWeightG || ''}
+                onChangeText={(value) => updateFlush(flush.id, { dryWeightG: value })}
               />
               <InputIcon as={Weight} className="mr-2" />
             </Input>
@@ -175,13 +169,19 @@ export const HarvestSection: React.FC<HarvestSectionProps> = ({
           <HStack className="justify-between">
             <Text className="font-bold">Total Wet Weight:</Text>
             <Text>
-              {flushes.reduce((sum, flush) => sum + (flush.wetWeightG || 0), 0).toFixed(2)}g
+              {flushes
+                .reduce((sum, flush) => sum + (parseFloat(flush.wetWeightG) || 0), 0)
+                .toFixed(2)}
+              g
             </Text>
           </HStack>
           <HStack className="justify-between">
             <Text className="font-bold">Total Dry Weight:</Text>
             <Text>
-              {flushes.reduce((sum, flush) => sum + (flush.dryWeightG || 0), 0).toFixed(2)}g
+              {flushes
+                .reduce((sum, flush) => sum + (parseFloat(flush.dryWeightG) || 0), 0)
+                .toFixed(2)}
+              g
             </Text>
           </HStack>
         </VStack>
