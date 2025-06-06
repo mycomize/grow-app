@@ -14,7 +14,28 @@ export interface Grow {
   harvestDryWeight: number;
   harvestWetWeight: number;
   age: number;
-  iotGatewayList?: any[];
+  iotGatewayList?: Array<{
+    id: number;
+    name: string;
+    type: string;
+    api_url: string;
+    is_active: boolean;
+  }>;
+  iot_gateways?: Array<{
+    id: number;
+    name: string;
+    type: string;
+    api_url: string;
+    is_active: boolean;
+  }>;
+
+  // Stage tracking fields
+  current_stage?: string;
+  inoculation_date?: string;
+  spawn_colonization_date?: string;
+  bulk_colonization_date?: string;
+  fruiting_start_date?: string;
+  harvest_date?: string;
 
   // New unified fields from the enhanced model
   syringe_brand?: string;
@@ -38,7 +59,6 @@ export interface Grow {
   bulk_created_at?: string;
   bulk_expiration_date?: string;
 
-  fruiting_start_date?: string;
   fruiting_pin_date?: string;
   fruiting_mist_frequency?: string;
   fruiting_fan_frequency?: string;

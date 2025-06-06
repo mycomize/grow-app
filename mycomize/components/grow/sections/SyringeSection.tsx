@@ -38,7 +38,7 @@ export const SyringeSection: React.FC<SyringeSectionProps> = ({
     <VStack space="md" className="bg-background-0 p-4">
       <FormControl>
         <FormControlLabel>
-          <FormControlLabelText>Vendor</FormControlLabelText>
+          <FormControlLabelText>Syringe Vendor</FormControlLabelText>
         </FormControlLabel>
         <Input>
           <InputField
@@ -51,7 +51,7 @@ export const SyringeSection: React.FC<SyringeSectionProps> = ({
 
       <FormControl>
         <FormControlLabel>
-          <FormControlLabelText>Volume (mL)</FormControlLabelText>
+          <FormControlLabelText>Syringe Volume (mL)</FormControlLabelText>
         </FormControlLabel>
         <Input>
           <InputField
@@ -65,7 +65,7 @@ export const SyringeSection: React.FC<SyringeSectionProps> = ({
 
       <FormControl>
         <FormControlLabel>
-          <FormControlLabelText>Cost</FormControlLabelText>
+          <FormControlLabelText>Syringe Cost</FormControlLabelText>
         </FormControlLabel>
         <Input>
           <InputField
@@ -79,7 +79,7 @@ export const SyringeSection: React.FC<SyringeSectionProps> = ({
 
       <FormControl>
         <FormControlLabel>
-          <FormControlLabelText>Created Date</FormControlLabelText>
+          <FormControlLabelText>Syringe Created Date</FormControlLabelText>
         </FormControlLabel>
         <Input isReadOnly>
           <InputField
@@ -101,7 +101,7 @@ export const SyringeSection: React.FC<SyringeSectionProps> = ({
 
       <FormControl>
         <FormControlLabel>
-          <FormControlLabelText>Expiration Date</FormControlLabelText>
+          <FormControlLabelText>Syringe Expiration Date</FormControlLabelText>
         </FormControlLabel>
         <Input isReadOnly>
           <InputField

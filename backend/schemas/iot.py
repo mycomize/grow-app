@@ -52,6 +52,7 @@ class IoTGateway(IoTGatewayBase):
     """Schema for returning a IoT gateway"""
     id: int
     created_at: datetime
+    grow_id: Optional[int] = None
     
     # Hidden fields that exist in the model but won't be returned in responses
     user_id: int = Field(exclude=True)

@@ -10,6 +10,17 @@ import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Spinner } from '~/components/ui/spinner';
 import { useToast, Toast } from '~/components/ui/toast';
+import { Keyboard } from 'react-native';
+import {
+  Modal,
+  ModalBackdrop,
+  ModalContent,
+  ModalHeader,
+  ModalCloseButton,
+  ModalBody,
+  ModalFooter,
+} from '~/components/ui/modal';
+import { Pressable } from '~/components/ui/pressable';
 import {
   Accordion,
   AccordionItem,
@@ -28,6 +39,9 @@ import {
   ShoppingBasket,
   ChevronRight,
   ChevronDown,
+  Bot,
+  Trash2,
+  X,
 } from 'lucide-react-native';
 import MushroomIcon from '~/components/icons/MushroomIcon';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
@@ -42,6 +56,8 @@ import { SpawnSection } from '~/components/grow/sections/SpawnSection';
 import { BulkSection } from '~/components/grow/sections/BulkSection';
 import { FruitingSection } from '~/components/grow/sections/FruitingSection';
 import { HarvestSection } from '~/components/grow/sections/HarvestSection';
+import { IoTGatewaySection } from '~/components/grow/sections/IoTGatewaySection';
+import { StagesSection } from '~/components/grow/sections/StagesSection';
 
 interface GrowData {
   id?: number;
@@ -49,6 +65,9 @@ interface GrowData {
   species?: string;
   variant?: string;
   inoculation_date?: string;
+  spawn_colonization_date?: string;
+  bulk_colonization_date?: string;
+  current_stage?: string;
   tek?: string;
   stage?: string;
   status?: string;
@@ -116,6 +135,7 @@ export default function GrowEditScreen() {
   const [growData, setGrowData] = useState<GrowData>({
     tek: 'Monotub',
     stage: 'spawn_colonization',
+    current_stage: undefined,
     status: 'growing',
     cost: 0,
   });
@@ -124,9 +144,27 @@ export default function GrowEditScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Date picker states
   const [activeDatePicker, setActiveDatePicker] = useState<string | null>(null);
+
+  // Keyboard visibility tracking
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   // Utility functions for date handling
   const parseDate = (dateString?: string): Date | null => {
@@ -191,6 +229,15 @@ export default function GrowEditScreen() {
     setGrowData((prev) => ({ ...prev, [field]: value }));
   };
 
+  // Handle IoT Gateway linking - no local state changes needed since backend handles the relationship
+  const handleGatewayLinked = (gatewayId: number) => {
+    // Relationship is handled by the backend IoT gateway linking endpoint
+  };
+
+  const handleGatewayUnlinked = () => {
+    // Relationship is handled by the backend IoT gateway unlinking endpoint
+  };
+
   // Handle date changes
   const handleDateChange = (field: string, date?: Date) => {
     setActiveDatePicker(null);
@@ -224,6 +271,44 @@ export default function GrowEditScreen() {
       (parseFloat(growData.spawn_cost || '0') || 0) +
       (parseFloat(growData.bulk_cost || '0') || 0)
     );
+  };
+
+  // Delete grow
+  const deleteGrow = async () => {
+    if (!id || id === 'new') return;
+
+    setIsDeleting(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${getBackendUrl()}/grows/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.replace('/login');
+          return;
+        }
+        throw new Error('Failed to delete grow');
+      }
+
+      setSuccess('Grow deleted successfully!');
+      setShowDeleteModal(false);
+
+      // Navigate back to grows list after a brief delay
+      setTimeout(() => {
+        router.replace('/grows');
+      }, 1000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete grow');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // Save grow
@@ -397,15 +482,15 @@ export default function GrowEditScreen() {
               </AccordionContent>
             </AccordionItem>
 
-            {/* Syringe Section */}
-            <AccordionItem value="syringe" className="rounded-md bg-background-0">
+            {/* IoT Gateway Section */}
+            <AccordionItem value="iot-gateway" className="rounded-md bg-background-0">
               <AccordionHeader>
                 <AccordionTrigger>
                   {({ isExpanded }: { isExpanded: boolean }) => (
                     <HStack className="flex-1 items-center justify-between">
                       <HStack className="items-center" space="md">
-                        <Icon as={Syringe} size="lg" className="text-typography-400" />
-                        <Text className="text-lg font-semibold">Syringe</Text>
+                        <Icon as={Bot} size="lg" className="text-typography-400" />
+                        <Text className="text-lg font-semibold">IoT Gateway</Text>
                       </HStack>
                       <Icon
                         as={isExpanded ? ChevronDown : ChevronRight}
@@ -417,26 +502,23 @@ export default function GrowEditScreen() {
                 </AccordionTrigger>
               </AccordionHeader>
               <AccordionContent>
-                <SyringeSection
-                  growData={growData}
-                  updateField={updateField}
-                  activeDatePicker={activeDatePicker}
-                  setActiveDatePicker={setActiveDatePicker}
-                  handleDateChange={handleDateChange}
-                  parseDate={parseDate}
+                <IoTGatewaySection
+                  growId={typeof id === 'string' ? parseInt(id) : undefined}
+                  onGatewayLinked={handleGatewayLinked}
+                  onGatewayUnlinked={handleGatewayUnlinked}
                 />
               </AccordionContent>
             </AccordionItem>
 
-            {/* Spawn Section */}
-            <AccordionItem value="spawn" className="rounded-md bg-background-0">
+            {/* Stages Section */}
+            <AccordionItem value="stages" className="rounded-md bg-background-0">
               <AccordionHeader>
                 <AccordionTrigger>
                   {({ isExpanded }: { isExpanded: boolean }) => (
                     <HStack className="flex-1 items-center justify-between">
                       <HStack className="items-center" space="md">
-                        <Icon as={Wheat} size="lg" className="text-typography-400" />
-                        <Text className="text-lg font-semibold">Spawn</Text>
+                        <MushroomIcon height={18} width={19} color="#9ca3af" strokeWidth={2} />
+                        <Text className="text-lg font-semibold">Stages</Text>
                       </HStack>
                       <Icon
                         as={isExpanded ? ChevronDown : ChevronRight}
@@ -448,100 +530,10 @@ export default function GrowEditScreen() {
                 </AccordionTrigger>
               </AccordionHeader>
               <AccordionContent>
-                <SpawnSection
+                <StagesSection
                   growData={growData}
                   updateField={updateField}
-                  activeDatePicker={activeDatePicker}
-                  setActiveDatePicker={setActiveDatePicker}
-                  handleDateChange={handleDateChange}
-                  parseDate={parseDate}
-                />
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Bulk Substrate Section */}
-            <AccordionItem value="bulk" className="rounded-md bg-background-0">
-              <AccordionHeader>
-                <AccordionTrigger>
-                  {({ isExpanded }: { isExpanded: boolean }) => (
-                    <HStack className="flex-1 items-center justify-between">
-                      <HStack className="items-center" space="md">
-                        <Icon as={Package} size="lg" className="text-typography-400" />
-                        <Text className="text-lg font-semibold">Bulk Substrate</Text>
-                      </HStack>
-                      <Icon
-                        as={isExpanded ? ChevronDown : ChevronRight}
-                        size="lg"
-                        className="text-typography-400"
-                      />
-                    </HStack>
-                  )}
-                </AccordionTrigger>
-              </AccordionHeader>
-              <AccordionContent>
-                <BulkSection
-                  growData={growData}
-                  updateField={updateField}
-                  activeDatePicker={activeDatePicker}
-                  setActiveDatePicker={setActiveDatePicker}
-                  handleDateChange={handleDateChange}
-                  parseDate={parseDate}
-                />
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Fruiting Section */}
-            <AccordionItem value="fruiting" className="rounded-md bg-background-0">
-              <AccordionHeader>
-                <AccordionTrigger>
-                  {({ isExpanded }: { isExpanded: boolean }) => (
-                    <HStack className="flex-1 items-center justify-between">
-                      <HStack className="items-center" space="md">
-                        <MushroomIcon height={20} width={20} color="#9ca3af" strokeWidth={2} />
-                        <Text className="text-lg font-semibold">Fruiting</Text>
-                      </HStack>
-                      <Icon
-                        as={isExpanded ? ChevronDown : ChevronRight}
-                        size="lg"
-                        className="text-typography-400"
-                      />
-                    </HStack>
-                  )}
-                </AccordionTrigger>
-              </AccordionHeader>
-              <AccordionContent>
-                <FruitingSection
-                  growData={growData}
-                  updateField={updateField}
-                  activeDatePicker={activeDatePicker}
-                  setActiveDatePicker={setActiveDatePicker}
-                  handleDateChange={handleDateChange}
-                  parseDate={parseDate}
-                />
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Harvest Section */}
-            <AccordionItem value="harvest" className="rounded-md bg-background-0">
-              <AccordionHeader>
-                <AccordionTrigger>
-                  {({ isExpanded }: { isExpanded: boolean }) => (
-                    <HStack className="flex-1 items-center justify-between">
-                      <HStack className="items-center" space="md">
-                        <Icon as={ShoppingBasket} size="lg" className="text-typography-400" />
-                        <Text className="text-lg font-semibold">Harvest</Text>
-                      </HStack>
-                      <Icon
-                        as={isExpanded ? ChevronDown : ChevronRight}
-                        size="lg"
-                        className="text-typography-400"
-                      />
-                    </HStack>
-                  )}
-                </AccordionTrigger>
-              </AccordionHeader>
-              <AccordionContent>
-                <HarvestSection
+                  flushCount={flushes.length}
                   flushes={flushes}
                   addFlush={addFlush}
                   updateFlush={updateFlush}
@@ -549,6 +541,7 @@ export default function GrowEditScreen() {
                   activeDatePicker={activeDatePicker}
                   setActiveDatePicker={setActiveDatePicker}
                   handleDateChange={handleDateChange}
+                  parseDate={parseDate}
                 />
               </AccordionContent>
             </AccordionItem>
@@ -556,20 +549,72 @@ export default function GrowEditScreen() {
         </VStack>
       </ScrollView>
 
-      {/* Bottom Save Button */}
-      <VStack className="bg-background-50 p-4">
-        <Button
-          variant="solid"
-          action="positive"
-          onPress={saveGrow}
-          isDisabled={isSaving}
-          className="h-12 w-full">
-          <ButtonIcon as={Save} className="text-white" />
-          <ButtonText className="text-lg text-white">
-            {isSaving ? 'Saving...' : 'Save Grow'}
-          </ButtonText>
-        </Button>
-      </VStack>
+      {/* Bottom Action Buttons - Hidden when keyboard is visible */}
+      {!keyboardVisible && (
+        <HStack className="bg-background-50 p-4" space="md">
+          {/* Delete Button - Only show for existing grows */}
+          {id && id !== 'new' && (
+            <Button
+              variant="solid"
+              action="negative"
+              onPress={() => setShowDeleteModal(true)}
+              isDisabled={isDeleting}
+              className="h-12 flex-1">
+              <ButtonIcon as={Trash2} className="text-white" />
+              <ButtonText className="text-lg text-white">Delete</ButtonText>
+            </Button>
+          )}
+
+          {/* Save Button */}
+          <Button
+            variant="solid"
+            action="positive"
+            onPress={saveGrow}
+            isDisabled={isSaving}
+            className="h-12 flex-1">
+            <ButtonIcon as={Save} className="text-white" />
+            <ButtonText className="text-lg text-white">
+              {isSaving ? 'Saving...' : 'Save'}
+            </ButtonText>
+          </Button>
+        </HStack>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} size="md">
+        <ModalBackdrop />
+        <ModalContent>
+          <ModalHeader>
+            <Heading size="lg">Delete Grow</Heading>
+            <ModalCloseButton>
+              <Icon as={X} className="text-typography-500" />
+            </ModalCloseButton>
+          </ModalHeader>
+          <ModalBody>
+            <Text>Are you sure you want to delete this grow? This action cannot be undone.</Text>
+          </ModalBody>
+          <ModalFooter>
+            <HStack space="md">
+              <Button
+                variant="outline"
+                action="secondary"
+                onPress={() => setShowDeleteModal(false)}
+                isDisabled={isDeleting}>
+                <ButtonText>Cancel</ButtonText>
+              </Button>
+              <Button
+                variant="solid"
+                action="negative"
+                onPress={deleteGrow}
+                isDisabled={isDeleting}>
+                <ButtonText className="text-white">
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </ButtonText>
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </VStack>
   );
 }

@@ -2,37 +2,15 @@ import { useState, useEffect, useContext, useCallback } from 'react';
 import { Button, ButtonIcon } from '~/components/ui/button';
 import { Text } from '~/components/ui/text';
 import { VStack } from '~/components/ui/vstack';
-import { Card } from '~/components/ui/card';
-import { Heading } from '~/components/ui/heading';
 import { getBackendUrl } from '~/lib/backendUrl';
-import { HStack } from '~/components/ui/hstack';
 import { Icon } from '~/components/ui/icon';
-import {
-  PlusIcon,
-  Sprout,
-  AlertCircle,
-  CalendarDays,
-  Scale,
-  Layers,
-  Clock,
-  DollarSign,
-} from 'lucide-react-native';
-import { Pressable } from '~/components/ui/pressable';
+import { PlusIcon } from 'lucide-react-native';
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-
 import { AuthContext } from '~/lib/AuthContext';
-import {
-  Grow,
-  stageLabels,
-  growStages,
-  tekLabels,
-  growTeks,
-  statusLabels,
-  growStatuses,
-} from '~/lib/growTypes';
-import { useTheme } from '~/components/ui/themeprovider/themeprovider';
+import { Grow, growTeks } from '~/lib/growTypes';
+import { GrowCard } from '~/components/grow/GrowCard';
 
 interface AddGrowButtonProps {
   title: string;
@@ -55,107 +33,6 @@ const AddGrowButton: React.FC<AddGrowButtonProps> = ({ title, initial = false })
         }}>
         <ButtonIcon as={PlusIcon} className="h-8 w-8 text-white" />
       </Button>
-    </>
-  );
-};
-
-const GrowCard: React.FC<{ grow: Grow }> = ({ grow }) => {
-  const router = useRouter();
-
-  const getStatusColor = (status: string) => {
-    if (status === growStatuses.CONTAMINATED) return 'text-error-500';
-    if (status === growStatuses.HARVESTED) return 'text-amber-600';
-    return 'text-green-700';
-  };
-
-  const statusColor = getStatusColor(grow.status);
-
-  return (
-    <>
-      <Card className="w-11/12 rounded-xl bg-background-0">
-        <VStack className="flex p-2">
-          <Pressable
-            onPress={() => {
-              router.push({
-                pathname: `/grows/[id]`,
-                params: { id: grow.id },
-              });
-            }}>
-            <HStack className="mb-2">
-              <Heading>{grow.variant}</Heading>
-              <Text className="ml-auto mt-0.5 text-lg" italic={true} size="md">
-                {grow.species}
-              </Text>
-            </HStack>
-
-            <HStack className="mb-1 mt-1">
-              <Text className="text-lg">Tek</Text>
-              <Text className="ml-auto">{tekLabels[grow.tek] || grow.tek}</Text>
-            </HStack>
-
-            <HStack className="mb-1 mt-1">
-              <Text className="text-lg">Stage</Text>
-              <HStack className="ml-auto">
-                <Text>{stageLabels[grow.stage] || grow.stage}</Text>
-              </HStack>
-            </HStack>
-
-            <HStack className="my-1">
-              <Text className="text-lg">Status</Text>
-              <HStack className="ml-auto">
-                <Text className={statusColor}>{statusLabels[grow.status] || grow.status}</Text>
-              </HStack>
-            </HStack>
-
-            <HStack className="my-1">
-              <Text className="text-lg">Age</Text>
-              <HStack className="ml-auto">
-                <Text>{grow.age || 0} days</Text>
-              </HStack>
-            </HStack>
-
-            <HStack className="my-1">
-              <Text className="text-lg">Cost</Text>
-              <HStack className="ml-auto">
-                <Text>${grow.cost?.toFixed(2) || '0.00'}</Text>
-              </HStack>
-            </HStack>
-
-            <HStack className="mt-1">
-              <Text className="text-lg">Inoculated</Text>
-              <HStack className="ml-auto">
-                <Text>{grow.inoculationDate?.toDateString() || 'Unknown'}</Text>
-              </HStack>
-            </HStack>
-
-            {grow.harvestDate && (
-              <>
-                <HStack>
-                  <Text>Harvested</Text>
-                  <HStack className="ml-auto">
-                    <Text>{grow.harvestDate?.toDateString()}</Text>
-                    <Icon as={CalendarDays} size="sm" className="ml-1 text-typography-400" />
-                  </HStack>
-                </HStack>
-
-                {(grow.harvestDryWeight > 0 || grow.harvestWetWeight > 0) && (
-                  <HStack>
-                    <Text>Yield</Text>
-                    <HStack className="ml-auto">
-                      <Text>
-                        {grow.harvestDryWeight > 0 ? `${grow.harvestDryWeight}g dry` : ''}
-                        {grow.harvestDryWeight > 0 && grow.harvestWetWeight > 0 ? ' / ' : ''}
-                        {grow.harvestWetWeight > 0 ? `${grow.harvestWetWeight}g wet` : ''}
-                      </Text>
-                      <Icon as={Scale} size="sm" className="ml-1 text-typography-400" />
-                    </HStack>
-                  </HStack>
-                )}
-              </>
-            )}
-          </Pressable>
-        </VStack>
-      </Card>
     </>
   );
 };

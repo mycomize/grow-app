@@ -1,25 +1,8 @@
 import React from 'react';
 import { VStack } from '~/components/ui/vstack';
-import { HStack } from '~/components/ui/hstack';
 import { Input, InputField } from '~/components/ui/input';
 import { Textarea, TextareaInput } from '~/components/ui/textarea';
-import { Text } from '~/components/ui/text';
-import { Icon } from '~/components/ui/icon';
-import { FileText, ChevronDown } from 'lucide-react-native';
 import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
-import {
-  Select,
-  SelectTrigger,
-  SelectInput,
-  SelectIcon,
-  SelectPortal,
-  SelectBackdrop,
-  SelectContent,
-  SelectDragIndicatorWrapper,
-  SelectDragIndicator,
-  SelectItem,
-} from '~/components/ui/select';
-import { growTeks, tekLabels } from '~/lib/growTypes';
 
 interface GrowData {
   name?: string;
@@ -36,7 +19,7 @@ interface BasicsSectionProps {
 
 export const BasicsSection: React.FC<BasicsSectionProps> = ({ growData, updateField }) => {
   return (
-    <VStack space="md" className="bg-background-0 p-4">
+    <VStack space="md" className="bg-background-0 p-2">
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText>Name</FormControlLabelText>
@@ -69,7 +52,7 @@ export const BasicsSection: React.FC<BasicsSectionProps> = ({ growData, updateFi
         </FormControlLabel>
         <Input>
           <InputField
-            placeholder="Enter strain/variant"
+            placeholder="Enter variant/strain"
             value={growData.variant || ''}
             onChangeText={(value) => updateField('variant', value)}
           />

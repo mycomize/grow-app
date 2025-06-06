@@ -66,7 +66,7 @@ export const HarvestSection: React.FC<HarvestSectionProps> = ({
       </Text>
 
       {flushes.map((flush, index) => (
-        <Card key={flush.id} className="mb-4 gap-4 p-4">
+        <Card key={flush.id} className="mb-4 gap-4 p-0">
           <HStack className="justify-between">
             <Text className="text-lg font-bold">Flush #{index + 1}</Text>
             {flushes.length > 1 && (

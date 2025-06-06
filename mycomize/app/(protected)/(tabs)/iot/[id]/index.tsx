@@ -724,6 +724,12 @@ export default function IoTIntegrationDetailScreen() {
                     <Text className="font-medium">Token:</Text>
                     <Text>••••••••••••••••</Text>
                   </HStack>
+                  {gateway.grow_id && (
+                    <HStack className="justify-between">
+                      <Text className="font-medium">Linked Grow:</Text>
+                      <Text className="font-medium text-primary-600">Grow #{gateway.grow_id}</Text>
+                    </HStack>
+                  )}
                   {gateway.created_at && (
                     <HStack className="justify-between">
                       <Text className="font-medium">Created:</Text>
@@ -796,7 +802,7 @@ export default function IoTIntegrationDetailScreen() {
               </HStack>
 
               {enabledStates.length === 0 ? (
-                <VStack className="items-center py-8" space="md">
+                <VStack className="items-center pb-2 pt-6" space="md">
                   <Text className="text-center text-typography-500">
                     No states enabled yet.{'\n'}
                     Browse and select states to monitor.
@@ -804,6 +810,7 @@ export default function IoTIntegrationDetailScreen() {
                   <Button
                     variant="solid"
                     action="positive"
+                    className="mt-4"
                     onPress={navigateToEntitySearch}
                     isDisabled={!gateway.is_active || !connectionInfo.connected}>
                     <ButtonIcon as={Search} className="text-white" />

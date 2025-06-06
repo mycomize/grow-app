@@ -89,28 +89,6 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
           />
         </Input>
       </FormControl>
-
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>Inoculation Date</FormControlLabelText>
-        </FormControlLabel>
-        <Input isReadOnly>
-          <InputField
-            value={parseDate(growData.inoculation_date)?.toDateString() || 'Select date'}
-            className={!growData.inoculation_date ? 'text-typography-400' : ''}
-          />
-          <InputSlot onPress={() => setActiveDatePicker('inoculation_date')}>
-            <InputIcon as={CalendarDays} className="mr-2" />
-          </InputSlot>
-        </Input>
-        {activeDatePicker === 'inoculation_date' && (
-          <DateTimePicker
-            value={parseDate(growData.inoculation_date) || new Date()}
-            mode="date"
-            onChange={(event, date) => handleDateChange('inoculation_date', date)}
-          />
-        )}
-      </FormControl>
     </VStack>
   );
 };

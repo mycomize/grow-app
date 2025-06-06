@@ -34,9 +34,14 @@ class Grow(Base):
     inoculation_date = Column(Date, nullable=True)
     tek = Column(String(64), default=GrowTek.MONOTUB.value)
     stage = Column(String(64), default=GrowStage.SPAWN_COLONIZATION.value)
+    current_stage = Column(String(64), nullable=True)  # Track current stage in timeline
     notes = Column(Text, nullable=True)
     status = Column(String(64), default=GrowStatus.GROWING.value)
     cost = Column(Float, default=0.0)
+    
+    # Stage date fields for timeline tracking
+    spawn_colonization_date = Column(Date, nullable=True)
+    bulk_colonization_date = Column(Date, nullable=True)
     
     # Harvest fields
     harvest_date = Column(Date, nullable=True)
@@ -77,4 +82,4 @@ class Grow(Base):
     user = relationship("User", back_populates="grows")
     
     # One-to-many relationship with IoT gateways
-    iot_gateways = relationship("IoTGateway", back_populates="grow", cascade="all, delete-orphan")
+    iot_gateways = relationship("IoTGateway", back_populates="grow")

@@ -10,9 +10,14 @@ class GrowBase(BaseModel):
     inoculation_date: Optional[date] = None
     tek: str = "Monotub"
     stage: str = "spawn_colonization"
+    current_stage: Optional[str] = None
     status: str = "growing"
     notes: Optional[str] = None
     cost: Optional[float] = 0
+    
+    # Stage date fields for timeline tracking
+    spawn_colonization_date: Optional[date] = None
+    bulk_colonization_date: Optional[date] = None
     
     # Harvest fields
     harvest_date: Optional[date] = None
@@ -87,10 +92,20 @@ class Grow(GrowBase):
         
     @validator("age", always=True)
     def calculate_age(cls, v, values):
+        # Use spawn_colonization_date as the primary date for age calculation
+        # since that's when the actual grow timeline starts
+        spawn_date = values.get("spawn_colonization_date")
         inoculation_date = values.get("inoculation_date")
-        if inoculation_date:
+        
+        # Prefer spawn_colonization_date, fallback to inoculation_date
+        start_date = spawn_date or inoculation_date
+        
+        if start_date:
             today = date.today()
-            return (today - inoculation_date).days
+            days_diff = (today - start_date).days
+            # Add 1 so that grows started today show as "Day 1" instead of "Day 0"
+            # Return 1 if negative or 0 (future date or today), otherwise return days + 1
+            return max(1, days_diff + 1)
         return None
 
 class GrowWithIoTGateways(Grow):
@@ -99,12 +114,14 @@ class GrowWithIoTGateways(Grow):
     
 class GrowComplete(Grow):
     """Schema for returning a complete grow with all related data"""
+    iot_gateways: List[IoTGateway] = []
     iotGatewayList: List[IoTGateway] = []
     
-    @validator("iotGatewayList", always=True)
+    @validator("iotGatewayList", always=True, pre=False)
     def set_iot_gateway_list(cls, v, values):
-        from_values = values.get("iot_gateways")
-        return from_values if from_values is not None else v
+        # Copy from iot_gateways if it exists
+        gateways = values.get("iot_gateways", [])
+        return gateways if gateways else v
 
 class GrowUpdate(BaseModel):
     """Schema for updating a grow"""
@@ -114,9 +131,14 @@ class GrowUpdate(BaseModel):
     inoculation_date: Optional[date] = None
     tek: Optional[str] = None
     stage: Optional[str] = None
+    current_stage: Optional[str] = None
     status: Optional[str] = None
     notes: Optional[str] = None
     cost: Optional[float] = None
+    
+    # Stage date fields for timeline tracking
+    spawn_colonization_date: Optional[date] = None
+    bulk_colonization_date: Optional[date] = None
     
     # Harvest fields
     harvest_date: Optional[date] = None

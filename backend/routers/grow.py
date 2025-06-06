@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 from datetime import date
 
@@ -75,8 +75,8 @@ async def read_all_grows(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all grows with complete data for the current user"""
-    # Query all grows for the current user with their relationships
-    grows = db.query(Grow).filter(Grow.user_id == current_user.id).all()
+    # Query all grows for the current user with their IoT gateway relationships loaded
+    grows = db.query(Grow).options(joinedload(Grow.iot_gateways)).filter(Grow.user_id == current_user.id).all()
 
     return grows
 
