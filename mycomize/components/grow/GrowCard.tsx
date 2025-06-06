@@ -167,8 +167,8 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow }) => {
           <VStack className="mb-3" space="xs">
             <Text className="mb-1 text-lg font-medium text-typography-600">IoT Gateways</Text>
             {(() => {
-              // Check both possible field names for IoT gateways
-              const gateways = grow.iot_gateways || grow.iotGatewayList || [];
+              // Get IoT gateways from the grow
+              const gateways = grow.iot_gateways || [];
               return gateways.length > 0 ? (
                 <VStack space="sm">
                   {gateways.map((gateway) => (
@@ -184,7 +184,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow }) => {
                       className="rounded-lg">
                       <VStack
                         space="xs"
-                        className="rounded-lg border border-background-200 bg-background-100 p-3">
+                        className="rounded-lg border border-background-200 bg-background-0 p-3">
                         <HStack className="items-center justify-between">
                           <HStack space="sm" className="items-center">
                             <Icon
@@ -194,6 +194,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow }) => {
                             />
                             <Text className="text-base font-medium">{gateway.name}</Text>
                           </HStack>
+                          {/* TODO get rid of is_active */}
                           <Text
                             className={`text-sm font-medium ${
                               gateway.is_active ? 'text-success-600' : 'text-error-600'
@@ -219,7 +220,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow }) => {
             {/* Age */}
             <HStack
               space="xs"
-              className="items-center rounded-sm border-2 border-background-200 bg-background-100 px-2 py-1">
+              className="items-center rounded-sm border border-background-200 bg-background-50 px-2 py-1">
               <Icon as={Clock} size="sm" className="text-typography-700" />
               <Text className="font-medium">{grow.age || 0} days</Text>
             </HStack>
@@ -227,7 +228,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow }) => {
             {/* Cost */}
             <HStack
               space="xs"
-              className="ml-3 items-center rounded-sm border-2 border-background-200 bg-background-100 px-2 py-1">
+              className="ml-3 items-center rounded-sm border border-background-200 bg-background-50 px-2 py-1">
               <Icon as={DollarSign} size="sm" className="text-typography-700" />
               <Text className="font-medium">{grow.cost?.toFixed(2) || '0.00'}</Text>
             </HStack>

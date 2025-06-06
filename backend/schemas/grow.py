@@ -115,13 +115,6 @@ class GrowWithIoTGateways(Grow):
 class GrowComplete(Grow):
     """Schema for returning a complete grow with all related data"""
     iot_gateways: List[IoTGateway] = []
-    iotGatewayList: List[IoTGateway] = []
-    
-    @validator("iotGatewayList", always=True, pre=False)
-    def set_iot_gateway_list(cls, v, values):
-        # Copy from iot_gateways if it exists
-        gateways = values.get("iot_gateways", [])
-        return gateways if gateways else v
 
 class GrowUpdate(BaseModel):
     """Schema for updating a grow"""

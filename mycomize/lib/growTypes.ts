@@ -14,13 +14,6 @@ export interface Grow {
   harvestDryWeight: number;
   harvestWetWeight: number;
   age: number;
-  iotGatewayList?: Array<{
-    id: number;
-    name: string;
-    type: string;
-    api_url: string;
-    is_active: boolean;
-  }>;
   iot_gateways?: Array<{
     id: number;
     name: string;
