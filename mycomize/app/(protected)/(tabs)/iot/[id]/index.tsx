@@ -748,12 +748,12 @@ export default function IoTIntegrationDetailScreen() {
                 <Heading size="lg">Connection</Heading>
                 {connectionInfo.connected ? (
                   <HStack className="items-center rounded-sm bg-success-50 px-3 py-1">
-                    <Icon as={PlugZap} className="mr-2 text-success-700" size="xl" />
+                    <Icon as={PlugZap} className="mr-2 text-success-700" size="lg" />
                     <Text className="text-sm text-success-700">CONNECTED</Text>
                   </HStack>
                 ) : (
                   <HStack className="items-center rounded-sm bg-error-50 px-3 py-2">
-                    <Icon as={PowerOff} className="mr-2 text-error-700" size="xl" />
+                    <Icon as={PowerOff} className="mr-2 text-error-700" size="lg" />
                     <Text className="text-sm text-error-700">DISCONNECTED</Text>
                   </HStack>
                 )}

@@ -3,7 +3,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView } from '~/components/ui/scroll-view';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
-import { Card } from '~/components/ui/card';
 import { Heading } from '~/components/ui/heading';
 import { Text } from '~/components/ui/text';
 import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
@@ -20,7 +19,6 @@ import {
   ModalBody,
   ModalFooter,
 } from '~/components/ui/modal';
-import { Pressable } from '~/components/ui/pressable';
 import {
   Accordion,
   AccordionItem,
@@ -33,10 +31,6 @@ import {
   AlertCircle,
   CheckCircle,
   FileText,
-  Syringe,
-  Wheat,
-  Package,
-  ShoppingBasket,
   ChevronRight,
   ChevronDown,
   Bot,
@@ -51,13 +45,10 @@ import { getBackendUrl } from '~/lib/backendUrl';
 
 // Import modular sections
 import { BasicsSection } from '~/components/grow/sections/BasicsSection';
-import { SyringeSection } from '~/components/grow/sections/SyringeSection';
-import { SpawnSection } from '~/components/grow/sections/SpawnSection';
-import { BulkSection } from '~/components/grow/sections/BulkSection';
-import { FruitingSection } from '~/components/grow/sections/FruitingSection';
-import { HarvestSection } from '~/components/grow/sections/HarvestSection';
 import { IoTGatewaySection } from '~/components/grow/sections/IoTGatewaySection';
 import { StagesSection } from '~/components/grow/sections/StagesSection';
+
+import { SensorGraph } from '~/components/charts/SensorGraph';
 
 interface GrowData {
   id?: number;
@@ -346,6 +337,7 @@ export default function GrowEditScreen() {
       });
 
       let response;
+
       if (id && id !== 'new') {
         // Update existing grow
         response = await fetch(`${getBackendUrl()}/grows/${id}`, {

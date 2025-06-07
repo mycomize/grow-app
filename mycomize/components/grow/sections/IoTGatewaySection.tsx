@@ -11,6 +11,7 @@ import { Card } from '~/components/ui/card';
 import { Spinner } from '~/components/ui/spinner';
 import { Badge } from '~/components/ui/badge';
 import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
+import { SensorGraph } from '~/components/charts/SensorGraph';
 import {
   Search,
   Wifi,
@@ -255,6 +256,7 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({
                   </Button>
                 </HStack>
               </HStack>
+              <SensorGraph gateway={gateway} />
             </Card>
           ))}
         </VStack>
