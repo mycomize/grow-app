@@ -3,3 +3,4 @@ sqlalchemy
 pydantic
 python-jose
 bcrypt
+pyjwt
