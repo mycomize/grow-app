@@ -129,35 +129,6 @@ export const FruitingSection: React.FC<FruitingSectionProps> = ({
           </SelectPortal>
         </Select>
       </FormControl>
-
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>Fan Frequency</FormControlLabelText>
-        </FormControlLabel>
-        <Select
-          selectedValue={growData.fruiting_fan_frequency}
-          onValueChange={(value) => updateField('fruiting_fan_frequency', value)}>
-          <SelectTrigger variant="outline" size="md">
-            <SelectInput
-              value={growData.fruiting_fan_frequency}
-              placeholder="Select frequency"
-              className="placeholder:text-sm"
-            />
-            <SelectIcon as={ChevronDown} className="ml-auto mr-2" />
-          </SelectTrigger>
-          <SelectPortal>
-            <SelectBackdrop />
-            <SelectContent>
-              <SelectDragIndicatorWrapper>
-                <SelectDragIndicator />
-              </SelectDragIndicatorWrapper>
-              {frequencyOptions.map((option) => (
-                <SelectItem key={option} label={option} value={option} />
-              ))}
-            </SelectContent>
-          </SelectPortal>
-        </Select>
-      </FormControl>
     </VStack>
   );
 };
