@@ -191,7 +191,24 @@ export default function GrowEditScreen() {
         }
 
         const data = await response.json();
-        setGrowData(data);
+
+        // Convert numeric fields to strings for form inputs
+        const convertedData = {
+          ...data,
+          // Syringe fields
+          syringe_volume_ml: data.syringe_volume_ml?.toString() || '',
+          syringe_cost: data.syringe_cost?.toString() || '',
+
+          // Spawn fields
+          spawn_weight_lbs: data.spawn_weight_lbs?.toString() || '',
+          spawn_cost: data.spawn_cost?.toString() || '',
+
+          // Bulk fields
+          bulk_weight_lbs: data.bulk_weight_lbs?.toString() || '',
+          bulk_cost: data.bulk_cost?.toString() || '',
+        };
+
+        setGrowData(convertedData);
 
         // Set up flushes based on harvest data
         if (data.harvest_dry_weight_grams > 0 || data.harvest_wet_weight_grams > 0) {
@@ -320,13 +337,27 @@ export default function GrowEditScreen() {
       );
       const firstHarvestDate = flushes.find((f) => f.harvestDate)?.harvestDate;
 
-      // Prepare data for API
+      // Prepare data for API - convert string fields back to numbers
       const apiData = {
         ...growData,
         cost: calculateTotalCost(),
         harvest_dry_weight_grams: totalDryWeight,
         harvest_wet_weight_grams: totalWetWeight,
         harvest_date: formatDateForAPI(firstHarvestDate || null),
+
+        // Convert string fields back to numbers for API
+        syringe_volume_ml: growData.syringe_volume_ml
+          ? parseFloat(growData.syringe_volume_ml)
+          : undefined,
+        syringe_cost: growData.syringe_cost ? parseFloat(growData.syringe_cost) : undefined,
+        spawn_weight_lbs: growData.spawn_weight_lbs
+          ? parseFloat(growData.spawn_weight_lbs)
+          : undefined,
+        spawn_cost: growData.spawn_cost ? parseFloat(growData.spawn_cost) : undefined,
+        bulk_weight_lbs: growData.bulk_weight_lbs
+          ? parseFloat(growData.bulk_weight_lbs)
+          : undefined,
+        bulk_cost: growData.bulk_cost ? parseFloat(growData.bulk_cost) : undefined,
       };
 
       // Remove undefined values
@@ -350,7 +381,7 @@ export default function GrowEditScreen() {
         });
       } else {
         // Create new grow
-        response = await fetch(`${getBackendUrl()}/grows`, {
+        response = await fetch(`${getBackendUrl()}/grows/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -5,30 +5,15 @@ import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Card } from '~/components/ui/card';
 import { Heading } from '~/components/ui/heading';
-import { Text } from '~/components/ui/text';
 import { Input, InputField, InputSlot, InputIcon } from '~/components/ui/input';
 import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
 import { Button, ButtonText } from '~/components/ui/button';
-import {
-  Select,
-  SelectTrigger,
-  SelectInput,
-  SelectPortal,
-  SelectContent,
-  SelectItem,
-  SelectIcon,
-  SelectBackdrop,
-  SelectDragIndicatorWrapper,
-  SelectDragIndicator,
-} from '~/components/ui/select';
-import { ChevronDownIcon } from 'lucide-react-native';
 import { Alert, AlertIcon, AlertText } from '~/components/ui/alert';
 import { InfoIcon, Eye, EyeOff } from 'lucide-react-native';
 import { AuthContext } from '~/lib/AuthContext';
 import { getBackendUrl } from '~/lib/backendUrl';
 import { IoTGatewayCreate, gatewayTypes, gatewayTypeLabels } from '~/lib/iot';
 import { Textarea, TextareaInput } from '~/components/ui/textarea';
-import { Tooltip, TooltipContent, TooltipText } from '~/components/ui/tooltip';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 

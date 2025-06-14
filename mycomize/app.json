@@ -28,11 +28,19 @@
       "bundleIdentifier": "com.anonymous.mycomize"
     },
     "android": {
+      "architectures": ["arm64-v8a", "armeabi-v7a"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.anonymous.mycomize"
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "aaa8278e-1f4f-44c4-a8dd-06c577a70e53"
+      }
+    },
+    "owner": "connojd"
   }
 }
