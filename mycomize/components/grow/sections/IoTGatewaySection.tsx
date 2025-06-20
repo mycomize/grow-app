@@ -11,7 +11,6 @@ import { Card } from '~/components/ui/card';
 import { Spinner } from '~/components/ui/spinner';
 import { Badge } from '~/components/ui/badge';
 import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
-import { SensorGraph } from '~/components/charts/SensorGraph';
 import {
   Search,
   Wifi,
@@ -23,11 +22,19 @@ import {
   Home,
   X,
   Settings,
+  Thermometer,
+  Droplet,
+  Activity,
+  Gauge,
+  Sun,
+  Wind,
+  Zap,
+  ChevronRight,
 } from 'lucide-react-native';
 
 import { AuthContext } from '~/lib/AuthContext';
 import { getBackendUrl } from '~/lib/backendUrl';
-import { IoTGateway, gatewayTypeLabels } from '~/lib/iot';
+import { IoTGateway, gatewayTypeLabels, IoTEntity, HAState } from '~/lib/iot';
 
 interface IoTGatewaySectionProps {
   growId?: number;
@@ -49,6 +56,85 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({
   const [isLinking, setIsLinking] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [enabledSensors, setEnabledSensors] = useState<IoTEntity[]>([]);
+  const [sensorStates, setSensorStates] = useState<HAState[]>([]);
+  const [isLoadingSensors, setIsLoadingSensors] = useState(false);
+
+  // Get icon based on device class
+  const getSensorIcon = (deviceClass?: string) => {
+    switch (deviceClass) {
+      case 'temperature':
+        return Thermometer;
+      case 'humidity':
+        return Droplet;
+      case 'pressure':
+        return Gauge;
+      case 'illuminance':
+        return Sun;
+      case 'wind_speed':
+        return Wind;
+      case 'power':
+      case 'energy':
+        return Zap;
+      default:
+        return Activity;
+    }
+  };
+
+  // Fetch enabled sensors for a gateway
+  const fetchEnabledSensors = async (gateway: IoTGateway) => {
+    if (!gateway.is_active) return;
+
+    setIsLoadingSensors(true);
+    try {
+      // Fetch enabled entities from backend
+      const entitiesResponse = await fetch(
+        `${getBackendUrl()}/iot-gateways/${gateway.id}/entities`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (entitiesResponse.ok) {
+        const entities: IoTEntity[] = await entitiesResponse.json();
+        const enabledSensorEntities = entities.filter(
+          (entity) => entity.is_enabled && entity.entity_id.startsWith('sensor.')
+        );
+        setEnabledSensors(enabledSensorEntities);
+
+        // Fetch current states for enabled sensors
+        if (enabledSensorEntities.length > 0) {
+          const statesResponse = await fetch(`${gateway.api_url}/api/states`, {
+            headers: {
+              Authorization: `Bearer ${gateway.api_key}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (statesResponse.ok) {
+            const allStates: HAState[] = await statesResponse.json();
+            const enabledEntityIds = enabledSensorEntities.map((e) => e.entity_id);
+            const filteredStates = allStates.filter((state) =>
+              enabledEntityIds.includes(state.entity_id)
+            );
+            setSensorStates(filteredStates);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch enabled sensors:', err);
+    } finally {
+      setIsLoadingSensors(false);
+    }
+  };
+
+  // Navigate to sensor detail screen
+  const navigateToSensor = (gatewayId: number, sensorId: string) => {
+    router.push(`/iot/${gatewayId}/sensor/${sensorId}`);
+  };
 
   // Fetch available gateways
   const fetchGateways = async () => {
@@ -80,6 +166,12 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({
 
       setGateways(formattedGateways);
       setFilteredGateways(formattedGateways);
+
+      // Fetch sensors for linked gateways
+      const linkedGateway = formattedGateways.find((gateway) => gateway.grow_id === growId);
+      if (linkedGateway) {
+        await fetchEnabledSensors(linkedGateway);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch gateways');
     } finally {
@@ -170,6 +262,10 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({
       setSuccess('Gateway unlinked successfully!');
       onGatewayUnlinked?.();
 
+      // Clear sensor data
+      setEnabledSensors([]);
+      setSensorStates([]);
+
       // Refresh gateways to show updated state
       fetchGateways();
     } catch (err) {
@@ -228,35 +324,105 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({
         <VStack>
           {linkedGateways.map((gateway) => (
             <Card key={gateway.id} className="bg-background-0">
-              <HStack className="items-center">
-                <VStack className="flex-1">
-                  <Text className="text-lg font-semibold text-primary-700">{gateway.name}</Text>
-                  <Text className="text-sm text-typography-500">
-                    {gatewayTypeLabels[gateway.type as keyof typeof gatewayTypeLabels] ||
-                      gateway.type}
-                  </Text>
-                </VStack>
-                <HStack space="sm">
-                  <Button variant="outline" size="sm" onPress={() => navigateToGateway(gateway.id)}>
-                    <ButtonIcon as={Settings} />
-                    <ButtonText>Configure</ButtonText>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-error-400"
-                    onPress={() => unlinkGateway(gateway.id)}
-                    isDisabled={isLinking === gateway.id}>
-                    {isLinking === gateway.id ? (
-                      <Spinner size="small" />
-                    ) : (
-                      <ButtonIcon as={Unlink} />
-                    )}
-                    <ButtonText>Unlink</ButtonText>
-                  </Button>
+              <VStack space="md">
+                <HStack className="items-center">
+                  <VStack className="flex-1">
+                    <Text className="text-lg font-semibold text-primary-700">{gateway.name}</Text>
+                    <Text className="text-sm text-typography-500">
+                      {gatewayTypeLabels[gateway.type as keyof typeof gatewayTypeLabels] ||
+                        gateway.type}
+                    </Text>
+                  </VStack>
+                  <HStack space="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onPress={() => navigateToGateway(gateway.id)}>
+                      <ButtonIcon as={Settings} />
+                      <ButtonText>Configure</ButtonText>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-error-400"
+                      onPress={() => unlinkGateway(gateway.id)}
+                      isDisabled={isLinking === gateway.id}>
+                      {isLinking === gateway.id ? (
+                        <Spinner size="small" />
+                      ) : (
+                        <ButtonIcon as={Unlink} />
+                      )}
+                      <ButtonText>Unlink</ButtonText>
+                    </Button>
+                  </HStack>
                 </HStack>
-              </HStack>
-              <SensorGraph gateway={gateway} />
+
+                {/* Enabled Sensors List */}
+                {isLoadingSensors ? (
+                  <VStack className="items-center py-4">
+                    <Spinner size="small" />
+                    <Text className="text-sm text-typography-500">Loading sensors...</Text>
+                  </VStack>
+                ) : enabledSensors.length === 0 ? (
+                  <VStack className="py-4">
+                    <Text className="text-center text-sm text-typography-500">
+                      No enabled sensors found. Configure sensors in the IoT gateway settings.
+                    </Text>
+                  </VStack>
+                ) : (
+                  <VStack space="xs">
+                    <Text className="text-sm font-medium text-typography-600">
+                      Enabled Sensors ({enabledSensors.length})
+                    </Text>
+                    {enabledSensors.map((sensor) => {
+                      const sensorState = sensorStates.find(
+                        (state) => state.entity_id === sensor.entity_id
+                      );
+                      const deviceClass = sensorState?.attributes?.device_class;
+                      const IconComponent = getSensorIcon(deviceClass);
+                      const friendlyName =
+                        sensor.friendly_name ||
+                        sensorState?.attributes?.friendly_name ||
+                        sensor.entity_id;
+                      const currentValue = sensorState?.state || 'Unknown';
+                      const unitOfMeasurement = sensorState?.attributes?.unit_of_measurement;
+
+                      return (
+                        <Pressable
+                          key={sensor.entity_id}
+                          onPress={() => navigateToSensor(gateway.id, sensor.entity_id)}>
+                          <Card className="bg-background-50">
+                            <HStack className="items-center" space="sm">
+                              <Icon
+                                as={IconComponent}
+                                className="mr-2 text-primary-600"
+                                size="md"
+                              />
+                              <VStack className="flex-1">
+                                <Text className="font-medium">{friendlyName}</Text>
+                                <Text className="text-xs text-typography-500">
+                                  {sensor.entity_id}
+                                </Text>
+                              </VStack>
+                              <VStack className="items-end">
+                                <Text className="font-semibold text-primary-600">
+                                  {currentValue}
+                                  {unitOfMeasurement && ` ${unitOfMeasurement}`}
+                                </Text>
+                              </VStack>
+                              <Icon
+                                as={ChevronRight}
+                                className="ml-1 text-typography-400"
+                                size="md"
+                              />
+                            </HStack>
+                          </Card>
+                        </Pressable>
+                      );
+                    })}
+                  </VStack>
+                )}
+              </VStack>
             </Card>
           ))}
         </VStack>

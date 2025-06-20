@@ -247,7 +247,13 @@ export default function GrowEditScreen() {
   };
 
   // Handle date changes
-  const handleDateChange = (field: string, date?: Date) => {
+  const handleDateChange = (field: string, date?: Date, event?: any) => {
+    // If user cancelled, don't change anything
+    if (event && event.type === 'dismissed') {
+      setActiveDatePicker(null);
+      return;
+    }
+
     setActiveDatePicker(null);
     if (date) {
       if (field.startsWith('flush_')) {

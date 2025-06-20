@@ -22,7 +22,7 @@ interface SyringeSectionProps {
   updateField: (field: keyof GrowData, value: any) => void;
   activeDatePicker: string | null;
   setActiveDatePicker: (field: string | null) => void;
-  handleDateChange: (field: string, date?: Date) => void;
+  handleDateChange: (field: string, date?: Date, event?: any) => void;
   parseDate: (dateString?: string) => Date | null;
 }
 
@@ -94,7 +94,7 @@ export const SyringeSection: React.FC<SyringeSectionProps> = ({
           <DateTimePicker
             value={parseDate(growData.syringe_created_at) || new Date()}
             mode="date"
-            onChange={(event, date) => handleDateChange('syringe_created_at', date)}
+            onChange={(event, date) => handleDateChange('syringe_created_at', date, event)}
           />
         )}
       </FormControl>
@@ -116,7 +116,7 @@ export const SyringeSection: React.FC<SyringeSectionProps> = ({
           <DateTimePicker
             value={parseDate(growData.syringe_expiration_date) || new Date()}
             mode="date"
-            onChange={(event, date) => handleDateChange('syringe_expiration_date', date)}
+            onChange={(event, date) => handleDateChange('syringe_expiration_date', date, event)}
           />
         )}
       </FormControl>

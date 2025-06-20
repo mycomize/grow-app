@@ -7,12 +7,15 @@ import { Text } from '~/components/ui/text';
 import { Spinner } from '~/components/ui/spinner';
 import { Card } from '~/components/ui/card';
 import { Icon } from '~/components/ui/icon';
+import { Button } from '~/components/ui/button';
 import { AlertCircle, Thermometer } from 'lucide-react-native';
 import { IoTGateway } from '~/lib/iot';
+import { Grow } from '~/lib/growTypes';
 
 interface SensorData {
   entity_id: string;
   friendly_name: string;
+  unit_of_measurement?: string;
   data: Array<{
     value: number;
     label?: string;
@@ -25,7 +28,12 @@ interface SensorData {
 
 interface SensorGraphProps {
   gateway: IoTGateway;
+  sensorEntityId?: string; // Optional: if provided, show only this sensor
+  grow?: Grow; // Optional: if provided, use inoculation date for MAX time scale
 }
+
+// Time scale options
+type TimeScale = '1D' | '1W' | 'MAX';
 
 // Color palette for multiple sensors
 const SENSOR_COLORS = [
@@ -39,11 +47,12 @@ const SENSOR_COLORS = [
   '#48DBFB',
 ];
 
-export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway }) => {
+export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityId, grow }) => {
   const [sensorData, setSensorData] = useState<SensorData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+  const [selectedTimeScale, setSelectedTimeScale] = useState<TimeScale>('1D');
 
   const chartWidth = useMemo(() => screenWidth - 100, [screenWidth]);
 
@@ -74,128 +83,168 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway }) => {
     return () => subscription?.remove();
   }, []);
 
-  const fetchSensorHistory = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  const fetchSensorHistory = useCallback(
+    async (timeScale: TimeScale = selectedTimeScale) => {
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      // First, fetch all entities to find temperature sensors
-      const statesResponse = await fetch(`${gateway.api_url}/api/states`, {
-        headers: {
-          Authorization: `Bearer ${gateway.api_key}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      try {
+        let sensorsToFetch: any[] = [];
 
-      if (!statesResponse.ok) {
-        throw new Error('Failed to fetch states from Home Assistant');
-      }
+        if (sensorEntityId) {
+          // Fetch specific sensor
+          const stateResponse = await fetch(`${gateway.api_url}/api/states/${sensorEntityId}`, {
+            headers: {
+              Authorization: `Bearer ${gateway.api_key}`,
+              'Content-Type': 'application/json',
+            },
+          });
 
-      const states = await statesResponse.json();
+          if (!stateResponse.ok) {
+            throw new Error('Failed to fetch sensor state from Home Assistant');
+          }
 
-      // Filter for temperature sensors
-      const temperatureSensors = states.filter((state: any) => {
-        return (
-          state.entity_id.startsWith('sensor.') &&
-          state.attributes.device_class === 'temperature' &&
-          state.state !== 'unavailable' &&
-          state.state !== 'unknown'
-        );
-      });
-
-      if (temperatureSensors.length === 0) {
-        setError('No temperature sensors found');
-        setIsLoading(false);
-        return;
-      }
-
-      // Calculate time range (past 24 hours)
-      const endTime = new Date();
-      const startTime = new Date(endTime.getTime() - 24 * 60 * 60 * 1000);
-
-      // Fetch history for each temperature sensor
-      const historyPromises = temperatureSensors.map(async (sensor: any, index: number) => {
-        const historyUrl = `${gateway.api_url}/api/history/period/${startTime.toISOString()}?filter_entity_id=${sensor.entity_id}&end_time=${endTime.toISOString()}`;
-
-        const historyResponse = await fetch(historyUrl, {
-          headers: {
-            Authorization: `Bearer ${gateway.api_key}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!historyResponse.ok) {
-          console.error(`Failed to fetch history for ${sensor.entity_id}`);
-          return null;
+          const sensorState = await stateResponse.json();
+          if (sensorState.state !== 'unavailable' && sensorState.state !== 'unknown') {
+            sensorsToFetch = [sensorState];
+          }
         }
 
-        const historyData = await historyResponse.json();
-
-        if (!historyData || !historyData[0] || historyData[0].length === 0) {
-          return null;
+        if (sensorsToFetch.length === 0) {
+          setError('Sensor not found or unavailable');
+          setIsLoading(false);
+          return;
         }
 
-        // Process history data
-        const processedData = historyData[0]
-          .filter((point: any) => {
-            const value = parseFloat(point.state);
-            return !isNaN(value) && point.state !== 'unavailable' && point.state !== 'unknown';
-          })
-          .map((point: any) => ({
-            time: new Date(point.last_changed),
-            value: parseFloat(point.state),
-          }))
-          .sort((a: any, b: any) => a.time.getTime() - b.time.getTime());
+        // Calculate time range based on selected time scale
+        const endTime = new Date();
+        let startTime: Date;
 
-        // Sample data every 10 minutes for better performance while maintaining data coverage
-        const sampledData = sampleDataEveryNMinutes(processedData, 10);
+        switch (timeScale) {
+          case '1D':
+            startTime = new Date(endTime.getTime() - 24 * 60 * 60 * 1000); // 24 hours ago
+            break;
+          case '1W':
+            startTime = new Date(endTime.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
+            break;
+          case 'MAX':
+            // Use grow inoculation date if available, otherwise default to 1 month ago
+            if (grow && (grow.inoculationDate || grow.inoculation_date)) {
+              // Handle both possible date field names and formats
+              const inoculationDate =
+                grow.inoculationDate ||
+                (grow.inoculation_date ? new Date(grow.inoculation_date) : null);
 
-        // Format data for gifted-charts with x-axis labels
-        const chartData = sampledData.map((point: { time: Date; value: number }, idx: number) => {
-          const date = point.time;
-          const hours = date.getHours();
+              if (inoculationDate instanceof Date && !isNaN(inoculationDate.getTime())) {
+                startTime = inoculationDate;
+              } else {
+                // Fallback to 1 month ago if inoculation date is invalid
+                startTime = new Date(endTime.getTime() - 30 * 24 * 60 * 60 * 1000);
+              }
+            } else {
+              // Default to 1 month ago if no grow data or inoculation date
+              startTime = new Date(endTime.getTime() - 30 * 24 * 60 * 60 * 1000);
+            }
+            break;
+          default:
+            startTime = new Date(endTime.getTime() - 24 * 60 * 60 * 1000);
+        }
 
-          // Show labels at regular intervals
-          const labelInterval = Math.max(1, Math.floor(sampledData.length / 5)); // Show about 5 labels
-          const showLabel =
-            idx === 0 || idx === sampledData.length - 1 || (idx > 0 && idx % labelInterval === 0);
+        // Fetch history for each sensor
+        const historyPromises = sensorsToFetch.map(async (sensor: any, index: number) => {
+          const historyUrl = `${gateway.api_url}/api/history/period/${startTime.toISOString()}?filter_entity_id=${sensor.entity_id}&end_time=${endTime.toISOString()}&minimal_response&no_attributes`;
+
+          const historyResponse = await fetch(historyUrl, {
+            headers: {
+              Authorization: `Bearer ${gateway.api_key}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (!historyResponse.ok) {
+            console.error(`Failed to fetch history for ${sensor.entity_id}`);
+            return null;
+          }
+
+          const historyData = await historyResponse.json();
+
+          if (!historyData || !historyData[0] || historyData[0].length === 0) {
+            return null;
+          }
+
+          // Process history data
+          const processedData = historyData[0]
+            .filter((point: any) => {
+              const value = parseFloat(point.state);
+              return !isNaN(value) && point.state !== 'unavailable' && point.state !== 'unknown';
+            })
+            .map((point: any) => ({
+              time: new Date(point.last_changed),
+              value: parseFloat(point.state),
+            }))
+            .sort((a: any, b: any) => a.time.getTime() - b.time.getTime());
+
+          // Sample data based on time scale for optimal performance and data coverage
+          let samplingInterval: number;
+          switch (timeScale) {
+            case '1D':
+              samplingInterval = 10; // 10 minutes
+              break;
+            case '1W':
+              samplingInterval = 60; // 60 minutes
+              break;
+            case 'MAX':
+              samplingInterval = 240; // 240 minutes
+              break;
+            default:
+              samplingInterval = 10;
+          }
+
+          const sampledData = sampleDataEveryNMinutes(processedData, samplingInterval);
+
+          // Format data for gifted-charts with x-axis labels
+          const chartData = sampledData.map((point: { time: Date; value: number }, idx: number) => {
+            const date = point.time;
+
+            return {
+              value: point.value,
+              label: '',
+              labelTextStyle: { color: '#6B7280', fontSize: 10, textAlign: 'center' },
+              timeString: formatFullTimeLabel(date), // Store formatted time string instead of Date object
+            };
+          });
 
           return {
-            value: point.value,
-            label: showLabel ? formatTimeLabel(date) : '',
-            labelTextStyle: { color: '#6B7280', fontSize: 10, textAlign: 'center' },
-            timeString: formatTimeLabel(date), // Store formatted time string instead of Date object
+            entity_id: sensor.entity_id,
+            friendly_name: sensor.attributes.friendly_name || sensor.entity_id,
+            unit_of_measurement: sensor.attributes.unit_of_measurement,
+            data: chartData,
+            color: SENSOR_COLORS[index % SENSOR_COLORS.length],
+            lastValue: processedData[processedData.length - 1]?.value || 0,
           };
         });
 
-        return {
-          entity_id: sensor.entity_id,
-          friendly_name: sensor.attributes.friendly_name || sensor.entity_id,
-          data: chartData,
-          color: SENSOR_COLORS[index % SENSOR_COLORS.length],
-          lastValue: processedData[processedData.length - 1]?.value || 0,
-        };
-      });
+        const results = await Promise.all(historyPromises);
+        const validResults = results.filter(
+          (result) => result !== null && result!.data.length > 0
+        ) as SensorData[];
 
-      const results = await Promise.all(historyPromises);
-      const validResults = results.filter(
-        (result): result is SensorData => result !== null && result.data.length > 0
-      );
-
-      setSensorData(validResults);
-    } catch (err) {
-      console.error('Error fetching sensor history:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch sensor data');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [gateway.api_url, gateway.api_key]);
+        setSensorData(validResults);
+      } catch (err) {
+        console.error('Error fetching sensor history:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch sensor data');
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [gateway.api_url, gateway.api_key, sensorEntityId]
+  );
 
   useEffect(() => {
     if (gateway.type === 'home_assistant' && gateway.is_active) {
-      fetchSensorHistory();
+      fetchSensorHistory(selectedTimeScale);
     }
-  }, [gateway.type, gateway.is_active, fetchSensorHistory]);
+  }, [gateway.type, gateway.is_active, fetchSensorHistory, selectedTimeScale]);
 
   // Sample data every N minutes
   const sampleDataEveryNMinutes = (
@@ -225,55 +274,83 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway }) => {
     return result;
   };
 
-  const formatTimeLabel = useCallback((date: Date) => {
+  const formatFullTimeLabel = useCallback((date: Date) => {
     const hours = date.getHours();
     const minutes = date.getMinutes();
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+
+    const formatted = date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+
+    return `${formatted} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   }, []);
 
-  const pointerLabelComponent = useCallback((items: any) => {
-    const pointData = items[0];
-    if (!pointData) return null;
+  const pointerLabelComponent = useCallback(
+    (items: any) => {
+      const pointData = items[0];
+      if (!pointData) return null;
 
-    // Use the pre-formatted time string
-    const timeLabel = pointData.timeString || '';
+      // Use the pre-formatted time string
+      const timeLabel = pointData.timeString || '';
 
-    return (
-      <View
-        style={{
-          backgroundColor: '#1F2937',
-          paddingHorizontal: 12,
-          paddingVertical: 8,
-          borderRadius: 8,
-          minWidth: 80,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.25,
-          shadowRadius: 3.84,
-          elevation: 5,
-        }}>
-        <Text
+      // Get the unit of measurement from the first sensor (primary sensor)
+      const unitOfMeasurement = sensorData.length > 0 ? sensorData[0].unit_of_measurement : '';
+      const unitSuffix = unitOfMeasurement ? unitOfMeasurement : '';
+
+      return (
+        <View
           style={{
-            color: '#FFF',
-            fontSize: 11,
-            fontWeight: '600',
-            textAlign: 'center',
+            backgroundColor: '#1F2937',
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 8,
+            minWidth: 80,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 3.84,
+            elevation: 5,
           }}>
-          {timeLabel}
-        </Text>
-        <Text
-          style={{
-            color: '#FFF',
-            fontSize: 13,
-            fontWeight: '700',
-            marginTop: 2,
-            textAlign: 'center',
-          }}>
-          {pointData.value.toFixed(1)}°
-        </Text>
-      </View>
-    );
-  }, []);
+          <Text
+            style={{
+              color: '#FFF',
+              fontSize: 11,
+              fontWeight: '600',
+              textAlign: 'center',
+            }}>
+            {timeLabel}
+          </Text>
+          <Text
+            style={{
+              color: '#FFF',
+              fontSize: 13,
+              fontWeight: '700',
+              marginTop: 2,
+              textAlign: 'center',
+            }}>
+            {pointData.value.toFixed(1)}
+            {unitSuffix}
+          </Text>
+        </View>
+      );
+    },
+    [sensorData]
+  );
+
+  const formatYLabel = useCallback(
+    (label: string | number) => {
+      const unitOfMeasurement = sensorData.length > 0 ? sensorData[0].unit_of_measurement : '';
+      const unitSuffix = unitOfMeasurement ? unitOfMeasurement : '';
+
+      if (typeof label === 'string') {
+        const num = parseFloat(label);
+        return isNaN(num) ? label : `${num}${unitSuffix}  `;
+      }
+      return `${label}${unitSuffix}  `;
+    },
+    [sensorData]
+  );
 
   const pointerConfig = useMemo(
     () => ({
@@ -341,12 +418,7 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway }) => {
   return (
     <Card className="bg-background-0">
       <VStack space="md">
-        <HStack className="items-center" space="sm">
-          <Icon as={Thermometer} className="text-primary-600" size="sm" />
-          <Text className="text-lg font-semibold">Temperature Sensors (24h)</Text>
-        </HStack>
-
-        <View style={{ width: chartWidth, alignSelf: 'flex-start' }}>
+        <View style={{ width: chartWidth, alignSelf: 'flex-start' }} className="mx-auto mt-6">
           <LineChart
             data={sensorData[0].data}
             data2={sensorData[1]?.data}
@@ -363,17 +435,10 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway }) => {
             width={chartWidth}
             height={250}
             adjustToWidth
-            yAxisLabelWidth={25}
+            yAxisLabelWidth={30}
             yAxisOffset={yMin - 2}
-            formatYLabel={(label) => {
-              if (typeof label === 'string') {
-                const num = parseFloat(label);
-                return isNaN(num) ? label : `${num}°`;
-              }
-              return `${label}°`;
-            }}
-            yAxisTextStyle={{ color: '#9F9F9F', fontSize: 12 }}
-            xAxisLabelTextStyle={{ color: '#9F9F9F', fontSize: 10 }}
+            formatYLabel={formatYLabel}
+            yAxisTextStyle={{ color: '#9F9F9F', fontSize: 10 }}
             showXAxisIndices={false}
             showFractionalValues={false}
             yAxisColor="#E5E7EB"
@@ -384,14 +449,14 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway }) => {
             curved
             animateOnDataChange
             animationDuration={750}
-            yAxisLabelSuffix=""
             spacing={Math.max(2, (chartWidth - 120) / Math.max(1, sensorData[0].data.length - 1))}
             initialSpacing={10}
             endSpacing={10}
             hideYAxisText={false}
             yAxisThickness={1}
             xAxisThickness={1}
-            xAxisLength={310}
+            xAxisLength={320}
+            xAxisLabelsVerticalShift={-5}
             hideOrigin
             // Disable default strip, only use pointer
             focusEnabled={false}
@@ -400,23 +465,27 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway }) => {
           />
         </View>
 
-        {/* Legend */}
-        <VStack space="xs">
-          {sensorData.map((sensor) => (
-            <HStack key={sensor.entity_id} className="items-center" space="sm">
-              <View
-                style={{
-                  width: 12,
-                  height: 12,
-                  backgroundColor: sensor.color,
-                  borderRadius: 6,
-                }}
-              />
-              <Text className="text-sm text-typography-600">{sensor.friendly_name}</Text>
-              <Text className="text-sm text-typography-500">({sensor.lastValue.toFixed(1)}°)</Text>
-            </HStack>
+        {/* Time Scale Selector */}
+        <HStack space="sm" className="justify-center pb-4">
+          {(['1D', '1W', 'MAX'] as TimeScale[]).map((timeScale) => (
+            <Button
+              key={timeScale}
+              size="sm"
+              variant={selectedTimeScale === timeScale ? 'solid' : 'outline'}
+              action={selectedTimeScale === timeScale ? 'positive' : 'secondary'}
+              onPress={() => setSelectedTimeScale(timeScale)}
+              className={
+                selectedTimeScale === timeScale ? 'min-w-16' : 'min-w-16 border-typography-200'
+              }>
+              <Text
+                className={`text-sm font-medium ${
+                  selectedTimeScale === timeScale ? 'text-white' : 'text-typography-600'
+                }`}>
+                {timeScale}
+              </Text>
+            </Button>
           ))}
-        </VStack>
+        </HStack>
       </VStack>
     </Card>
   );
