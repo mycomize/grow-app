@@ -114,7 +114,8 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
             <SelectInput
               value={growData.spawn_status}
               placeholder="Select status"
-              className="placeholder:text-sm"
+              className="mt-1 placeholder:text-sm"
+              size="md"
             />
             <SelectIcon as={ChevronDown} className="ml-auto mr-2" />
           </SelectTrigger>

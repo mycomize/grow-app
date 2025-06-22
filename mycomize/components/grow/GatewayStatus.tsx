@@ -131,13 +131,13 @@ export const GatewayStatus: React.FC<GatewayStatusProps> = ({ gateway }) => {
   const getConnectionIcon = () => {
     switch (connectionStatus) {
       case 'connected':
-        return <Icon as={Wifi} size="md" className="text-success-700" />;
+        return <Icon as={Wifi} size="sm" className="text-success-700" />;
       case 'connecting':
-        return <Icon as={RadioTower} size="md" className="text-purple-300" />;
+        return <Icon as={RadioTower} size="sm" className="text-purple-300" />;
       case 'disconnected':
-        return <Icon as={PowerOff} size="md" className="text-error-900" />;
+        return <Icon as={PowerOff} size="sm" className="text-error-900" />;
       default:
-        return <Icon as={WifiOff} size="md" className="text-error-900" />;
+        return <Icon as={WifiOff} size="sm" className="text-error-900" />;
     }
   };
 
@@ -174,7 +174,7 @@ export const GatewayStatus: React.FC<GatewayStatusProps> = ({ gateway }) => {
       case 'connecting':
         return 'bg-purple-800';
       case 'disconnected':
-        return 'bg-error-900';
+        return 'bg-error-50';
       default:
         return 'bg-background-200';
     }

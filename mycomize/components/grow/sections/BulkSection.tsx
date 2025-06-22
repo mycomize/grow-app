@@ -159,7 +159,7 @@ export const BulkSection: React.FC<BulkSectionProps> = ({
             <SelectInput
               value={growData.bulk_status}
               placeholder="Select status"
-              className="placeholder:text-sm"
+              className="mt-1 placeholder:text-sm"
             />
             <SelectIcon as={ChevronDown} className="ml-auto mr-2" />
           </SelectTrigger>

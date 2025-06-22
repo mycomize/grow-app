@@ -145,7 +145,7 @@ export const SyringeSection: React.FC<SyringeSectionProps> = ({
             <SelectInput
               value={growData.syringe_status}
               placeholder="Select status"
-              className="placeholder:text-sm"
+              className="mt-1 placeholder:text-sm"
             />
             <SelectIcon as={ChevronDown} className="ml-auto mr-2" />
           </SelectTrigger>

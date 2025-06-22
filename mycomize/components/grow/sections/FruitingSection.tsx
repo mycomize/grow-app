@@ -113,7 +113,7 @@ export const FruitingSection: React.FC<FruitingSectionProps> = ({
             <SelectInput
               value={growData.fruiting_mist_frequency}
               placeholder="Select frequency"
-              className="placeholder:text-sm"
+              className="mt-1 placeholder:text-sm"
             />
             <SelectIcon as={ChevronDown} className="ml-auto mr-2" />
           </SelectTrigger>

@@ -9,7 +9,7 @@ import { HStack } from '~/components/ui/hstack';
 import { Icon } from '~/components/ui/icon';
 import {
   PlusIcon,
-  Home,
+  SquarePen,
   Power,
   PowerOff,
   HouseWifi,
@@ -192,6 +192,17 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({ gateway, token }) => 
                 <Text className="ml-auto text-base">None</Text>
               </HStack>
             )}
+
+            <Pressable
+              className="ml-auto mt-2"
+              onPress={() => {
+                router.push({
+                  pathname: `/iot/[id]`,
+                  params: { id: gateway.id },
+                });
+              }}>
+              <Icon as={SquarePen} size="xl" />
+            </Pressable>
           </Pressable>
         </VStack>
       </Card>
