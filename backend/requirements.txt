@@ -4,3 +4,4 @@ pydantic
 python-jose
 bcrypt
 pyjwt
+alembic
