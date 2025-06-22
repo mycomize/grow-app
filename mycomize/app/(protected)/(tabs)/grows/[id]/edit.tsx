@@ -48,8 +48,6 @@ import { BasicsSection } from '~/components/grow/sections/BasicsSection';
 import { IoTGatewaySection } from '~/components/grow/sections/IoTGatewaySection';
 import { StagesSection } from '~/components/grow/sections/StagesSection';
 
-import { SensorGraph } from '~/components/charts/SensorGraph';
-
 interface GrowData {
   id?: number;
   name?: string;
@@ -76,12 +74,14 @@ interface GrowData {
   syringe_cost?: string;
   syringe_created_at?: string;
   syringe_expiration_date?: string;
+  syringe_status?: string;
 
   // Spawn fields
   spawn_type?: string;
   spawn_weight_lbs?: string;
   spawn_cost?: string;
   spawn_vendor?: string;
+  spawn_status?: string;
 
   // Bulk substrate fields
   bulk_type?: string;
@@ -90,12 +90,14 @@ interface GrowData {
   bulk_vendor?: string;
   bulk_created_at?: string;
   bulk_expiration_date?: string;
+  bulk_status?: string;
 
   // Fruiting fields
   fruiting_start_date?: string;
   fruiting_pin_date?: string;
   fruiting_mist_frequency?: string;
   fruiting_fan_frequency?: string;
+  fruiting_status?: string;
 }
 
 interface HarvestFlush {
@@ -256,11 +258,14 @@ export default function GrowEditScreen() {
 
     setActiveDatePicker(null);
     if (date) {
+      // Handle flush dates differently from regular grow data fields
       if (field.startsWith('flush_')) {
-        const [, flushId] = field.split('_');
+        const flushId = field.replace('flush_', '');
         updateFlush(flushId, { harvestDate: date });
       } else {
-        updateField(field as keyof GrowData, formatDateForAPI(date));
+        // Format the date as YYYY-MM-DD string for the API
+        const formattedDate = formatDateForAPI(date);
+        updateField(field as keyof GrowData, formattedDate);
       }
     }
   };
@@ -500,7 +505,7 @@ export default function GrowEditScreen() {
                       <Icon
                         as={isExpanded ? ChevronDown : ChevronRight}
                         size="lg"
-                        className="text-typography-400"
+                        className="text-typography-900"
                       />
                     </HStack>
                   )}
@@ -524,7 +529,7 @@ export default function GrowEditScreen() {
                       <Icon
                         as={isExpanded ? ChevronDown : ChevronRight}
                         size="lg"
-                        className="text-typography-400"
+                        className="text-typography-900"
                       />
                     </HStack>
                   )}
@@ -552,7 +557,7 @@ export default function GrowEditScreen() {
                       <Icon
                         as={isExpanded ? ChevronDown : ChevronRight}
                         size="lg"
-                        className="text-typography-400"
+                        className="text-typography-900"
                       />
                     </HStack>
                   )}

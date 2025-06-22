@@ -30,12 +30,14 @@ class GrowBase(BaseModel):
     syringe_cost: Optional[float] = None
     syringe_created_at: Optional[date] = None
     syringe_expiration_date: Optional[date] = None
+    syringe_status: Optional[str] = None
     
     # Spawn fields
     spawn_type: Optional[str] = None
     spawn_weight_lbs: Optional[float] = None
     spawn_cost: Optional[float] = None
     spawn_vendor: Optional[str] = None
+    spawn_status: Optional[str] = None
     
     # Bulk substrate fields
     bulk_type: Optional[str] = None
@@ -44,12 +46,14 @@ class GrowBase(BaseModel):
     bulk_vendor: Optional[str] = None
     bulk_created_at: Optional[date] = None
     bulk_expiration_date: Optional[date] = None
+    bulk_status: Optional[str] = None
     
     # Fruiting fields
     fruiting_start_date: Optional[date] = None
     fruiting_pin_date: Optional[date] = None
     fruiting_mist_frequency: Optional[str] = None
     fruiting_fan_frequency: Optional[str] = None
+    fruiting_status: Optional[str] = None
 
 class GrowCreate(GrowBase):
     """Schema for creating a new grow"""
@@ -144,12 +148,14 @@ class GrowUpdate(BaseModel):
     syringe_cost: Optional[float] = None
     syringe_created_at: Optional[date] = None
     syringe_expiration_date: Optional[date] = None
+    syringe_status: Optional[str] = None
     
     # Spawn fields
     spawn_type: Optional[str] = None
     spawn_weight_lbs: Optional[float] = None
     spawn_cost: Optional[float] = None
     spawn_vendor: Optional[str] = None
+    spawn_status: Optional[str] = None
     
     # Bulk substrate fields
     bulk_type: Optional[str] = None
@@ -158,9 +164,11 @@ class GrowUpdate(BaseModel):
     bulk_vendor: Optional[str] = None
     bulk_created_at: Optional[date] = None
     bulk_expiration_date: Optional[date] = None
+    bulk_status: Optional[str] = None
     
     # Fruiting fields
     fruiting_start_date: Optional[date] = None
     fruiting_pin_date: Optional[date] = None
     fruiting_mist_frequency: Optional[str] = None
     fruiting_fan_frequency: Optional[str] = None
+    fruiting_status: Optional[str] = None

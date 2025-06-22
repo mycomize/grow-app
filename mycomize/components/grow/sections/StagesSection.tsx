@@ -456,7 +456,7 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
       {/* Instructions */}
       <VStack className="rounded-lg bg-background-50 p-3">
         <Text className="text-sm text-typography-500">
-          Track your grow's progress through each stage. Press "Advance" to move to the next stage
+          Track your grow's progress through each stage. Press "Complete" to move to the next stage
           when ready. Each stage will record its start date automatically.
         </Text>
       </VStack>

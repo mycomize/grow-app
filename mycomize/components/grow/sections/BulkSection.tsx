@@ -5,8 +5,20 @@ import { Input, InputField, InputIcon, InputSlot } from '~/components/ui/input';
 import { Text } from '~/components/ui/text';
 import { Pressable } from '~/components/ui/pressable';
 import { Icon } from '~/components/ui/icon';
-import { CalendarDays, DollarSign, Weight, Package } from 'lucide-react-native';
+import { CalendarDays, DollarSign, Weight, Package, ChevronDown } from 'lucide-react-native';
 import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
+import {
+  Select,
+  SelectTrigger,
+  SelectInput,
+  SelectIcon,
+  SelectPortal,
+  SelectBackdrop,
+  SelectContent,
+  SelectDragIndicatorWrapper,
+  SelectDragIndicator,
+  SelectItem,
+} from '~/components/ui/select';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface GrowData {
@@ -16,6 +28,7 @@ interface GrowData {
   bulk_vendor?: string;
   bulk_created_at?: string;
   bulk_expiration_date?: string;
+  bulk_status?: string;
 }
 
 interface BulkSectionProps {
@@ -23,7 +36,7 @@ interface BulkSectionProps {
   updateField: (field: keyof GrowData, value: any) => void;
   activeDatePicker: string | null;
   setActiveDatePicker: (field: string | null) => void;
-  handleDateChange: (field: string, date?: Date) => void;
+  handleDateChange: (field: string, date?: Date, event?: any) => void;
   parseDate: (dateString?: string) => Date | null;
 }
 
@@ -43,7 +56,7 @@ export const BulkSection: React.FC<BulkSectionProps> = ({
         </FormControlLabel>
         <Input>
           <InputField
-            placeholder="Enter substrate type (e.g., Coco Coir)"
+            placeholder="Enter substrate type"
             value={growData.bulk_type || ''}
             onChangeText={(value) => updateField('bulk_type', value)}
           />
@@ -108,7 +121,7 @@ export const BulkSection: React.FC<BulkSectionProps> = ({
           <DateTimePicker
             value={parseDate(growData.bulk_created_at) || new Date()}
             mode="date"
-            onChange={(event, date) => handleDateChange('bulk_created_at', date)}
+            onChange={(event, date) => handleDateChange('bulk_created_at', date, event)}
           />
         )}
       </FormControl>
@@ -130,9 +143,38 @@ export const BulkSection: React.FC<BulkSectionProps> = ({
           <DateTimePicker
             value={parseDate(growData.bulk_expiration_date) || new Date()}
             mode="date"
-            onChange={(event, date) => handleDateChange('bulk_expiration_date', date)}
+            onChange={(event, date) => handleDateChange('bulk_expiration_date', date, event)}
           />
         )}
+      </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Status</FormControlLabelText>
+        </FormControlLabel>
+        <Select
+          selectedValue={growData.bulk_status}
+          onValueChange={(value) => updateField('bulk_status', value)}>
+          <SelectTrigger variant="outline" size="md">
+            <SelectInput
+              value={growData.bulk_status}
+              placeholder="Select status"
+              className="placeholder:text-sm"
+            />
+            <SelectIcon as={ChevronDown} className="ml-auto mr-2" />
+          </SelectTrigger>
+          <SelectPortal>
+            <SelectBackdrop />
+            <SelectContent>
+              <SelectDragIndicatorWrapper>
+                <SelectDragIndicator />
+              </SelectDragIndicatorWrapper>
+              <SelectItem label="Healthy" value="Healthy" />
+              <SelectItem label="Suspect" value="Suspect" />
+              <SelectItem label="Contaminated" value="Contaminated" />
+            </SelectContent>
+          </SelectPortal>
+        </Select>
       </FormControl>
     </VStack>
   );

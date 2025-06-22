@@ -191,7 +191,7 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
               samplingInterval = 10; // 10 minutes
               break;
             case '1W':
-              samplingInterval = 60; // 60 minutes
+              samplingInterval = 70; // 60 minutes
               break;
             case 'MAX':
               samplingInterval = 240; // 240 minutes

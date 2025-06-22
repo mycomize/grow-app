@@ -370,7 +370,7 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({
                     </Text>
                   </VStack>
                 ) : (
-                  <VStack space="xs">
+                  <VStack space="sm">
                     <Text className="text-sm font-medium text-typography-600">
                       Enabled Sensors ({enabledSensors.length})
                     </Text>

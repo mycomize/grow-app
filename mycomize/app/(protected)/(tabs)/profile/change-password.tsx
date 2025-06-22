@@ -209,7 +209,7 @@ export default function ChangePasswordScreen() {
               <Text className="text-lg font-medium text-typography-900">{username}</Text>
             </VStack>
 
-            <FormControl className="rounded-lg border border-outline-300 p-4">
+            <FormControl className="rounded-lg bg-background-0 p-8">
               <VStack space="xl">
                 <VStack space="xs">
                   <Text className="text-typography-700">Current Password</Text>

@@ -22,6 +22,12 @@ class GrowStatus(enum.Enum):
     GROWING = "growing"
     CONTAMINATED = "contaminated"
     HARVESTED = "harvested"
+
+class SectionStatus(enum.Enum):
+    """Enum for section status (syringe, spawn, bulk, fruiting)"""
+    HEALTHY = "Healthy"
+    SUSPECT = "Suspect"
+    CONTAMINATED = "Contaminated"
     
 class Grow(Base):
     """Grow model for mushroom cultivation tracking"""
@@ -54,12 +60,14 @@ class Grow(Base):
     syringe_cost = Column(Float, nullable=True)
     syringe_created_at = Column(Date, nullable=True)
     syringe_expiration_date = Column(Date, nullable=True)
+    syringe_status = Column(String(64), nullable=True)
     
     # Spawn fields
     spawn_type = Column(String(128), nullable=True)
     spawn_weight_lbs = Column(Float, nullable=True)
     spawn_cost = Column(Float, nullable=True)
     spawn_vendor = Column(String(128), nullable=True)
+    spawn_status = Column(String(64), nullable=True)
     
     # Bulk substrate fields
     bulk_type = Column(String(128), nullable=True)
@@ -68,12 +76,14 @@ class Grow(Base):
     bulk_vendor = Column(String(128), nullable=True)
     bulk_created_at = Column(Date, nullable=True)
     bulk_expiration_date = Column(Date, nullable=True)
+    bulk_status = Column(String(64), nullable=True)
     
     # Fruiting fields
     fruiting_start_date = Column(Date, nullable=True)
     fruiting_pin_date = Column(Date, nullable=True)
     fruiting_mist_frequency = Column(String(64), nullable=True)
     fruiting_fan_frequency = Column(String(64), nullable=True)
+    fruiting_status = Column(String(64), nullable=True)
     
     # Foreign key to user
     user_id = Column(Integer, ForeignKey("users.id"))

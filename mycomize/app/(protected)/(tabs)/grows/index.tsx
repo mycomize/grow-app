@@ -11,6 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '~/lib/AuthContext';
 import { Grow, growTeks } from '~/lib/growTypes';
 import { GrowCard } from '~/components/grow/GrowCard';
+import { GrowCardSkeleton } from '~/components/grow/GrowCardSkeleton';
 
 interface AddGrowButtonProps {
   title: string;
@@ -41,6 +42,7 @@ export default function GrowScreen() {
   const { token } = useContext(AuthContext);
   const router = useRouter();
   const [grows, setGrows] = useState<Grow[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const addGrow = (grow: Grow) => {
     const isDuplicate = grows.some((existingGrow) => existingGrow.id === grow.id);
@@ -60,6 +62,7 @@ export default function GrowScreen() {
   // Define the fetch function
   const fetchData = useCallback(async () => {
     try {
+      setLoading(true);
       const url = getBackendUrl();
       // Reset grows before fetching to avoid stale data
       setGrows([]);
@@ -78,6 +81,7 @@ export default function GrowScreen() {
         } else {
           console.error('Failed to fetch grows:', response.statusText);
         }
+        setLoading(false);
         return;
       }
 
@@ -89,8 +93,10 @@ export default function GrowScreen() {
       }));
 
       setGrows(formattedGrows);
+      setLoading(false);
     } catch (error) {
       console.error('Exception fetching grows:', error);
+      setLoading(false);
     }
   }, [token, router]);
 
@@ -103,6 +109,18 @@ export default function GrowScreen() {
       return () => {};
     }, [fetchData])
   );
+
+  if (loading) {
+    return (
+      <VStack className="flex-1 items-center gap-4 bg-background-50">
+        <View className="mt-2" />
+        {/* Show 3 skeleton cards while loading */}
+        {Array.from({ length: 1 }).map((_, index) => (
+          <GrowCardSkeleton key={index} />
+        ))}
+      </VStack>
+    );
+  }
 
   return grows.length == 0 ? (
     <VStack className="flex-1 items-center justify-center gap-5 bg-background-50">

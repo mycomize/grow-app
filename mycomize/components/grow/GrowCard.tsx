@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '~/components/ui/card';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
@@ -9,16 +9,16 @@ import { Pressable } from '~/components/ui/pressable';
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
 import {
-  Wifi,
-  WifiOff,
   CheckCircle,
   Circle,
   Disc2,
   Clock,
   DollarSign,
   Scale,
+  SquarePen,
 } from 'lucide-react-native';
 import { Grow, stageLabels, statusLabels, growStatuses } from '~/lib/growTypes';
+import { GatewayStatus } from './GatewayStatus';
 
 interface GrowCardProps {
   grow: Grow;
@@ -86,13 +86,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow }) => {
   return (
     <Card className="w-11/12 rounded-xl bg-background-0">
       <VStack className="p-2">
-        <Pressable
-          onPress={() => {
-            router.push({
-              pathname: `/grows/[id]/edit`,
-              params: { id: grow.id },
-            });
-          }}>
+        <View>
           {/* Header with strain and species */}
           <HStack className="mb-5 items-center justify-between">
             <Heading size="lg">{grow.variant}</Heading>
@@ -172,41 +166,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow }) => {
               return gateways.length > 0 ? (
                 <VStack space="sm">
                   {gateways.map((gateway) => (
-                    <Pressable
-                      key={gateway.id}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        router.push({
-                          pathname: `/iot/[id]`,
-                          params: { id: gateway.id },
-                        });
-                      }}
-                      className="rounded-lg">
-                      <VStack
-                        space="xs"
-                        className="rounded-lg border border-background-200 bg-background-0 p-3">
-                        <HStack className="items-center justify-between">
-                          <HStack space="sm" className="items-center">
-                            <Icon
-                              as={gateway.is_active ? Wifi : WifiOff}
-                              size="md"
-                              className={gateway.is_active ? 'text-success-600' : 'text-error-600'}
-                            />
-                            <Text className="text-base font-medium">{gateway.name}</Text>
-                          </HStack>
-                          {/* TODO get rid of is_active */}
-                          <Text
-                            className={`text-sm font-medium ${
-                              gateway.is_active ? 'text-success-600' : 'text-error-600'
-                            }`}>
-                            {gateway.is_active ? 'Connected' : 'Disconnected'}
-                          </Text>
-                        </HStack>
-                        <Text className="text-sm text-typography-500" numberOfLines={1}>
-                          {gateway.api_url}
-                        </Text>
-                      </VStack>
-                    </Pressable>
+                    <GatewayStatus key={gateway.id} gateway={gateway} />
                   ))}
                 </VStack>
               ) : (
@@ -232,6 +192,16 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow }) => {
               <Icon as={DollarSign} size="sm" className="text-typography-700" />
               <Text className="font-medium">{grow.cost?.toFixed(2) || '0.00'}</Text>
             </HStack>
+            <Pressable
+              className="ml-auto mt-2"
+              onPress={() => {
+                router.push({
+                  pathname: `/grows/[id]/edit`,
+                  params: { id: grow.id },
+                });
+              }}>
+              <Icon as={SquarePen} size="xl" />
+            </Pressable>
           </HStack>
 
           {/* Harvest info if applicable */}
@@ -245,7 +215,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow }) => {
               </Text>
             </HStack>
           )}
-        </Pressable>
+        </View>
       </VStack>
     </Card>
   );

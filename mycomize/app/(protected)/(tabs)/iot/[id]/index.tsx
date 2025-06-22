@@ -748,7 +748,7 @@ export default function IoTIntegrationDetailScreen() {
                 <Heading size="lg">Connection</Heading>
                 {connectionInfo.connected ? (
                   <HStack className="items-center rounded-sm bg-success-50 px-3 py-1">
-                    <Icon as={PlugZap} className="mr-2 text-success-700" size="lg" />
+                    <Icon as={Wifi} className="mr-2 text-success-700" size="lg" />
                     <Text className="text-sm text-success-700">CONNECTED</Text>
                   </HStack>
                 ) : (

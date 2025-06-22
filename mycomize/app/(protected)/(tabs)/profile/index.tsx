@@ -16,7 +16,7 @@ import { useContext, useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { getSwitchColors } from '@/lib/switchUtils';
 
-import { ArrowRightIcon } from 'lucide-react-native';
+import { ChevronRight } from 'lucide-react-native';
 
 // Function to decode JWT token and extract username
 function getUsernameFromToken(token: string | null | undefined): string {
@@ -79,7 +79,7 @@ export default function ProfileScreen() {
         <Pressable onPress={navigateToChangePassword}>
           <HStack className="flex w-full flex-row items-center py-2">
             <Text className="text-lg">Change password</Text>
-            <Icon className="ml-auto h-6 w-6 text-typography-500" as={ArrowRightIcon} />
+            <Icon className="ml-auto h-6 w-6 text-typography-500" as={ChevronRight} />
           </HStack>
         </Pressable>
       </Card>

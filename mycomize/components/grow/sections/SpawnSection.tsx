@@ -5,8 +5,20 @@ import { Input, InputField, InputIcon, InputSlot } from '~/components/ui/input';
 import { Text } from '~/components/ui/text';
 import { Pressable } from '~/components/ui/pressable';
 import { Icon } from '~/components/ui/icon';
-import { CalendarDays, DollarSign, Weight, Wheat } from 'lucide-react-native';
+import { CalendarDays, DollarSign, Weight, Wheat, ChevronDown } from 'lucide-react-native';
 import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
+import {
+  Select,
+  SelectTrigger,
+  SelectInput,
+  SelectIcon,
+  SelectPortal,
+  SelectBackdrop,
+  SelectContent,
+  SelectDragIndicatorWrapper,
+  SelectDragIndicator,
+  SelectItem,
+} from '~/components/ui/select';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface GrowData {
@@ -14,6 +26,7 @@ interface GrowData {
   spawn_weight_lbs?: string;
   spawn_cost?: string;
   spawn_vendor?: string;
+  spawn_status?: string;
   inoculation_date?: string;
 }
 
@@ -22,7 +35,7 @@ interface SpawnSectionProps {
   updateField: (field: keyof GrowData, value: any) => void;
   activeDatePicker: string | null;
   setActiveDatePicker: (field: string | null) => void;
-  handleDateChange: (field: string, date?: Date) => void;
+  handleDateChange: (field: string, date?: Date, event?: any) => void;
   parseDate: (dateString?: string) => Date | null;
 }
 
@@ -88,6 +101,35 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
             onChangeText={(value) => updateField('spawn_vendor', value)}
           />
         </Input>
+      </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Status</FormControlLabelText>
+        </FormControlLabel>
+        <Select
+          selectedValue={growData.spawn_status}
+          onValueChange={(value) => updateField('spawn_status', value)}>
+          <SelectTrigger variant="outline" size="md">
+            <SelectInput
+              value={growData.spawn_status}
+              placeholder="Select status"
+              className="placeholder:text-sm"
+            />
+            <SelectIcon as={ChevronDown} className="ml-auto mr-2" />
+          </SelectTrigger>
+          <SelectPortal>
+            <SelectBackdrop />
+            <SelectContent>
+              <SelectDragIndicatorWrapper>
+                <SelectDragIndicator />
+              </SelectDragIndicatorWrapper>
+              <SelectItem label="Healthy" value="Healthy" />
+              <SelectItem label="Suspect" value="Suspect" />
+              <SelectItem label="Contaminated" value="Contaminated" />
+            </SelectContent>
+          </SelectPortal>
+        </Select>
       </FormControl>
     </VStack>
   );

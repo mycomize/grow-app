@@ -5,8 +5,20 @@ import { Input, InputField, InputIcon, InputSlot } from '~/components/ui/input';
 import { Text } from '~/components/ui/text';
 import { Pressable } from '~/components/ui/pressable';
 import { Icon } from '~/components/ui/icon';
-import { CalendarDays, DollarSign, Droplets, Syringe } from 'lucide-react-native';
+import { CalendarDays, DollarSign, Droplets, Syringe, ChevronDown } from 'lucide-react-native';
 import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
+import {
+  Select,
+  SelectTrigger,
+  SelectInput,
+  SelectIcon,
+  SelectPortal,
+  SelectBackdrop,
+  SelectContent,
+  SelectDragIndicatorWrapper,
+  SelectDragIndicator,
+  SelectItem,
+} from '~/components/ui/select';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface GrowData {
@@ -15,6 +27,7 @@ interface GrowData {
   syringe_cost?: string;
   syringe_created_at?: string;
   syringe_expiration_date?: string;
+  syringe_status?: string;
 }
 
 interface SyringeSectionProps {
@@ -119,6 +132,35 @@ export const SyringeSection: React.FC<SyringeSectionProps> = ({
             onChange={(event, date) => handleDateChange('syringe_expiration_date', date, event)}
           />
         )}
+      </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Status</FormControlLabelText>
+        </FormControlLabel>
+        <Select
+          selectedValue={growData.syringe_status}
+          onValueChange={(value) => updateField('syringe_status', value)}>
+          <SelectTrigger variant="outline" size="md">
+            <SelectInput
+              value={growData.syringe_status}
+              placeholder="Select status"
+              className="placeholder:text-sm"
+            />
+            <SelectIcon as={ChevronDown} className="ml-auto mr-2" />
+          </SelectTrigger>
+          <SelectPortal>
+            <SelectBackdrop />
+            <SelectContent>
+              <SelectDragIndicatorWrapper>
+                <SelectDragIndicator />
+              </SelectDragIndicatorWrapper>
+              <SelectItem label="Healthy" value="Healthy" />
+              <SelectItem label="Suspect" value="Suspect" />
+              <SelectItem label="Contaminated" value="Contaminated" />
+            </SelectContent>
+          </SelectPortal>
+        </Select>
       </FormControl>
     </VStack>
   );

@@ -45,7 +45,7 @@ interface HarvestSectionProps {
   removeFlush: (id: string) => void;
   activeDatePicker: string | null;
   setActiveDatePicker: (field: string | null) => void;
-  handleDateChange: (field: string, date?: Date) => void;
+  handleDateChange: (field: string, date?: Date, event?: any) => void;
 }
 
 const potencyOptions = ['Low', 'Medium', 'High', 'Very High', 'Unknown'];
@@ -93,7 +93,7 @@ export const HarvestSection: React.FC<HarvestSectionProps> = ({
               <DateTimePicker
                 value={flush.harvestDate || new Date()}
                 mode="date"
-                onChange={(event, date) => handleDateChange(`flush_${flush.id}`, date)}
+                onChange={(event, date) => handleDateChange(`flush_${flush.id}`, date, event)}
               />
             )}
           </FormControl>

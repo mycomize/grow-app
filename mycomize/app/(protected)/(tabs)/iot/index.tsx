@@ -30,6 +30,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { AuthContext } from '~/lib/AuthContext';
 import { IoTGateway, gatewayTypeLabels } from '~/lib/iot';
+import { IntegrationCardSkeleton } from '~/components/iot/IntegrationCardSkeleton';
 
 interface AddIntegrationButtonProps {
   title: string;
@@ -113,22 +114,22 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({ gateway, token }) => 
       case 'connected':
         return (
           <HStack className="items-center rounded-sm bg-success-50 px-3 py-1">
-            <Icon as={PlugZap} className="mr-2 text-success-700" />
+            <Icon as={Wifi} className="mr-2 text-success-700" size="sm" />
             <Text className="text-sm text-success-700">CONNECTED</Text>
           </HStack>
         );
       case 'disconnected':
         return (
           <HStack className="items-center rounded-sm bg-error-50 px-3 py-1">
-            <Icon as={PowerOff} className="mr-2 text-error-700" />
-            <Text className="text-sm text-error-700">DISCONNECTED</Text>
+            <Icon as={PowerOff} className="mr-2 text-error-800" size="sm" />
+            <Text className="text-sm text-error-800">DISCONNECTED</Text>
           </HStack>
         );
       case 'connecting':
         return (
           <HStack className="items-center rounded-sm bg-orange-900 px-3 py-1">
-            <Icon as={RadioTower} className="mr-2 text-orange-200" />
-            <Text className="text-sm text-orange-700">CONNECTING</Text>
+            <Icon as={RadioTower} className="mr-2 text-orange-200" size="sm" />
+            <Text className="text-sm text-orange-200">CONNECTING</Text>
           </HStack>
         );
       default:
@@ -202,10 +203,12 @@ export default function IoTScreen() {
   const { token } = useContext(AuthContext);
   const router = useRouter();
   const [gateways, setGateways] = useState<IoTGateway[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // Define the fetch function
   const fetchData = useCallback(async () => {
     try {
+      setLoading(true);
       const url = getBackendUrl();
       // Reset gateways before fetching to avoid stale data
       setGateways([]);
@@ -224,6 +227,7 @@ export default function IoTScreen() {
         } else {
           console.error('Failed to fetch IoT gateways:', response.statusText);
         }
+        setLoading(false);
         return;
       }
 
@@ -234,8 +238,10 @@ export default function IoTScreen() {
       }));
 
       setGateways(formattedGateways);
+      setLoading(false);
     } catch (error) {
       console.error('Exception fetching IoT gateways:', error);
+      setLoading(false);
     }
   }, [token, router]);
 
@@ -248,6 +254,18 @@ export default function IoTScreen() {
       return () => {};
     }, [fetchData])
   );
+
+  if (loading) {
+    return (
+      <VStack className="flex-1 items-center gap-4 bg-background-50">
+        <View className="mt-2" />
+        {/* Show 2 skeleton cards while loading */}
+        {Array.from({ length: 2 }).map((_, index) => (
+          <IntegrationCardSkeleton key={index} />
+        ))}
+      </VStack>
+    );
+  }
 
   return gateways.length == 0 ? (
     <VStack className="flex-1 items-center justify-center gap-2 bg-background-50">
