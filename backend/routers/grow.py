@@ -39,6 +39,7 @@ async def create_grow(
         name=grow.name,
         species=grow.species,
         variant=grow.variant,
+        space=grow.space,
         inoculation_date=grow.inoculation_date,
         tek=grow.tek,
         stage=grow.stage,

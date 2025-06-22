@@ -37,6 +37,7 @@ class Grow(Base):
     name = Column(String(128), nullable=True)
     species = Column(String(64), nullable=True)
     variant = Column(String(64), nullable=True)
+    space = Column(String(128), nullable=True)
     inoculation_date = Column(Date, nullable=True)
     tek = Column(String(64), default=GrowTek.MONOTUB.value)
     stage = Column(String(64), default=GrowStage.SPAWN_COLONIZATION.value)

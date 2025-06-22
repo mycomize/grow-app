@@ -7,6 +7,7 @@ class GrowBase(BaseModel):
     name: Optional[str] = None
     species: Optional[str] = None
     variant: Optional[str] = None
+    space: Optional[str] = None
     inoculation_date: Optional[date] = None
     tek: str = "Monotub"
     stage: str = "spawn_colonization"
@@ -125,6 +126,7 @@ class GrowUpdate(BaseModel):
     name: Optional[str] = None
     species: Optional[str] = None
     variant: Optional[str] = None
+    space: Optional[str] = None
     inoculation_date: Optional[date] = None
     tek: Optional[str] = None
     stage: Optional[str] = None
