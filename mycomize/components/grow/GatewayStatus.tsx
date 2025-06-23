@@ -120,8 +120,8 @@ export const GatewayStatus: React.FC<GatewayStatusProps> = ({ gateway }) => {
   useEffect(() => {
     if (gateway.is_active) {
       checkConnection();
-      // Check connection every 30 seconds
-      const interval = setInterval(checkConnection, 30000);
+      // Check connection every 5 minutes seconds
+      const interval = setInterval(checkConnection, 60000 * 5);
       return () => clearInterval(interval);
     } else {
       setConnectionStatus('disconnected');

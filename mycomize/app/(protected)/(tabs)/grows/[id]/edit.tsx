@@ -53,6 +53,7 @@ interface GrowData {
   name?: string;
   species?: string;
   variant?: string;
+  space?: string;
   inoculation_date?: string;
   spawn_colonization_date?: string;
   bulk_colonization_date?: string;
@@ -551,7 +552,7 @@ export default function GrowEditScreen() {
                   {({ isExpanded }: { isExpanded: boolean }) => (
                     <HStack className="flex-1 items-center justify-between">
                       <HStack className="items-center" space="md">
-                        <MushroomIcon height={18} width={19} color="#9ca3af" strokeWidth={2} />
+                        <MushroomIcon height={18} width={19} color="#828282" strokeWidth={2} />
                         <Text className="text-lg font-semibold">Stages</Text>
                       </HStack>
                       <Icon

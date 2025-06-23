@@ -104,7 +104,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow }) => {
                     {/* Stage indicator */}
                     <View className="items-center">
                       {status === 'completed' ? (
-                        <Icon as={CheckCircle} size="md" className="text-green-600" />
+                        <Icon as={CheckCircle} size="md" className="text-blue-500" />
                       ) : status === 'active' ? (
                         <Icon as={Disc2} size="md" className="text-typography-900" />
                       ) : (
@@ -117,7 +117,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow }) => {
                       <View
                         className={`h-0.5 flex-1 ${
                           getStageStatus(index) === 'completed'
-                            ? 'bg-green-600'
+                            ? 'bg-blue-500'
                             : 'bg-typography-200'
                         }`}
                       />
@@ -146,7 +146,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow }) => {
                         status === 'active'
                           ? 'font-semibold text-typography-900'
                           : status === 'completed'
-                            ? 'text-green-600'
+                            ? 'text-blue-500'
                             : 'text-typography-400'
                       }`}>
                       {stage.name}
