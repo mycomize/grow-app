@@ -36,6 +36,7 @@ import {
   Bot,
   Trash2,
   X,
+  BrainCircuit,
 } from 'lucide-react-native';
 import MushroomIcon from '~/components/icons/MushroomIcon';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
@@ -47,6 +48,7 @@ import { getBackendUrl } from '~/lib/backendUrl';
 import { BasicsSection } from '~/components/grow/sections/BasicsSection';
 import { IoTGatewaySection } from '~/components/grow/sections/IoTGatewaySection';
 import { StagesSection } from '~/components/grow/sections/StagesSection';
+import { AIAssistantSection } from '~/components/grow/sections/AIAssistantSection';
 
 interface GrowData {
   id?: number;
@@ -578,6 +580,30 @@ export default function GrowEditScreen() {
                   handleDateChange={handleDateChange}
                   parseDate={parseDate}
                 />
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* AI Assistant Section */}
+            <AccordionItem value="ai-assistant" className="rounded-md bg-background-0">
+              <AccordionHeader>
+                <AccordionTrigger>
+                  {({ isExpanded }: { isExpanded: boolean }) => (
+                    <HStack className="flex-1 items-center justify-between">
+                      <HStack className="items-center" space="md">
+                        <Icon as={BrainCircuit} size="xl" className="text-typography-400" />
+                        <Text className="text-lg font-semibold">AI Assistant</Text>
+                      </HStack>
+                      <Icon
+                        as={isExpanded ? ChevronDown : ChevronRight}
+                        size="lg"
+                        className="text-typography-900"
+                      />
+                    </HStack>
+                  )}
+                </AccordionTrigger>
+              </AccordionHeader>
+              <AccordionContent>
+                <AIAssistantSection growData={growData} updateField={updateField} />
               </AccordionContent>
             </AccordionItem>
           </Accordion>
