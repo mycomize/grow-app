@@ -500,7 +500,7 @@ export default function GrowEditScreen() {
                   {({ isExpanded }: { isExpanded: boolean }) => (
                     <HStack className="flex-1 items-center justify-between">
                       <HStack className="items-center" space="md">
-                        <Icon as={FileText} size="lg" className="text-typography-400" />
+                        <Icon as={FileText} size="xl" className="text-typography-400" />
                         <Text className="text-lg font-semibold">Basics</Text>
                       </HStack>
                       <Icon
@@ -524,7 +524,7 @@ export default function GrowEditScreen() {
                   {({ isExpanded }: { isExpanded: boolean }) => (
                     <HStack className="flex-1 items-center justify-between">
                       <HStack className="items-center" space="md">
-                        <Icon as={Bot} size="lg" className="text-typography-400" />
+                        <Icon as={Bot} size="xl" className="text-typography-400" />
                         <Text className="text-lg font-semibold">IoT Gateway</Text>
                       </HStack>
                       <Icon
@@ -552,7 +552,7 @@ export default function GrowEditScreen() {
                   {({ isExpanded }: { isExpanded: boolean }) => (
                     <HStack className="flex-1 items-center justify-between">
                       <HStack className="items-center" space="md">
-                        <MushroomIcon height={18} width={19} color="#828282" strokeWidth={2} />
+                        <MushroomIcon height={20} width={20} color="#828282" strokeWidth={2} />
                         <Text className="text-lg font-semibold">Stages</Text>
                       </HStack>
                       <Icon
