@@ -9,15 +9,12 @@ import { Text } from '~/components/ui/text';
 import { Input, InputField, InputSlot, InputIcon } from '~/components/ui/input';
 import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
 import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
-import { Badge } from '~/components/ui/badge';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { Alert, AlertIcon, AlertText } from '~/components/ui/alert';
 import { Spinner } from '~/components/ui/spinner';
 import { Textarea, TextareaInput } from '~/components/ui/textarea';
 import {
-  Wifi,
-  WifiOff,
   CheckCircle,
   AlertCircle,
   Save,
@@ -31,6 +28,7 @@ import {
 import { AuthContext } from '~/lib/AuthContext';
 import { getBackendUrl } from '~/lib/backendUrl';
 import { IoTGateway, IoTGatewayUpdate } from '~/lib/iot';
+import { ConnectionStatusBadge, ConnectionStatus } from '~/components/ui/connection-status-badge';
 
 interface ConnectionInfo {
   connected: boolean;
@@ -244,20 +242,10 @@ export default function ConnectionDetailsScreen() {
             {/* Connection Status */}
             <Card className="bg-background-50 p-4">
               <HStack className="mb-3 items-center justify-between">
-                <Text className="font-semibold">Status</Text>
-                <Badge
-                  variant="solid"
-                  action={connectionInfo.connected ? 'success' : 'error'}
-                  className="px-2">
-                  <Icon
-                    as={connectionInfo.connected ? CheckCircle : AlertCircle}
-                    size="xs"
-                    className="mr-1"
-                  />
-                  <Text size="xs" className="text-white">
-                    {connectionInfo.connected ? 'Connected' : 'Disconnected'}
-                  </Text>
-                </Badge>
+                <Text className="font-semibold">Connection</Text>
+                <ConnectionStatusBadge
+                  status={connectionInfo.connected ? 'connected' : 'disconnected'}
+                />
               </HStack>
 
               <Button

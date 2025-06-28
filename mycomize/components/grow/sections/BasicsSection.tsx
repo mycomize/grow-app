@@ -8,6 +8,8 @@ interface GrowData {
   name?: string;
   species?: string;
   variant?: string;
+  spawn_type?: string;
+  bulk_type?: string;
   space?: string;
   tek?: string;
   notes?: string;
@@ -56,6 +58,32 @@ export const BasicsSection: React.FC<BasicsSectionProps> = ({ growData, updateFi
             placeholder="Enter variant/strain"
             value={growData.variant || ''}
             onChangeText={(value) => updateField('variant', value)}
+          />
+        </Input>
+      </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Spawn Type</FormControlLabelText>
+        </FormControlLabel>
+        <Input>
+          <InputField
+            placeholder="Enter spawn type (e.g., Rye Grain)"
+            value={growData.spawn_type || ''}
+            onChangeText={(value) => updateField('spawn_type', value)}
+          />
+        </Input>
+      </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Bulk Type</FormControlLabelText>
+        </FormControlLabel>
+        <Input>
+          <InputField
+            placeholder="Enter substrate type"
+            value={growData.bulk_type || ''}
+            onChangeText={(value) => updateField('bulk_type', value)}
           />
         </Input>
       </FormControl>

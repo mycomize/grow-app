@@ -22,7 +22,6 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface GrowData {
-  bulk_type?: string;
   bulk_weight_lbs?: string;
   bulk_cost?: string;
   bulk_vendor?: string;
@@ -50,19 +49,6 @@ export const BulkSection: React.FC<BulkSectionProps> = ({
 }) => {
   return (
     <VStack space="md" className="bg-background-0 p-4">
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>Type</FormControlLabelText>
-        </FormControlLabel>
-        <Input>
-          <InputField
-            placeholder="Enter substrate type"
-            value={growData.bulk_type || ''}
-            onChangeText={(value) => updateField('bulk_type', value)}
-          />
-        </Input>
-      </FormControl>
-
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText>Weight (lbs)</FormControlLabelText>

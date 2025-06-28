@@ -7,22 +7,7 @@ import { Heading } from '~/components/ui/heading';
 import { getBackendUrl } from '~/lib/backendUrl';
 import { HStack } from '~/components/ui/hstack';
 import { Icon } from '~/components/ui/icon';
-import {
-  PlusIcon,
-  SquarePen,
-  Power,
-  PowerOff,
-  HouseWifi,
-  PlugZap,
-  Unplug,
-  Wifi,
-  WifiOff,
-  Calendar,
-  RefreshCw,
-  CheckCircle,
-  AlertCircle,
-  RadioTower,
-} from 'lucide-react-native';
+import { PlusIcon, SquarePen } from 'lucide-react-native';
 import { Pressable } from '~/components/ui/pressable';
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
@@ -31,6 +16,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '~/lib/AuthContext';
 import { IoTGateway, gatewayTypeLabels } from '~/lib/iot';
 import { IntegrationCardSkeleton } from '~/components/iot/IntegrationCardSkeleton';
+import { ConnectionStatusBadge, ConnectionStatus } from '~/components/ui/connection-status-badge';
 
 interface AddIntegrationButtonProps {
   title: string;
@@ -109,39 +95,6 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({ gateway, token }) => 
     }
   }, [gateway.is_active]);
 
-  const getConnectionStatusBadge = () => {
-    switch (connectionStatus) {
-      case 'connected':
-        return (
-          <HStack className="items-center rounded-sm bg-success-50 px-3 py-1">
-            <Icon as={Wifi} className="mr-2 text-success-700" size="sm" />
-            <Text className="text-sm text-success-700">CONNECTED</Text>
-          </HStack>
-        );
-      case 'disconnected':
-        return (
-          <HStack className="items-center rounded-sm bg-error-50 px-3 py-1">
-            <Icon as={PowerOff} className="mr-2 text-error-800" size="sm" />
-            <Text className="text-sm text-error-800">DISCONNECTED</Text>
-          </HStack>
-        );
-      case 'connecting':
-        return (
-          <HStack className="items-center rounded-sm bg-orange-900 px-3 py-1">
-            <Icon as={RadioTower} className="mr-2 text-orange-200" size="sm" />
-            <Text className="text-sm text-orange-200">CONNECTING</Text>
-          </HStack>
-        );
-      default:
-        return (
-          <HStack className="items-center rounded-sm bg-error-50 px-3 py-1">
-            <Icon as={WifiOff} className="mr-2 text-error-700" />
-            <Text className="text-sm text-error-700">UNKNOWN</Text>
-          </HStack>
-        );
-    }
-  };
-
   return (
     <>
       <Card className="w-11/12 rounded-xl bg-background-0">
@@ -164,7 +117,7 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({ gateway, token }) => 
                 </Text>
               </VStack>
               <HStack className="ml-auto items-center" space="xs">
-                {getConnectionStatusBadge()}
+                <ConnectionStatusBadge status={connectionStatus as ConnectionStatus} />
               </HStack>
             </HStack>
 

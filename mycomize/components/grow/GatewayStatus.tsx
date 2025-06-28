@@ -5,10 +5,11 @@ import { Text } from '~/components/ui/text';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { useRouter } from 'expo-router';
-import { Wifi, WifiOff, PlugZap, PowerOff, RadioTower, ChevronRight } from 'lucide-react-native';
+import { ChevronRight } from 'lucide-react-native';
 import { AuthContext } from '~/lib/AuthContext';
 import { getBackendUrl } from '~/lib/backendUrl';
 import { IoTEntity } from '~/lib/iot';
+import { ConnectionStatusBadge, ConnectionStatus } from '~/components/ui/connection-status-badge';
 
 interface Gateway {
   id: number;
@@ -128,58 +129,6 @@ export const GatewayStatus: React.FC<GatewayStatusProps> = ({ gateway }) => {
     }
   }, [gateway.is_active, gateway.api_url, token]);
 
-  const getConnectionIcon = () => {
-    switch (connectionStatus) {
-      case 'connected':
-        return <Icon as={Wifi} size="sm" className="text-success-700" />;
-      case 'connecting':
-        return <Icon as={RadioTower} size="sm" className="text-purple-300" />;
-      case 'disconnected':
-        return <Icon as={PowerOff} size="sm" className="text-error-900" />;
-      default:
-        return <Icon as={WifiOff} size="sm" className="text-error-900" />;
-    }
-  };
-
-  const getConnectionText = () => {
-    switch (connectionStatus) {
-      case 'connected':
-        return 'CONNECTED';
-      case 'connecting':
-        return 'CONNECTING';
-      case 'disconnected':
-        return 'DISCONNECTED';
-      default:
-        return 'UNKNOWN';
-    }
-  };
-
-  const getConnectionTextColor = () => {
-    switch (connectionStatus) {
-      case 'connected':
-        return 'text-success-700';
-      case 'connecting':
-        return 'text-purple-300';
-      case 'disconnected':
-        return 'text-error-900';
-      default:
-        return 'text-error-900';
-    }
-  };
-
-  const getConnectionBoxStyle = () => {
-    switch (connectionStatus) {
-      case 'connected':
-        return 'bg-success-50';
-      case 'connecting':
-        return 'bg-purple-800';
-      case 'disconnected':
-        return 'bg-error-50';
-      default:
-        return 'bg-background-200';
-    }
-  };
-
   return (
     <Pressable
       onPress={(e) => {
@@ -193,14 +142,7 @@ export const GatewayStatus: React.FC<GatewayStatusProps> = ({ gateway }) => {
       <VStack space="xs" className="rounded-lg border border-background-200 bg-background-0 p-3">
         <HStack className="items-center justify-between">
           <Text className="text-base font-medium">{gateway.name}</Text>
-          <HStack
-            space="sm"
-            className={`items-center rounded-sm px-3 py-1 ${getConnectionBoxStyle()}`}>
-            {getConnectionIcon()}
-            <Text className={`text-sm font-medium ${getConnectionTextColor()}`}>
-              {getConnectionText()}
-            </Text>
-          </HStack>
+          <ConnectionStatusBadge status={connectionStatus as ConnectionStatus} />
         </HStack>
         <Text className="text-sm text-typography-500" numberOfLines={1}>
           {gateway.api_url}

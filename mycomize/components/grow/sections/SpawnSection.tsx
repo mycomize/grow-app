@@ -22,7 +22,6 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface GrowData {
-  spawn_type?: string;
   spawn_weight_lbs?: string;
   spawn_cost?: string;
   spawn_vendor?: string;
@@ -49,19 +48,6 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
 }) => {
   return (
     <VStack space="md" className="bg-background-0 p-4">
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>Type</FormControlLabelText>
-        </FormControlLabel>
-        <Input>
-          <InputField
-            placeholder="Enter spawn type (e.g., Rye Grain)"
-            value={growData.spawn_type || ''}
-            onChangeText={(value) => updateField('spawn_type', value)}
-          />
-        </Input>
-      </FormControl>
-
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText>Weight (lbs)</FormControlLabelText>

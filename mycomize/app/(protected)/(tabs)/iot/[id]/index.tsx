@@ -19,8 +19,6 @@ import { Pressable } from '~/components/ui/pressable';
 import { Textarea, TextareaInput } from '~/components/ui/textarea';
 import {
   Home,
-  Wifi,
-  WifiOff,
   Settings,
   Activity,
   Bot,
@@ -53,9 +51,10 @@ import { getBackendUrl } from '~/lib/backendUrl';
 import { IoTGateway, IoTGatewayUpdate, IoTEntity, HAState } from '~/lib/iot';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import { getSwitchColors } from '~/lib/switchUtils';
+import { ConnectionStatusBadge, ConnectionStatus } from '~/components/ui/connection-status-badge';
 
 interface ConnectionInfo {
-  connected: boolean;
+  status: ConnectionStatus;
   version?: string;
   config?: any;
 }
@@ -75,7 +74,7 @@ export default function IoTIntegrationDetailScreen() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo>({
-    connected: false,
+    status: 'disconnected',
   });
   const [stateCount, setEntityCount] = useState(0);
   const [enabledStates, setEnabledStates] = useState<string[]>([]);
@@ -218,21 +217,21 @@ export default function IoTIntegrationDetailScreen() {
       if (response.ok) {
         const data = await response.json();
         setConnectionInfo({
-          connected: true,
+          status: 'connected',
           version: data.version,
         });
 
         // Get state count
         await getEntityCount(gateway);
       } else {
-        setConnectionInfo({ connected: false });
+        setConnectionInfo({ status: 'disconnected' });
         if (response.status === 401) {
           setError('Invalid API token');
         }
       }
     } catch (err) {
       console.error('Connection check failed:', err);
-      setConnectionInfo({ connected: false });
+      setConnectionInfo({ status: 'disconnected' });
     }
   };
 
@@ -265,8 +264,9 @@ export default function IoTIntegrationDetailScreen() {
     setSuccess(null);
 
     try {
+      setConnectionInfo({ status: 'connecting' });
       await checkHomeAssistantConnection(gateway);
-      if (connectionInfo.connected) {
+      if (connectionInfo.status === 'connected') {
         setSuccess('Connection test successful!');
       } else {
         setError('Connection test failed. Please check your settings.');
@@ -314,7 +314,7 @@ export default function IoTIntegrationDetailScreen() {
         checkHomeAssistantConnection(updatedGateway);
         setSuccess('Integration connected successfully');
       } else {
-        setConnectionInfo({ connected: false });
+        setConnectionInfo({ status: 'disconnected' });
         setSuccess('Integration disconnected');
       }
     } catch (err) {
@@ -746,20 +746,12 @@ export default function IoTIntegrationDetailScreen() {
             <VStack className="p-2" space="md">
               <HStack className="mb-2 items-center justify-between">
                 <Heading size="lg">Connection</Heading>
-                {connectionInfo.connected ? (
-                  <HStack className="items-center rounded-sm bg-success-50 px-3 py-1">
-                    <Icon as={Wifi} className="mr-2 text-success-700" size="lg" />
-                    <Text className="text-sm text-success-700">CONNECTED</Text>
-                  </HStack>
-                ) : (
-                  <HStack className="items-center rounded-sm bg-error-50 px-3 py-2">
-                    <Icon as={PowerOff} className="mr-2 text-error-700" size="lg" />
-                    <Text className="text-sm text-error-700">DISCONNECTED</Text>
-                  </HStack>
-                )}
+                <ConnectionStatusBadge
+                  status={isTestingConnection ? 'connecting' : connectionInfo.status}
+                />
               </HStack>
 
-              {connectionInfo.connected && connectionInfo.version && (
+              {connectionInfo.status === 'connected' && connectionInfo.version && (
                 <Text className="text-sm text-typography-500">
                   Home Assistant Version: {connectionInfo.version}
                 </Text>
@@ -812,7 +804,7 @@ export default function IoTIntegrationDetailScreen() {
                     action="positive"
                     className="mt-4"
                     onPress={navigateToEntitySearch}
-                    isDisabled={!gateway.is_active || !connectionInfo.connected}>
+                    isDisabled={!gateway.is_active || connectionInfo.status !== 'connected'}>
                     <ButtonIcon as={Search} className="text-white" />
                     <ButtonText className="text-white">Browse States</ButtonText>
                   </Button>
