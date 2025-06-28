@@ -86,6 +86,31 @@ class Grow(Base):
     fruiting_fan_frequency = Column(String(64), nullable=True)
     fruiting_status = Column(String(64), nullable=True)
     
+    # Predicted milestone fields (cached AI predictions)
+    predicted_full_spawn_colonization = Column(Date, nullable=True)
+    predicted_full_bulk_colonization = Column(Date, nullable=True)
+    predicted_first_harvest_date = Column(Date, nullable=True)
+    prediction_inputs_hash = Column(String(64), nullable=True)  # Hash of inputs used for predictions
+    
+    # Predicted optimal conditions fields (cached AI predictions)
+    optimal_spawn_temp_low = Column(Float, nullable=True)
+    optimal_spawn_temp_high = Column(Float, nullable=True)
+    optimal_bulk_temp_low = Column(Float, nullable=True)
+    optimal_bulk_temp_high = Column(Float, nullable=True)
+    optimal_bulk_relative_humidity_low = Column(Float, nullable=True)
+    optimal_bulk_relative_humidity_high = Column(Float, nullable=True)
+    optimal_bulk_co2_low = Column(Float, nullable=True)
+    optimal_bulk_co2_high = Column(Float, nullable=True)
+    optimal_fruiting_temp_low = Column(Float, nullable=True)
+    optimal_fruiting_temp_high = Column(Float, nullable=True)
+    optimal_fruiting_relative_humidity_low = Column(Float, nullable=True)
+    optimal_fruiting_relative_humidity_high = Column(Float, nullable=True)
+    optimal_fruiting_co2_low = Column(Float, nullable=True)
+    optimal_fruiting_co2_high = Column(Float, nullable=True)
+    optimal_fruiting_light_low = Column(Float, nullable=True)
+    optimal_fruiting_light_high = Column(Float, nullable=True)
+    conditions_inputs_hash = Column(String(64), nullable=True)  # Hash of inputs used for conditions predictions
+    
     # Foreign key to user
     user_id = Column(Integer, ForeignKey("users.id"))
     

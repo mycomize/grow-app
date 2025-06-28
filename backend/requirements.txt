@@ -5,3 +5,5 @@ python-jose
 bcrypt
 pyjwt
 alembic
+requests
+anthropic
