@@ -13,7 +13,7 @@ export default function GrowDetailsScreen() {
     if (id) {
       const growId = Array.isArray(id) ? id[0] : id;
       router.replace({
-        pathname: '/(protected)/(tabs)/grows/[id]/edit',
+        pathname: './edit',
         params: { id: growId },
       });
     }

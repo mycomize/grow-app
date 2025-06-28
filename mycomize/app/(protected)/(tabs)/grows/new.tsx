@@ -10,7 +10,7 @@ export default function NewGrowScreen() {
   useEffect(() => {
     // Redirect to the unified edit screen for new grow
     router.replace({
-      pathname: '/(protected)/(tabs)/grows/[id]/edit',
+      pathname: './[id]/edit',
       params: { id: 'new' },
     });
   }, [router]);

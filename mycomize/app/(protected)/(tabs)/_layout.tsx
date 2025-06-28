@@ -36,6 +36,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor,
         tabBarStyle,
         tabBarHideOnKeyboard: true,
+        headerStatusBarHeight: 0,
       }}
       initialRouteName="grows">
       <Tabs.Screen name="index" options={{ href: null }} />
@@ -54,7 +55,7 @@ export default function TabLayout() {
           title: 'IoT',
           tabBarLabel: 'IoT',
           tabBarIcon: ({ color }) => <CircuitBoard color={color} />,
-          headerShown: false,
+          headerShown: true,
         }}
       />
       <Tabs.Screen

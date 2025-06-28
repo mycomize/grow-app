@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
 
-export default function IoTGatewayLayout() {
+export default function GrowDetailsLayout() {
   const { theme } = useTheme();
 
   // Set header styles based on theme
@@ -18,13 +18,19 @@ export default function IoTGatewayLayout() {
         headerTintColor,
         headerTitleAlign: 'center',
       }}>
-      <Stack.Screen name="index" options={{ title: 'IoT Gateway', headerShown: true }} />
-      <Stack.Screen name="new" options={{ title: 'New IoT Gateway', headerShown: true }} />
-      <Stack.Screen name="[id]/index" options={{ title: 'IoT Gateway', headerShown: true }} />
-      <Stack.Screen name="[id]/states/index" options={{ title: 'IoT States', headerShown: true }} />
       <Stack.Screen
-        name="[id]/sensor/[sensorId]"
-        options={{ title: 'Sensor Details', headerShown: true }}
+        name="index"
+        options={{
+          title: 'Grow Details',
+          headerShown: false, // This will be redirected anyway
+        }}
+      />
+      <Stack.Screen
+        name="edit"
+        options={{
+          title: 'Manage Grow',
+          headerShown: false,
+        }}
       />
     </Stack>
   );

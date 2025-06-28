@@ -39,7 +39,7 @@ function ThemedApp() {
             headerTitleStyle: {
               color: headerTintColor,
             },
-            contentStyle: { paddingTop: 40 },
+            contentStyle: { paddingTop: 0 },
           }}>
           <Stack.Screen name="(protected)" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
