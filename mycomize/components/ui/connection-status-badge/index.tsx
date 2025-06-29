@@ -61,7 +61,7 @@ export const ConnectionStatusBadge: React.FC<ConnectionStatusBadgeProps> = ({
   const getConnectionBoxStyle = () => {
     switch (status) {
       case 'connected':
-        return 'bg-success-50';
+        return 'bg-success-200';
       case 'connecting':
         return 'bg-purple-800';
       case 'disconnected':

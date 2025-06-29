@@ -1,5 +1,5 @@
 import React, { useState, useContext, useCallback } from 'react';
-import { Button, ButtonIcon } from '~/components/ui/button';
+import { Button, ButtonIcon, ButtonText } from '~/components/ui/button';
 import { Text } from '~/components/ui/text';
 import { VStack } from '~/components/ui/vstack';
 import { Card } from '~/components/ui/card';
@@ -7,7 +7,27 @@ import { Heading } from '~/components/ui/heading';
 import { getBackendUrl } from '~/lib/backendUrl';
 import { HStack } from '~/components/ui/hstack';
 import { Icon } from '~/components/ui/icon';
-import { PlusIcon, SquarePen } from 'lucide-react-native';
+import { Input, InputField, InputIcon } from '~/components/ui/input';
+import { ScrollView } from '~/components/ui/scroll-view';
+import {
+  Modal,
+  ModalBackdrop,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalCloseButton,
+} from '~/components/ui/modal';
+import {
+  PlusIcon,
+  SquarePen,
+  Search,
+  X,
+  ArrowUpDown,
+  Filter,
+  Check,
+  Gauge,
+} from 'lucide-react-native';
 import { Pressable } from '~/components/ui/pressable';
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
@@ -17,6 +37,7 @@ import { AuthContext } from '~/lib/AuthContext';
 import { IoTGateway, gatewayTypeLabels } from '~/lib/iot';
 import { IntegrationCardSkeleton } from '~/components/iot/IntegrationCardSkeleton';
 import { ConnectionStatusBadge, ConnectionStatus } from '~/components/ui/connection-status-badge';
+import { CountBadge } from '~/components/ui/count-badge';
 
 interface AddIntegrationButtonProps {
   title: string;
@@ -46,54 +67,17 @@ const AddIntegrationButton: React.FC<AddIntegrationButtonProps> = ({ title, init
 interface IntegrationCardProps {
   gateway: IoTGateway;
   token: string | null | undefined;
+  connectionStatus: ConnectionStatus;
+  latency?: number;
 }
 
-const IntegrationCard: React.FC<IntegrationCardProps> = ({ gateway, token }) => {
+const IntegrationCard: React.FC<IntegrationCardProps> = ({
+  gateway,
+  token,
+  connectionStatus,
+  latency,
+}) => {
   const router = useRouter();
-  const [connectionStatus, setConnectionStatus] = useState<
-    'unknown' | 'connecting' | 'connected' | 'disconnected'
-  >('unknown');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Check connection to Home Assistant
-  const checkConnection = async () => {
-    if (!gateway.is_active) {
-      setConnectionStatus('disconnected');
-      return;
-    }
-
-    setIsRefreshing(true);
-    setConnectionStatus('connecting');
-
-    try {
-      const response = await fetch(`${gateway.api_url}/api/`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${gateway.api_key}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        setConnectionStatus('connected');
-      } else {
-        setConnectionStatus('disconnected');
-      }
-    } catch (err) {
-      setConnectionStatus('disconnected');
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  // Check connection on mount if gateway is active
-  React.useEffect(() => {
-    if (gateway.is_active) {
-      checkConnection();
-    } else {
-      setConnectionStatus('disconnected');
-    }
-  }, [gateway.is_active]);
 
   return (
     <>
@@ -118,6 +102,9 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({ gateway, token }) => 
               </VStack>
               <HStack className="ml-auto items-center" space="xs">
                 <ConnectionStatusBadge status={connectionStatus as ConnectionStatus} />
+                {latency !== undefined && connectionStatus === 'connected' && (
+                  <CountBadge count={latency} label="ms" variant="green-dark" icon={Gauge} />
+                )}
               </HStack>
             </HStack>
 
@@ -168,6 +155,17 @@ export default function IoTScreen() {
   const router = useRouter();
   const [gateways, setGateways] = useState<IoTGateway[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<string>('name');
+  const [filterConnectedOnly, setFilterConnectedOnly] = useState<boolean>(false);
+  const [showSortModal, setShowSortModal] = useState<boolean>(false);
+  const [showFilterModal, setShowFilterModal] = useState<boolean>(false);
+  const [tempSortBy, setTempSortBy] = useState<string>('name');
+  const [tempFilterConnectedOnly, setTempFilterConnectedOnly] = useState<boolean>(false);
+  const [connectionStatuses, setConnectionStatuses] = useState<Record<number, ConnectionStatus>>(
+    {}
+  );
+  const [connectionLatencies, setConnectionLatencies] = useState<Record<number, number>>({});
 
   // Define the fetch function
   const fetchData = useCallback(async () => {
@@ -209,6 +207,137 @@ export default function IoTScreen() {
     }
   }, [token, router]);
 
+  // Check connection status for all gateways
+  const checkAllConnections = useCallback(async () => {
+    const statusPromises = gateways.map(async (gateway) => {
+      if (!gateway.is_active) {
+        return {
+          id: gateway.id,
+          status: 'disconnected' as ConnectionStatus,
+          latency: undefined,
+        };
+      }
+
+      try {
+        const startTime = Date.now();
+        const response = await fetch(`${gateway.api_url}/api/`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${gateway.api_key}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        const endTime = Date.now();
+        const latency = endTime - startTime;
+
+        return {
+          id: gateway.id,
+          status: response.ok
+            ? ('connected' as ConnectionStatus)
+            : ('disconnected' as ConnectionStatus),
+          latency: response.ok ? latency : undefined,
+        };
+      } catch (err) {
+        return {
+          id: gateway.id,
+          status: 'disconnected' as ConnectionStatus,
+          latency: undefined,
+        };
+      }
+    });
+
+    const results = await Promise.all(statusPromises);
+    const statusMap = results.reduce(
+      (acc, result) => {
+        acc[result.id] = result.status;
+        return acc;
+      },
+      {} as Record<number, ConnectionStatus>
+    );
+
+    const latencyMap = results.reduce(
+      (acc, result) => {
+        if (result.latency !== undefined) {
+          acc[result.id] = result.latency;
+        }
+        return acc;
+      },
+      {} as Record<number, number>
+    );
+
+    setConnectionStatuses(statusMap);
+    setConnectionLatencies(latencyMap);
+  }, [gateways]);
+
+  // Modal handler functions
+  const handleSortModalOpen = () => {
+    setTempSortBy(sortBy);
+    setShowSortModal(true);
+  };
+
+  const handleSortConfirm = () => {
+    setSortBy(tempSortBy);
+    setShowSortModal(false);
+  };
+
+  const handleFilterModalOpen = () => {
+    setTempFilterConnectedOnly(filterConnectedOnly);
+    setShowFilterModal(true);
+  };
+
+  const handleFilterConfirm = () => {
+    setFilterConnectedOnly(tempFilterConnectedOnly);
+    setShowFilterModal(false);
+  };
+
+  // Sort gateways function
+  const sortGateways = (gatewaysToSort: IoTGateway[]) => {
+    return [...gatewaysToSort].sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return (a.name || '').localeCompare(b.name || '');
+        case 'type':
+          return (a.type || '').localeCompare(b.type || '');
+        case 'created_at':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); // Most recent first
+        case 'status':
+          const statusA = a.is_active ? 'active' : 'inactive';
+          const statusB = b.is_active ? 'active' : 'inactive';
+          return statusA.localeCompare(statusB);
+        default:
+          return 0;
+      }
+    });
+  };
+
+  // Calculate connected gateways
+  const connectedGateways = gateways.filter((gateway) => {
+    return gateway.is_active && connectionStatuses[gateway.id] === 'connected';
+  });
+
+  // Filter and sort gateways based on search query and connected filter
+  const filteredAndSortedGateways = sortGateways(
+    gateways.filter((gateway) => {
+      // Connected filter
+      const isConnected = gateway.is_active && connectionStatuses[gateway.id] === 'connected';
+      const matchesConnectedFilter = !filterConnectedOnly || isConnected;
+
+      // Search filter
+      if (searchQuery === '') {
+        return matchesConnectedFilter;
+      }
+
+      const searchLower = searchQuery?.toLowerCase() ?? '';
+      const matchesSearch =
+        (gateway.name?.toLowerCase()?.includes(searchLower) ?? false) ||
+        (gateway.description?.toLowerCase()?.includes(searchLower) ?? false) ||
+        (gateway.type?.toLowerCase()?.includes(searchLower) ?? false) ||
+        (gateway.api_url?.toLowerCase()?.includes(searchLower) ?? false);
+
+      return matchesConnectedFilter && matchesSearch;
+    })
+  );
+
   // Use useFocusEffect to refresh data when the screen comes into focus
   useFocusEffect(
     useCallback(() => {
@@ -218,6 +347,13 @@ export default function IoTScreen() {
       return () => {};
     }, [fetchData])
   );
+
+  // Check connections when gateways change
+  React.useEffect(() => {
+    if (gateways.length > 0) {
+      checkAllConnections();
+    }
+  }, [gateways, checkAllConnections]);
 
   if (loading) {
     return (
@@ -239,12 +375,187 @@ export default function IoTScreen() {
       <AddIntegrationButton title="Add Integration" initial={true} />
     </VStack>
   ) : (
-    <VStack className="flex-1 items-center gap-4 bg-background-50">
-      <View className="mt-2" />
-      {gateways.map((gateway, index) => (
-        <IntegrationCard key={gateway.id} gateway={gateway} token={token} />
-      ))}
-      <AddIntegrationButton title="Add Integration" />
-    </VStack>
+    <ScrollView className="m-0 flex-1 bg-background-50">
+      <VStack className="items-center gap-4 pb-16">
+        <View className="mt-2" />
+
+        {/* IoT Control Card */}
+        <Card className="mx-4 w-11/12 bg-background-0">
+          <VStack className="p-2" space="md">
+            <HStack className="">
+              <Heading size="xl" className="">
+                IoT Control
+              </Heading>
+              <HStack className="ml-auto items-center gap-2">
+                <CountBadge count={gateways.length} label="TOTAL" variant="success" />
+                {connectedGateways.length > 0 && (
+                  <CountBadge
+                    count={connectedGateways.length}
+                    label="CONNECTED"
+                    variant="green-dark"
+                  />
+                )}
+              </HStack>
+            </HStack>
+
+            <Input className="mt-2">
+              <InputIcon as={Search} className="ml-3" />
+              <InputField
+                placeholder="Search gateways..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery && (
+                <Pressable onPress={() => setSearchQuery('')} className="pr-3">
+                  <Icon as={X} size="sm" className="text-typography-500" />
+                </Pressable>
+              )}
+            </Input>
+
+            {/* Action Buttons */}
+            <HStack className="mt-2 items-center justify-around gap-2">
+              <Pressable onPress={handleSortModalOpen}>
+                <Icon as={ArrowUpDown} size="lg" />
+              </Pressable>
+              <Pressable onPress={handleFilterModalOpen}>
+                <Icon as={Filter} size="lg" />
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  router.push('/iot/new');
+                }}>
+                <Icon className="text-white" as={PlusIcon} size="lg" />
+              </Pressable>
+            </HStack>
+          </VStack>
+        </Card>
+
+        {/* Gateway Cards */}
+        {filteredAndSortedGateways.map((gateway, index) => (
+          <IntegrationCard
+            key={gateway.id}
+            gateway={gateway}
+            token={token}
+            connectionStatus={connectionStatuses[gateway.id] || 'unknown'}
+            latency={connectionLatencies[gateway.id]}
+          />
+        ))}
+
+        {filteredAndSortedGateways.length === 0 && (searchQuery || filterConnectedOnly) && (
+          <VStack className="items-center justify-center p-8">
+            <Text className="text-center text-typography-500">
+              {searchQuery && filterConnectedOnly
+                ? `No connected gateways found matching "${searchQuery}"`
+                : searchQuery
+                  ? `No gateways found matching "${searchQuery}"`
+                  : 'No connected gateways found'}
+            </Text>
+          </VStack>
+        )}
+      </VStack>
+
+      {/* Sort Modal */}
+      <Modal isOpen={showSortModal} onClose={() => setShowSortModal(false)} size="md">
+        <ModalBackdrop />
+        <ModalContent>
+          <ModalHeader>
+            <Heading size="lg">Sort Gateways</Heading>
+            <ModalCloseButton onPress={() => setShowSortModal(false)}>
+              <Icon as={X} />
+            </ModalCloseButton>
+          </ModalHeader>
+          <ModalBody>
+            <VStack space="lg">
+              <Text className="text-typography-600">Choose how to sort your gateways:</Text>
+              <VStack space="md">
+                {[
+                  { value: 'name', label: 'Name' },
+                  { value: 'type', label: 'Type' },
+                  { value: 'created_at', label: 'Created Date' },
+                  { value: 'status', label: 'Status' },
+                ].map((option) => (
+                  <Pressable
+                    key={option.value}
+                    onPress={() => setTempSortBy(option.value)}
+                    className="flex-row items-center justify-between rounded-lg border border-outline-200 p-4">
+                    <Text className="text-typography-900">{option.label}</Text>
+                    {tempSortBy === option.value && (
+                      <Icon as={Check} className="text-success-600" size="sm" />
+                    )}
+                  </Pressable>
+                ))}
+              </VStack>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <HStack space="sm" className="w-full justify-end">
+              <Button variant="outline" onPress={() => setShowSortModal(false)}>
+                <ButtonText>Cancel</ButtonText>
+              </Button>
+              <Button action="positive" onPress={handleSortConfirm}>
+                <ButtonText>Apply Sort</ButtonText>
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Filter Modal */}
+      <Modal isOpen={showFilterModal} onClose={() => setShowFilterModal(false)} size="md">
+        <ModalBackdrop />
+        <ModalContent>
+          <ModalHeader>
+            <Heading size="lg">Filter Gateways</Heading>
+            <ModalCloseButton onPress={() => setShowFilterModal(false)}>
+              <Icon as={X} />
+            </ModalCloseButton>
+          </ModalHeader>
+          <ModalBody>
+            <VStack space="lg">
+              <Text className="text-typography-600">Choose which gateways to display:</Text>
+              <VStack space="md">
+                {[
+                  {
+                    value: false,
+                    label: 'All Gateways',
+                    description: 'Show all gateways regardless of connection status',
+                  },
+                  {
+                    value: true,
+                    label: 'Connected Only',
+                    description: 'Show only gateways that are currently connected',
+                  },
+                ].map((option) => (
+                  <Pressable
+                    key={option.value.toString()}
+                    onPress={() => setTempFilterConnectedOnly(option.value)}
+                    className="rounded-lg border border-outline-200 p-4">
+                    <HStack className="items-center justify-between">
+                      <VStack className="flex-1">
+                        <Text className="text-typography-900">{option.label}</Text>
+                        <Text className="text-sm text-typography-600">{option.description}</Text>
+                      </VStack>
+                      {tempFilterConnectedOnly === option.value && (
+                        <Icon as={Check} className="text-success-600" size="sm" />
+                      )}
+                    </HStack>
+                  </Pressable>
+                ))}
+              </VStack>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <HStack space="sm" className="w-full justify-end">
+              <Button variant="outline" onPress={() => setShowFilterModal(false)}>
+                <ButtonText>Cancel</ButtonText>
+              </Button>
+              <Button action="positive" onPress={handleFilterConfirm}>
+                <ButtonText>Apply Filter</ButtonText>
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </ScrollView>
   );
 }

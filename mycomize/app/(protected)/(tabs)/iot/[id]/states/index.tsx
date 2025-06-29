@@ -404,16 +404,17 @@ export default function EntityStatesScreen() {
         <Card className="bg-background-0">
           <VStack className="p-2" space="xl">
             <HStack className="items-center justify-between">
-              <Heading size="xl">State Control</Heading>
+              <Heading size="xl">Control Selection</Heading>
             </HStack>
             <HStack className="items-center gap-2">
               <CountBadge count={filteredStates.length} label="ENTITIES" variant="success" />
               {enabledStates.size > 0 && (
-                <CountBadge count={enabledStates.size} label="ENABLED" variant="green-dark" />
+                <CountBadge count={enabledStates.size} label="ASSIGNED" variant="green-dark" />
               )}
             </HStack>
             <Text>
-              Select Home Assistant states from the list below to add to your IoT Gateway{' '}
+              Select the Home Assistant states from the list below to assign them to your grow's IoT
+              Control Panel.
             </Text>
 
             {/* Search and Filter Controls */}
@@ -434,7 +435,7 @@ export default function EntityStatesScreen() {
 
               <HStack className="items-center">
                 <Icon as={Filter} size="lg" className="text-typography-500" />
-                <Text className="ml-2">Show enabled only</Text>
+                <Text className="ml-2">Show assigned only</Text>
                 <Switch
                   trackColor={{ false: trackFalse, true: trackTrue }}
                   thumbColor={thumbColor}

@@ -17,6 +17,7 @@ import { Spinner } from '~/components/ui/spinner';
 import { useToast, Toast, ToastTitle, ToastDescription } from '~/components/ui/toast';
 import { Pressable } from '~/components/ui/pressable';
 import { Textarea, TextareaInput } from '~/components/ui/textarea';
+import { Link, LinkText } from '~/components/ui/link';
 import {
   Home,
   Settings,
@@ -46,6 +47,7 @@ import {
   Droplet,
 } from 'lucide-react-native';
 
+import { CountBadge } from '~/components/ui/count-badge';
 import { AuthContext } from '~/lib/AuthContext';
 import { getBackendUrl } from '~/lib/backendUrl';
 import { IoTGateway, IoTGatewayUpdate, IoTEntity, HAState } from '~/lib/iot';
@@ -721,7 +723,7 @@ export default function IoTIntegrationDetailScreen() {
                     </Text>
                   </HStack>
                   <HStack className="justify-between">
-                    <Text className="font-medium">Token:</Text>
+                    <Text className="font-medium">API Token:</Text>
                     <Text>••••••••••••••••</Text>
                   </HStack>
                   {gateway.grow_id && (
@@ -745,7 +747,7 @@ export default function IoTIntegrationDetailScreen() {
           <Card className="bg-background-0">
             <VStack className="p-2" space="md">
               <HStack className="mb-2 items-center justify-between">
-                <Heading size="lg">Connection</Heading>
+                <Heading size="lg">Status</Heading>
                 <ConnectionStatusBadge
                   status={isTestingConnection ? 'connecting' : connectionInfo.status}
                 />
@@ -787,17 +789,31 @@ export default function IoTIntegrationDetailScreen() {
           <Card className="bg-background-0">
             <VStack className="p-2" space="md">
               <HStack className="items-center justify-between">
-                <Heading size="lg">Enabled Entities</Heading>
-                <Badge variant="outline" action="muted">
-                  <Text size="md">{enabledStates.length} enabled</Text>
-                </Badge>
+                <Heading size="lg">Control Panel</Heading>
+                <CountBadge
+                  count={enabledStates.length}
+                  label="ENABLED"
+                  variant="green-dark"
+                  size="md"
+                />
               </HStack>
+              {enabledStates.length > 0 && (
+                <>
+                  <Text>
+                    The controls below are currently assigned to Grow #{gateway.grow_id || 'N/A'}.
+                  </Text>
+                  <Text>
+                    Enable, disable, and change them using the interface below. You can add or
+                    remove controls using the "Manage Controls" button below.
+                  </Text>
+                </>
+              )}
 
               {enabledStates.length === 0 ? (
                 <VStack className="items-center pb-2 pt-6" space="md">
                   <Text className="text-center text-typography-500">
-                    No states enabled yet.{'\n'}
-                    Browse and select states to monitor.
+                    No controls enabled yet.{'\n'}
+                    Browse and select controls to assign to the grow.
                   </Text>
                   <Button
                     variant="solid"
@@ -806,7 +822,7 @@ export default function IoTIntegrationDetailScreen() {
                     onPress={navigateToEntitySearch}
                     isDisabled={!gateway.is_active || connectionInfo.status !== 'connected'}>
                     <ButtonIcon as={Search} className="text-white" />
-                    <ButtonText className="text-white">Browse States</ButtonText>
+                    <ButtonText className="text-white">Browse Controls</ButtonText>
                   </Button>
                 </VStack>
               ) : (
@@ -968,9 +984,9 @@ export default function IoTIntegrationDetailScreen() {
                     </VStack>
                   ))}
 
-                  <Button variant="outline" onPress={navigateToEntitySearch} className="mt-2">
+                  <Button variant="outline" onPress={navigateToEntitySearch} className="mt-4">
                     <ButtonIcon as={Settings} />
-                    <ButtonText>Manage Entities</ButtonText>
+                    <ButtonText>Manage Controls</ButtonText>
                   </Button>
                 </VStack>
               )}

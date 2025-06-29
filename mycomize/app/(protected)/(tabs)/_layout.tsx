@@ -1,10 +1,12 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter, useSegments } from 'expo-router';
 import { CircuitBoard, User, Beaker } from 'lucide-react-native';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
 import MushroomIcon from '~/components/icons/MushroomIcon';
 
 export default function TabLayout() {
   const { theme } = useTheme();
+  const router = useRouter();
+  const segments = useSegments();
 
   // Set tab bar styles based on theme
   const tabBarStyle = {
@@ -56,6 +58,25 @@ export default function TabLayout() {
           tabBarLabel: 'IoT',
           tabBarIcon: ({ color }) => <CircuitBoard color={color} />,
           headerShown: true,
+        }}
+        listeners={{
+          tabPress: (e) => {
+            // Check if we're currently on a nested IoT route by examining the pathname
+            const currentPath = segments.join('/');
+            const isOnNestedIoTRoute =
+              currentPath.includes('iot') &&
+              (currentPath.match(/iot\/\d+/) || // matches /iot/[id]
+                currentPath.includes('states') ||
+                currentPath.includes('services') ||
+                currentPath.includes('sensor'));
+
+            if (isOnNestedIoTRoute) {
+              // Prevent default tab press behavior
+              e.preventDefault();
+              // Navigate to IoT index
+              router.push('/iot');
+            }
+          },
         }}
       />
       <Tabs.Screen

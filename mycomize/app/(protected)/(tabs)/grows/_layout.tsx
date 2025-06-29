@@ -40,7 +40,7 @@ export default function GrowsLayout() {
       <Drawer.Screen
         name="index"
         options={{
-          title: 'Grow Control',
+          title: 'Grow',
           drawerLabel: 'Grow Control',
           drawerIcon: ({ color, size }: { color: string; size: number }) => (
             <Waypoints size={size} color={color} />
@@ -50,7 +50,7 @@ export default function GrowsLayout() {
       <Drawer.Screen
         name="templates"
         options={{
-          title: 'Grow Templates',
+          title: 'Grow',
           drawerLabel: 'Grow Templates',
           drawerIcon: ({ color, size }: { color: string; size: number }) => (
             <Layers size={size} color={color} />
@@ -60,7 +60,7 @@ export default function GrowsLayout() {
       <Drawer.Screen
         name="calendar"
         options={{
-          title: 'Grow Calendar',
+          title: 'Grow',
           drawerLabel: 'Grow Calendar',
           drawerIcon: ({ color, size }: { color: string; size: number }) => (
             <Calendar size={size} color={color} />
@@ -70,7 +70,7 @@ export default function GrowsLayout() {
       <Drawer.Screen
         name="statistics"
         options={{
-          title: 'Grow Statistics',
+          title: 'Grow',
           drawerLabel: 'Grow Statistics',
           drawerIcon: ({ color, size }: { color: string; size: number }) => (
             <ChartNoAxesCombined size={size} color={color} />
