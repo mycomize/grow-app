@@ -1,6 +1,6 @@
 import { Drawer } from 'expo-router/drawer';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
-import { List, PlusCircle, Layers, Calendar } from 'lucide-react-native';
+import { Waypoints, Layers, Calendar, ChartNoAxesCombined } from 'lucide-react-native';
 
 export default function GrowsLayout() {
   const { theme } = useTheme();
@@ -30,18 +30,18 @@ export default function GrowsLayout() {
       <Drawer.Screen
         name="index"
         options={{
-          title: 'Grow List',
-          drawerLabel: 'Grow List',
+          title: 'Grow Control',
+          drawerLabel: 'Grow Control',
           drawerIcon: ({ color, size }: { color: string; size: number }) => (
-            <List size={size} color={color} />
+            <Waypoints size={size} color={color} />
           ),
         }}
       />
       <Drawer.Screen
         name="templates"
         options={{
-          title: 'Templates',
-          drawerLabel: 'Templates',
+          title: 'Grow Templates',
+          drawerLabel: 'Grow Templates',
           drawerIcon: ({ color, size }: { color: string; size: number }) => (
             <Layers size={size} color={color} />
           ),
@@ -50,10 +50,20 @@ export default function GrowsLayout() {
       <Drawer.Screen
         name="calendar"
         options={{
-          title: 'Calendar',
-          drawerLabel: 'Calendar',
+          title: 'Grow Calendar',
+          drawerLabel: 'Grow Calendar',
           drawerIcon: ({ color, size }: { color: string; size: number }) => (
             <Calendar size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="statistics"
+        options={{
+          title: 'Grow Statistics',
+          drawerLabel: 'Grow Statistics',
+          drawerIcon: ({ color, size }: { color: string; size: number }) => (
+            <ChartNoAxesCombined size={size} color={color} />
           ),
         }}
       />

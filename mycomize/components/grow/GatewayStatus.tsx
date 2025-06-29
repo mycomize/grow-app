@@ -10,6 +10,7 @@ import { AuthContext } from '~/lib/AuthContext';
 import { getBackendUrl } from '~/lib/backendUrl';
 import { IoTEntity } from '~/lib/iot';
 import { ConnectionStatusBadge, ConnectionStatus } from '~/components/ui/connection-status-badge';
+import { CountBadge } from '~/components/ui/count-badge';
 
 interface Gateway {
   id: number;
@@ -147,10 +148,8 @@ export const GatewayStatus: React.FC<GatewayStatusProps> = ({ gateway }) => {
         <Text className="text-sm text-typography-500" numberOfLines={1}>
           {gateway.api_url}
         </Text>
-        <HStack>
-          <Text className="mt-1 rounded-sm border border-green-800 bg-green-900 px-3 py-1 text-sm text-green-100">
-            {enabledStates.size} ENTITIES
-          </Text>
+        <HStack className="items-center">
+          <CountBadge count={enabledStates.size} label="ENTITIES" variant="green-dark" />
           <Pressable
             onPress={(e) => {
               e.stopPropagation();

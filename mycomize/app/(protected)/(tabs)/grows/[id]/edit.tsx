@@ -10,15 +10,7 @@ import { Icon } from '~/components/ui/icon';
 import { Spinner } from '~/components/ui/spinner';
 import { useToast, Toast } from '~/components/ui/toast';
 import { Keyboard } from 'react-native';
-import {
-  Modal,
-  ModalBackdrop,
-  ModalContent,
-  ModalHeader,
-  ModalCloseButton,
-  ModalBody,
-  ModalFooter,
-} from '~/components/ui/modal';
+import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
 import {
   Accordion,
   AccordionItem,
@@ -642,40 +634,14 @@ export default function GrowEditScreen() {
       )}
 
       {/* Delete Confirmation Modal */}
-      <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} size="md">
-        <ModalBackdrop />
-        <ModalContent>
-          <ModalHeader>
-            <Heading size="lg">Delete Grow</Heading>
-            <ModalCloseButton>
-              <Icon as={X} className="text-typography-500" />
-            </ModalCloseButton>
-          </ModalHeader>
-          <ModalBody>
-            <Text>Are you sure you want to delete this grow? This action cannot be undone.</Text>
-          </ModalBody>
-          <ModalFooter>
-            <HStack space="md">
-              <Button
-                variant="outline"
-                action="secondary"
-                onPress={() => setShowDeleteModal(false)}
-                isDisabled={isDeleting}>
-                <ButtonText>Cancel</ButtonText>
-              </Button>
-              <Button
-                variant="solid"
-                action="negative"
-                onPress={deleteGrow}
-                isDisabled={isDeleting}>
-                <ButtonText className="text-white">
-                  {isDeleting ? 'Deleting...' : 'Delete'}
-                </ButtonText>
-              </Button>
-            </HStack>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={deleteGrow}
+        title="Delete Grow"
+        message="Are you sure you want to delete this grow? This action cannot be undone."
+        isDeleting={isDeleting}
+      />
     </VStack>
   );
 }

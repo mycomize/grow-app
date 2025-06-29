@@ -21,6 +21,7 @@ import { getBackendUrl } from '~/lib/backendUrl';
 import { IoTGateway, HAService } from '~/lib/iot';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import { getSwitchColors } from '~/lib/switchUtils';
+import { CountBadge } from '~/components/ui/count-badge';
 
 export default function ServicesScreen() {
   const { id } = useLocalSearchParams();
@@ -225,9 +226,12 @@ export default function ServicesScreen() {
 
             {/* Enabled count */}
             {enabledServices.size > 0 && (
-              <Badge variant="outline" action="success">
-                <Text size="xs">{enabledServices.size} enabled domains</Text>
-              </Badge>
+              <CountBadge
+                count={enabledServices.size}
+                label="ENABLED DOMAINS"
+                variant="green-dark"
+                size="sm"
+              />
             )}
           </VStack>
         </Card>

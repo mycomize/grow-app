@@ -7,6 +7,8 @@ import { Heading } from '~/components/ui/heading';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { View } from '~/components/ui/view';
+import { Button, ButtonText } from '~/components/ui/button';
+import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
 import { useRouter } from 'expo-router';
 import {
   CheckCircle,
@@ -16,16 +18,20 @@ import {
   DollarSign,
   Scale,
   SquarePen,
+  Trash2,
+  X,
 } from 'lucide-react-native';
 import { Grow, stageLabels, statusLabels, growStatuses } from '~/lib/growTypes';
 import { GatewayStatus } from './GatewayStatus';
 
 interface GrowCardProps {
   grow: Grow;
+  onDelete?: (growId: number) => Promise<void>;
 }
 
-export const GrowCard: React.FC<GrowCardProps> = ({ grow }) => {
+export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
   const router = useRouter();
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
 
   const getStatusColor = (status: string) => {
     if (status === growStatuses.CONTAMINATED) return 'text-error-500';
@@ -192,16 +198,22 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow }) => {
               <Icon as={DollarSign} size="sm" className="text-typography-700" />
               <Text className="font-medium">{grow.cost?.toFixed(2) || '0.00'}</Text>
             </HStack>
-            <Pressable
-              className="ml-auto mt-2"
-              onPress={() => {
-                router.push({
-                  pathname: `/grows/[id]/edit`,
-                  params: { id: grow.id },
-                });
-              }}>
-              <Icon as={SquarePen} size="xl" />
-            </Pressable>
+            <HStack className="ml-auto mt-2" space="md">
+              <Pressable
+                onPress={() => {
+                  router.push({
+                    pathname: `/grows/[id]/edit`,
+                    params: { id: grow.id },
+                  });
+                }}>
+                <Icon as={SquarePen} size="xl" />
+              </Pressable>
+              {onDelete && (
+                <Pressable onPress={() => setShowDeleteAlert(true)}>
+                  <Icon as={Trash2} size="xl" className="text-error-500" />
+                </Pressable>
+              )}
+            </HStack>
           </HStack>
 
           {/* Harvest info if applicable */}
@@ -217,6 +229,20 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow }) => {
           )}
         </View>
       </VStack>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={showDeleteAlert}
+        onClose={() => setShowDeleteAlert(false)}
+        onConfirm={async () => {
+          setShowDeleteAlert(false);
+          if (onDelete) {
+            await onDelete(grow.id);
+          }
+        }}
+        title="Delete Grow"
+        itemName={grow.variant}
+      />
     </Card>
   );
 };

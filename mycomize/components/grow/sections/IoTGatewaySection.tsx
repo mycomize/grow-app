@@ -186,9 +186,10 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({
     } else {
       const filtered = gateways.filter(
         (gateway) =>
-          gateway.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          gateway.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          gateway.api_url.toLowerCase().includes(searchQuery.toLowerCase())
+          (gateway.name?.toLowerCase()?.includes(searchQuery?.toLowerCase() ?? '') ?? false) ||
+          (gateway.description?.toLowerCase()?.includes(searchQuery?.toLowerCase() ?? '') ??
+            false) ||
+          (gateway.api_url?.toLowerCase()?.includes(searchQuery?.toLowerCase() ?? '') ?? false)
       );
       setFilteredGateways(filtered);
     }

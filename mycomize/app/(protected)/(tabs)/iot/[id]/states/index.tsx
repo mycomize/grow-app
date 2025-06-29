@@ -38,6 +38,7 @@ import {
   updateIoTFilterPreferences,
   IoTFilterPreferences,
 } from '~/lib/userPreferences';
+import { CountBadge } from '~/components/ui/count-badge';
 
 export default function EntityStatesScreen() {
   const { id } = useLocalSearchParams();
@@ -403,21 +404,16 @@ export default function EntityStatesScreen() {
         <Card className="bg-background-0">
           <VStack className="p-2" space="xl">
             <HStack className="items-center justify-between">
-              <Heading size="xl">Home Assistant Entities</Heading>
+              <Heading size="xl">State Control</Heading>
             </HStack>
             <HStack className="items-center gap-2">
-              <HStack className="items-center rounded-sm bg-success-200 px-3 py-1">
-                <Text className="text-success-700">{filteredStates.length} ENTITIES</Text>
-              </HStack>
-              {/* Enabled count */}
+              <CountBadge count={filteredStates.length} label="ENTITIES" variant="success" />
               {enabledStates.size > 0 && (
-                <HStack className="items-center rounded-sm bg-green-600 px-3 py-1">
-                  <Text className="text-green-200">{enabledStates.size} ENABLED</Text>
-                </HStack>
+                <CountBadge count={enabledStates.size} label="ENABLED" variant="green-dark" />
               )}
             </HStack>
             <Text>
-              Select home assistant entities from the list below to add to your IoT Gateway{' '}
+              Select Home Assistant states from the list below to add to your IoT Gateway{' '}
             </Text>
 
             {/* Search and Filter Controls */}
