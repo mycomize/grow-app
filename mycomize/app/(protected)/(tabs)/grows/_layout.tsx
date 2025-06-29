@@ -1,9 +1,12 @@
 import { Drawer } from 'expo-router/drawer';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
-import { Waypoints, Layers, Calendar, ChartNoAxesCombined } from 'lucide-react-native';
+import { Waypoints, Layers, Calendar, ChartNoAxesCombined, ArrowLeft } from 'lucide-react-native';
+import { TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 
 export default function GrowsLayout() {
   const { theme } = useTheme();
+  const router = useRouter();
 
   // Set header styles based on theme
   const headerStyle = {
@@ -14,6 +17,13 @@ export default function GrowsLayout() {
   const drawerActiveTintColor = theme === 'dark' ? '#4ade80' : '#16a34a';
   const drawerInactiveTintColor = theme === 'dark' ? '#9ca3af' : '#6b7280';
   const drawerBackgroundColor = theme === 'dark' ? '#111827' : '#f9fafb';
+
+  // Custom back button component
+  const BackButton = () => (
+    <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16, padding: 4 }}>
+      <ArrowLeft size={24} color={headerTintColor} />
+    </TouchableOpacity>
+  );
 
   return (
     <Drawer
@@ -81,6 +91,8 @@ export default function GrowsLayout() {
           drawerItemStyle: { display: 'none' }, // Hide from drawer menu
           title: 'Manage Grow',
           headerShown: true,
+          headerLeft: () => <BackButton />, // Custom back button instead of hamburger
+          swipeEnabled: false, // Disable drawer swipe for this screen
         }}
       />
     </Drawer>
