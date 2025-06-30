@@ -276,7 +276,7 @@ export default function GrowScreen() {
           <VStack className="p-2" space="md">
             <HStack className="">
               <Heading size="xl" className="">
-                Grow Control
+                Grow List
               </Heading>
               <HStack className="ml-auto items-center gap-2">
                 <CountBadge count={grows.length} label="TOTAL" variant="success" />
