@@ -574,30 +574,6 @@ export default function GrowEditScreen() {
                 />
               </AccordionContent>
             </AccordionItem>
-
-            {/* AI Assistant Section */}
-            <AccordionItem value="ai-assistant" className="rounded-md bg-background-0">
-              <AccordionHeader>
-                <AccordionTrigger>
-                  {({ isExpanded }: { isExpanded: boolean }) => (
-                    <HStack className="flex-1 items-center justify-between">
-                      <HStack className="items-center" space="md">
-                        <Icon as={BrainCircuit} size="xl" className="text-typography-400" />
-                        <Text className="text-lg font-semibold">AI Assistant</Text>
-                      </HStack>
-                      <Icon
-                        as={isExpanded ? ChevronDown : ChevronRight}
-                        size="lg"
-                        className="text-typography-900"
-                      />
-                    </HStack>
-                  )}
-                </AccordionTrigger>
-              </AccordionHeader>
-              <AccordionContent>
-                <AIAssistantSection growData={growData} updateField={updateField} />
-              </AccordionContent>
-            </AccordionItem>
           </Accordion>
         </VStack>
       </ScrollView>

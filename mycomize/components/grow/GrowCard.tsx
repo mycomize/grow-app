@@ -20,9 +20,11 @@ import {
   SquarePen,
   Trash2,
   X,
+  Layers,
 } from 'lucide-react-native';
 import { Grow, stageLabels, statusLabels, growStatuses } from '~/lib/growTypes';
 import { GatewayStatus } from './GatewayStatus';
+import { InfoBadge } from '~/components/ui/info-badge';
 
 interface GrowCardProps {
   grow: Grow;
@@ -87,6 +89,23 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
     if (index < currentStageIndex) return 'completed';
     if (index === currentStageIndex) return 'active';
     return 'pending';
+  };
+
+  // Check if grow is completed and can be turned into a template
+  const canCreateTemplate = () => {
+    return (
+      grow.status === 'completed' ||
+      grow.status === growStatuses.HARVESTED ||
+      grow.current_stage === 'completed'
+    );
+  };
+
+  const handleCreateTemplate = () => {
+    // Navigate to template creation from grow using router.push with query params
+    router.push({
+      pathname: '/templates/new',
+      params: { fromGrow: grow.id.toString() },
+    });
   };
 
   return (
@@ -161,6 +180,16 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
                 );
               })}
             </HStack>
+            {/* Info badge row */}
+            <HStack className="mt-4" space="md">
+              <InfoBadge text={`${grow.age || 0} days`} icon={Clock} variant="default" size="md" />
+              <InfoBadge
+                text={`${grow.cost?.toFixed(2) || '0.00'}`}
+                icon={DollarSign}
+                variant="default"
+                size="md"
+              />
+            </HStack>
           </VStack>
 
           {/* IoT Gateways Section */}
@@ -181,39 +210,27 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
             })()}
           </VStack>
 
-          {/* Stats Row */}
-          <HStack className="mt-2">
-            {/* Age */}
-            <HStack
-              space="xs"
-              className="items-center rounded-sm border border-background-200 bg-background-50 px-2 py-1">
-              <Icon as={Clock} size="sm" className="text-typography-700" />
-              <Text className="font-medium">{grow.age || 0} days</Text>
-            </HStack>
-
-            {/* Cost */}
-            <HStack
-              space="xs"
-              className="ml-3 items-center rounded-sm border border-background-200 bg-background-50 px-2 py-1">
-              <Icon as={DollarSign} size="sm" className="text-typography-700" />
-              <Text className="font-medium">{grow.cost?.toFixed(2) || '0.00'}</Text>
-            </HStack>
-            <HStack className="ml-auto mt-2" space="md">
-              <Pressable
-                onPress={() => {
-                  router.push({
-                    pathname: `/grows/[id]/edit`,
-                    params: { id: grow.id },
-                  });
-                }}>
-                <Icon as={SquarePen} size="xl" />
+          {/* Individual grow controls */}
+          <HStack className=" mt-2 justify-around" space="md">
+            {canCreateTemplate() && (
+              <Pressable onPress={handleCreateTemplate}>
+                <Icon as={Layers} size="xl" className="text-primary-600" />
               </Pressable>
-              {onDelete && (
-                <Pressable onPress={() => setShowDeleteAlert(true)}>
-                  <Icon as={Trash2} size="xl" className="text-error-500" />
-                </Pressable>
-              )}
-            </HStack>
+            )}
+            <Pressable
+              onPress={() => {
+                router.push({
+                  pathname: `/grows/[id]/edit`,
+                  params: { id: grow.id },
+                });
+              }}>
+              <Icon as={SquarePen} size="xl" />
+            </Pressable>
+            {onDelete && (
+              <Pressable onPress={() => setShowDeleteAlert(true)}>
+                <Icon as={Trash2} size="xl" className="text-error-500" />
+              </Pressable>
+            )}
           </HStack>
 
           {/* Harvest info if applicable */}

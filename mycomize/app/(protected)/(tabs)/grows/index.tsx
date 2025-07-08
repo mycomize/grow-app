@@ -19,13 +19,22 @@ import {
   ModalFooter,
   ModalCloseButton,
 } from '~/components/ui/modal';
-import { Switch } from '~/components/ui/switch';
-import { PlusIcon, Search, X, ArrowUpDown, Filter, Check } from 'lucide-react-native';
+import {
+  List,
+  PlusIcon,
+  Search,
+  X,
+  ArrowUpDown,
+  Filter,
+  Check,
+  Circle,
+  CircleCheckBig,
+} from 'lucide-react-native';
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '~/lib/AuthContext';
-import { Grow, growTeks } from '~/lib/growTypes';
+import { Grow } from '~/lib/growTypes';
 import { GrowCard } from '~/components/grow/GrowCard';
 import { GrowCardSkeleton } from '~/components/grow/GrowCardSkeleton';
 import { CountBadge } from '~/components/ui/count-badge';
@@ -275,9 +284,10 @@ export default function GrowScreen() {
         <Card className="mx-4 w-11/12 bg-background-0">
           <VStack className="p-2" space="md">
             <HStack className="">
-              <Heading size="xl" className="">
-                Grow List
-              </Heading>
+              <HStack className="items-center gap-2">
+                <Icon as={List} size="xl" className="text-typography-900" />
+                <Heading size="xl">Grow List</Heading>
+              </HStack>
               <HStack className="ml-auto items-center gap-2">
                 <CountBadge count={grows.length} label="TOTAL" variant="success" />
                 {inProgressGrows.length > 0 && (
@@ -362,7 +372,10 @@ export default function GrowScreen() {
                     className="flex-row items-center justify-between rounded-lg border border-outline-200 p-4">
                     <Text className="text-typography-900">{option.label}</Text>
                     {tempSortBy === option.value && (
-                      <Icon as={Check} className="text-success-600" size="sm" />
+                      <Icon as={CircleCheckBig} className="text-success-500" size="xl" />
+                    )}
+                    {tempSortBy !== option.value && (
+                      <Icon as={Circle} className="text-success-500" size="xl" />
                     )}
                   </Pressable>
                 ))}
@@ -375,7 +388,7 @@ export default function GrowScreen() {
                 <ButtonText>Cancel</ButtonText>
               </Button>
               <Button action="positive" onPress={handleSortConfirm}>
-                <ButtonText>Apply Sort</ButtonText>
+                <ButtonText className="text-typography-900">Apply Sort</ButtonText>
               </Button>
             </HStack>
           </ModalFooter>
@@ -384,7 +397,7 @@ export default function GrowScreen() {
 
       {/* Filter Modal */}
       <Modal isOpen={showFilterModal} onClose={() => setShowFilterModal(false)} size="md">
-        <ModalBackdrop />
+        <ModalBackdrop style={{ backdropFilter: 'blur(100px)' }} />
         <ModalContent>
           <ModalHeader>
             <Heading size="lg">Filter Grows</Heading>
@@ -418,7 +431,10 @@ export default function GrowScreen() {
                         <Text className="text-sm text-typography-600">{option.description}</Text>
                       </VStack>
                       {tempFilterActiveOnly === option.value && (
-                        <Icon as={Check} className="text-success-600" size="sm" />
+                        <Icon as={CircleCheckBig} className="text-success-500" size="xl" />
+                      )}
+                      {tempFilterActiveOnly !== option.value && (
+                        <Icon as={Circle} className="text-success-500" size="xl" />
                       )}
                     </HStack>
                   </Pressable>
@@ -432,7 +448,7 @@ export default function GrowScreen() {
                 <ButtonText>Cancel</ButtonText>
               </Button>
               <Button action="positive" onPress={handleFilterConfirm}>
-                <ButtonText>Apply Filter</ButtonText>
+                <ButtonText className="text-typography-900">Apply Filter</ButtonText>
               </Button>
             </HStack>
           </ModalFooter>

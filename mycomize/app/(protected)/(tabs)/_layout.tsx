@@ -1,5 +1,5 @@
 import { Tabs, useRouter, useSegments } from 'expo-router';
-import { CircuitBoard, User, Beaker } from 'lucide-react-native';
+import { CircuitBoard, User, Beaker, Layers } from 'lucide-react-native';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
 import MushroomIcon from '~/components/icons/MushroomIcon';
 
@@ -48,6 +48,15 @@ export default function TabLayout() {
           title: 'Grow',
           tabBarLabel: 'Grow',
           tabBarIcon: ({ color }) => <MushroomIcon height={24} width={24} color={color} />,
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="templates"
+        options={{
+          title: 'Tek Library',
+          tabBarLabel: 'Tek Library',
+          tabBarIcon: ({ color }) => <Layers color={color} />,
           headerShown: false,
         }}
       />

@@ -17,6 +17,7 @@ from backend.models.grow import Grow
 from backend.models.inventory import InventoryItem
 from backend.models.iot import IoTGateway
 from backend.models.iot_entity import IoTEntity
+from backend.models.template import MonotubTekTemplate
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

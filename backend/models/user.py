@@ -22,3 +22,6 @@ class User(Base):
     
     # Relationship with IoTGateway (one-to-many)
     iot_gateways = relationship("IoTGateway", back_populates="user", cascade="all, delete-orphan")
+    
+    # Relationship with MonotubTekTemplate (one-to-many)
+    templates = relationship("MonotubTekTemplate", back_populates="creator", cascade="all, delete-orphan")
