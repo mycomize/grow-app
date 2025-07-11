@@ -2,13 +2,14 @@
 export interface Grow {
   id: number;
   name: string;
+  description?: string;
   species: string;
   variant: string;
+  tags?: string[];
   tek: string;
   stage: string;
   status: string;
   cost: number;
-  notes: string;
   inoculationDate: Date | null;
   harvestDate: Date | null;
   harvestDryWeight: number;
@@ -38,14 +39,12 @@ export interface Grow {
   syringe_created_at?: string;
   syringe_expiration_date?: string;
 
-  spawn_type?: string;
   spawn_weight_lbs?: number;
   spawn_cost?: number;
   spawn_vendor?: string;
   spawn_created_at?: string;
   spawn_expiration_date?: string;
 
-  bulk_type?: string;
   bulk_weight_lbs?: number;
   bulk_cost?: number;
   bulk_vendor?: string;

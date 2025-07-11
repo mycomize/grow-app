@@ -45,8 +45,10 @@ import { AIAssistantSection } from '~/components/grow/sections/AIAssistantSectio
 interface GrowData {
   id?: number;
   name?: string;
+  description?: string;
   species?: string;
   variant?: string;
+  tags?: string[];
   space?: string;
   inoculation_date?: string;
   spawn_colonization_date?: string;
@@ -55,7 +57,6 @@ interface GrowData {
   tek?: string;
   stage?: string;
   status?: string;
-  notes?: string;
   cost?: number;
 
   // Harvest fields
@@ -72,14 +73,12 @@ interface GrowData {
   syringe_status?: string;
 
   // Spawn fields
-  spawn_type?: string;
   spawn_weight_lbs?: string;
   spawn_cost?: string;
   spawn_vendor?: string;
   spawn_status?: string;
 
   // Bulk substrate fields
-  bulk_type?: string;
   bulk_weight_lbs?: string;
   bulk_cost?: string;
   bulk_vendor?: string;
@@ -114,7 +113,7 @@ const defaultHarvestFlush: HarvestFlush = {
 };
 
 export default function GrowEditScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, fromTemplate } = useLocalSearchParams();
   const router = useRouter();
   const { token } = useContext(AuthContext);
   const toast = useToast();
@@ -165,8 +164,52 @@ export default function GrowEditScreen() {
     return date.toISOString().split('T')[0];
   };
 
-  // Load grow data if editing existing grow
+  // Load grow data if editing existing grow or from template
   useEffect(() => {
+    if (id === 'new' && fromTemplate) {
+      // Load template data for new grow
+      const fetchTemplate = async () => {
+        setIsLoading(true);
+        try {
+          const response = await fetch(`${getBackendUrl()}/monotub-tek-templates/${fromTemplate}`, {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (!response.ok) {
+            if (response.status === 401) {
+              router.replace('/login');
+              return;
+            }
+            throw new Error('Failed to load template');
+          }
+
+          const templateData = await response.json();
+
+          // Populate grow data from template
+          setGrowData((prev) => ({
+            ...prev,
+            name: `${templateData.name} Grow`,
+            description: templateData.description || '',
+            species: templateData.species || '',
+            variant: templateData.variant || '',
+            tags: templateData.tags || [],
+            // Keep space empty for user input
+            space: '',
+          }));
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to load template');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      fetchTemplate();
+      return;
+    }
+
     if (!id || id === 'new') return;
 
     const fetchGrow = async () => {
@@ -227,7 +270,7 @@ export default function GrowEditScreen() {
     };
 
     fetchGrow();
-  }, [id, token, router]);
+  }, [id, fromTemplate, token, router]);
 
   // Update grow data field
   const updateField = (field: keyof GrowData, value: any) => {

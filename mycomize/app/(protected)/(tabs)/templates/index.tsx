@@ -264,6 +264,20 @@ export default function TemplatesLibraryScreen() {
     });
   };
 
+  const handleUseForNewGrow = (template: MonotubTekTemplate) => {
+    router.push({
+      pathname: '/grows/new',
+      params: { fromTemplate: template.id.toString() },
+    });
+  };
+
+  const handleCopyToNewTek = (template: MonotubTekTemplate) => {
+    router.push({
+      pathname: '/templates/new',
+      params: { copyFromTemplate: template.id.toString() },
+    });
+  };
+
   const getFilterDisplayText = () => {
     switch (filterBy) {
       case 'public':
@@ -366,6 +380,8 @@ export default function TemplatesLibraryScreen() {
             onDelete={handleDeleteTemplate}
             onEdit={handleEditTemplate}
             onConvertToGrow={handleConvertToGrow}
+            onUseForNewGrow={handleUseForNewGrow}
+            onCopyToNewTek={handleCopyToNewTek}
           />
         ))}
 

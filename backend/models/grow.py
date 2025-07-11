@@ -1,7 +1,7 @@
 import enum
 from datetime import date, datetime
 
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Float, Text, Boolean, func
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Float, Text, Boolean, func, JSON
 from sqlalchemy.orm import relationship
 from datetime import date
 from backend.database import Base
@@ -35,14 +35,15 @@ class Grow(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(128), nullable=True)
+    description = Column(Text, nullable=True)  # Added description field
     species = Column(String(64), nullable=True)
     variant = Column(String(64), nullable=True)
+    tags = Column(JSON, nullable=True)  # Added tags field (array of strings)
     space = Column(String(128), nullable=True)
     inoculation_date = Column(Date, nullable=True)
     tek = Column(String(64), default=GrowTek.MONOTUB.value)
     stage = Column(String(64), default=GrowStage.SPAWN_COLONIZATION.value)
     current_stage = Column(String(64), nullable=True)  # Track current stage in timeline
-    notes = Column(Text, nullable=True)
     status = Column(String(64), default=GrowStatus.GROWING.value)
     cost = Column(Float, default=0.0)
     
@@ -64,14 +65,12 @@ class Grow(Base):
     syringe_status = Column(String(64), nullable=True)
     
     # Spawn fields
-    spawn_type = Column(String(128), nullable=True)
     spawn_weight_lbs = Column(Float, nullable=True)
     spawn_cost = Column(Float, nullable=True)
     spawn_vendor = Column(String(128), nullable=True)
     spawn_status = Column(String(64), nullable=True)
     
     # Bulk substrate fields
-    bulk_type = Column(String(128), nullable=True)
     bulk_weight_lbs = Column(Float, nullable=True)
     bulk_cost = Column(Float, nullable=True)
     bulk_vendor = Column(String(128), nullable=True)

@@ -21,6 +21,7 @@ import { RefreshCw, Clock, Eye, Users, Tag, Trash2, Lock, SquarePen } from 'luci
 import { InfoBadge } from '~/components/ui/info-badge';
 import { getCachedProfileImage, cacheProfileImage } from '~/lib/imageCache';
 import { MonotubTekTemplate } from '~/lib/templateTypes';
+import { TemplateActionModal } from '~/components/template/modals/TemplateActionModal';
 
 interface TemplateCardProps {
   template: MonotubTekTemplate;
@@ -29,6 +30,8 @@ interface TemplateCardProps {
   onDelete: (template: MonotubTekTemplate) => void;
   onEdit: (template: MonotubTekTemplate) => void;
   onConvertToGrow: (template: MonotubTekTemplate) => void;
+  onUseForNewGrow: (template: MonotubTekTemplate) => void;
+  onCopyToNewTek: (template: MonotubTekTemplate) => void;
 }
 
 export const TemplateCard: React.FC<TemplateCardProps> = ({
@@ -38,9 +41,12 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
   onDelete,
   onEdit,
   onConvertToGrow,
+  onUseForNewGrow,
+  onCopyToNewTek,
 }) => {
   const [cachedImage, setCachedImage] = useState<string | null>(null);
   const [showPopover, setShowPopover] = useState(false);
+  const [showActionModal, setShowActionModal] = useState(false);
 
   const handlePopoverOpen = () => {
     setShowPopover(true);
@@ -238,7 +244,7 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
 
           {/* Action controls */}
           <HStack className="mt-1 justify-around" space="md">
-            <Pressable onPress={() => onConvertToGrow(template)}>
+            <Pressable onPress={() => setShowActionModal(true)}>
               <HStack className="items-center gap-1">
                 <Icon className="text-typography-300" as={RefreshCw} size="md" />
                 {template.usage_count > 0 && (
@@ -255,6 +261,15 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
           </HStack>
         </View>
       </VStack>
+
+      {/* Template Action Modal */}
+      <TemplateActionModal
+        isOpen={showActionModal}
+        onClose={() => setShowActionModal(false)}
+        template={template}
+        onUseForNewGrow={() => onUseForNewGrow(template)}
+        onCopyToNewTek={() => onCopyToNewTek(template)}
+      />
     </Card>
   );
 };

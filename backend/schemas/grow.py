@@ -5,15 +5,16 @@ from backend.schemas.iot import IoTGateway
 
 class GrowBase(BaseModel):
     name: Optional[str] = None
+    description: Optional[str] = None
     species: Optional[str] = None
     variant: Optional[str] = None
+    tags: Optional[List[str]] = None
     space: Optional[str] = None
     inoculation_date: Optional[date] = None
     tek: str = "Monotub"
     stage: str = "spawn_colonization"
     current_stage: Optional[str] = None
     status: str = "growing"
-    notes: Optional[str] = None
     cost: Optional[float] = 0
     
     # Stage date fields for timeline tracking
@@ -34,14 +35,12 @@ class GrowBase(BaseModel):
     syringe_status: Optional[str] = None
     
     # Spawn fields
-    spawn_type: Optional[str] = None
     spawn_weight_lbs: Optional[float] = None
     spawn_cost: Optional[float] = None
     spawn_vendor: Optional[str] = None
     spawn_status: Optional[str] = None
     
     # Bulk substrate fields
-    bulk_type: Optional[str] = None
     bulk_weight_lbs: Optional[float] = None
     bulk_cost: Optional[float] = None
     bulk_vendor: Optional[str] = None
@@ -124,15 +123,16 @@ class GrowComplete(Grow):
 class GrowUpdate(BaseModel):
     """Schema for updating a grow"""
     name: Optional[str] = None
+    description: Optional[str] = None
     species: Optional[str] = None
     variant: Optional[str] = None
+    tags: Optional[List[str]] = None
     space: Optional[str] = None
     inoculation_date: Optional[date] = None
     tek: Optional[str] = None
     stage: Optional[str] = None
     current_stage: Optional[str] = None
     status: Optional[str] = None
-    notes: Optional[str] = None
     cost: Optional[float] = None
     
     # Stage date fields for timeline tracking
@@ -153,14 +153,12 @@ class GrowUpdate(BaseModel):
     syringe_status: Optional[str] = None
     
     # Spawn fields
-    spawn_type: Optional[str] = None
     spawn_weight_lbs: Optional[float] = None
     spawn_cost: Optional[float] = None
     spawn_vendor: Optional[str] = None
     spawn_status: Optional[str] = None
     
     # Bulk substrate fields
-    bulk_type: Optional[str] = None
     bulk_weight_lbs: Optional[float] = None
     bulk_cost: Optional[float] = None
     bulk_vendor: Optional[str] = None
