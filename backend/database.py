@@ -9,38 +9,20 @@ os.makedirs("./data", exist_ok=True)
 # Create Base class
 Base = declarative_base()
 
-# Function to create a database engine and session for a specific database
-def create_db_engine(db_name):
-    # SQLite database URL with the mycomize- prefix
-    database_url = f"sqlite:///./data/mycomize-{db_name}.db"
-    
-    # Create SQLAlchemy engine
-    engine = create_engine(
-        database_url, connect_args={"check_same_thread": False}
-    )
-    
-    # Create SessionLocal class
-    session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    
-    return engine, session_local
+# Single database configuration
+DATABASE_URL = "sqlite:///./data/mycomize.db"
 
-# Create user database engine and session
-user_engine, UserSessionLocal = create_db_engine("user")
+# Create SQLAlchemy engine
+engine = create_engine(
+    DATABASE_URL, connect_args={"check_same_thread": False}
+)
 
-# Create grow database engine and session
-grow_engine, GrowSessionLocal = create_db_engine("grow")
+# Create SessionLocal class
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Dependency to get user DB session
-def get_user_db():
-    db = UserSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-# Dependency to get grow DB session
-def get_grow_db():
-    db = GrowSessionLocal()
+# Dependency to get DB session
+def get_mycomize_db():
+    db = SessionLocal()
     try:
         yield db
     finally:

@@ -10,7 +10,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from backend.schemas.user import TokenData
 from backend.models.user import User
-from backend.database import get_user_db
+from backend.database import get_mycomize_db
 
 # Security configurations
 ALGORITHM = "HS256"
@@ -80,7 +80,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
     return encoded_jwt
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_user_db)):
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_mycomize_db)):
     """Get the current user from the JWT token"""
     print(f"Token received: {token}")
     credentials_exception = HTTPException(

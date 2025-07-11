@@ -5,8 +5,8 @@ from datetime import timedelta, datetime
 from typing import Annotated
 
 from backend.models.user import User
-from backend.schemas.user import UserCreate, UserResponse, Token, ChangePassword
-from backend.database import get_user_db, user_engine
+from backend.schemas.user import UserCreate, UserResponse, Token, ChangePassword, UserProfileImageUpdate
+from backend.database import get_mycomize_db, engine
 from backend.security import (
     get_password_hash,
     verify_password,
@@ -18,7 +18,7 @@ from backend.security import (
 
 # Create the models
 from backend.models.user import Base
-Base.metadata.create_all(bind=user_engine)
+Base.metadata.create_all(bind=engine)
 
 router = APIRouter(
     prefix="/auth",
@@ -27,7 +27,7 @@ router = APIRouter(
 )
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register_user(user: UserCreate, db: Session = Depends(get_user_db)):
+async def register_user(user: UserCreate, db: Session = Depends(get_mycomize_db)):
     """Register a new user"""
     # Check if user already exists
     db_user = db.query(User).filter(User.username == user.username).first()
@@ -57,7 +57,7 @@ async def register_user(user: UserCreate, db: Session = Depends(get_user_db)):
 @router.post("/token", response_model=Token)
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    db: Session = Depends(get_user_db)
+    db: Session = Depends(get_mycomize_db)
 ):
     print(f"Attempting to authenticate user {form_data.username}")
     """Login and get access token"""
@@ -87,7 +87,7 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
 async def change_password(
     password_data: ChangePassword,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_user_db)
+    db: Session = Depends(get_mycomize_db)
 ):
     """Change user password"""
     # Verify current password
@@ -105,3 +105,19 @@ async def change_password(
     db.commit()
     
     return {"message": "Password changed successfully"}
+
+@router.put("/profile-image", response_model=UserResponse)
+async def update_profile_image(
+    profile_data: UserProfileImageUpdate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_mycomize_db)
+):
+    """Update user profile image"""
+    # Update profile image
+    current_user.profile_image = profile_data.profile_image
+    current_user.updated_at = datetime.now()
+    
+    db.commit()
+    db.refresh(current_user)
+    
+    return current_user

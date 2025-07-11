@@ -43,7 +43,11 @@ class ChangePassword(BaseModel):
             raise ValueError('New password must be at least 8 characters long')
         return v
 
+class UserProfileImageUpdate(BaseModel):
+    profile_image: str  # Base64 encoded image data
+
 class UserResponse(UserBase):
+    profile_image: Optional[str] = None
     created_at: datetime
 
     class Config:

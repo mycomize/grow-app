@@ -14,7 +14,7 @@ import { Text } from '~/components/ui/text';
 import { Button, ButtonText } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Input, InputField } from '~/components/ui/input';
-import { X, CheckSquare, Calendar } from 'lucide-react-native';
+import { X, CheckSquare } from 'lucide-react-native';
 import { Task, generateId } from '~/lib/templateTypes';
 
 interface TaskModalProps {
@@ -28,7 +28,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
   const [formData, setFormData] = useState({
     action: '',
     frequency: '',
-    estimatedStartDate: '',
+    daysAfterStageStart: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -40,15 +40,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
         setFormData({
           action: task.action,
           frequency: task.frequency,
-          estimatedStartDate: task.estimatedStartDate,
+          daysAfterStageStart: task.daysAfterStageStart.toString(),
         });
       } else {
-        // Default to today's date for new tasks
-        const today = new Date().toISOString().split('T')[0];
+        // Default to 0 days for new tasks
         setFormData({
           action: '',
           frequency: '',
-          estimatedStartDate: today,
+          daysAfterStageStart: '0',
         });
       }
       setErrors({});
@@ -66,8 +65,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
       newErrors.frequency = 'Frequency is required';
     }
 
-    if (!formData.estimatedStartDate.trim()) {
-      newErrors.estimatedStartDate = 'Estimated start date is required';
+    if (!formData.daysAfterStageStart.trim()) {
+      newErrors.daysAfterStageStart = 'Days after stage start is required';
+    } else {
+      const days = parseInt(formData.daysAfterStageStart, 10);
+      if (isNaN(days) || days < 0) {
+        newErrors.daysAfterStageStart = 'Must be a valid number of days (0 or greater)';
+      }
     }
 
     setErrors(newErrors);
@@ -83,7 +87,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
       id: task?.id || generateId(),
       action: formData.action.trim(),
       frequency: formData.frequency.trim(),
-      estimatedStartDate: formData.estimatedStartDate,
+      daysAfterStageStart: parseInt(formData.daysAfterStageStart, 10),
     };
 
     onSave(taskData);
@@ -138,24 +142,22 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
               )}
             </VStack>
 
-            {/* Estimated Start Date */}
+            {/* Days After Stage Start */}
             <VStack space="xs">
-              <Text className="font-medium">Estimated Start Date *</Text>
-              <HStack className="items-center" space="sm">
-                <Icon as={Calendar} className="text-typography-500" />
-                <Input className={`flex-1 ${errors.estimatedStartDate ? 'border-error-500' : ''}`}>
-                  <InputField
-                    placeholder="YYYY-MM-DD"
-                    value={formData.estimatedStartDate}
-                    onChangeText={(value) => updateField('estimatedStartDate', value)}
-                  />
-                </Input>
-              </HStack>
-              {errors.estimatedStartDate && (
-                <Text className="text-sm text-error-600">{errors.estimatedStartDate}</Text>
+              <Text className="font-medium">Start Day</Text>
+              <Input className={errors.daysAfterStageStart ? 'border-error-500' : ''}>
+                <InputField
+                  placeholder="e.g., 0, 14, 30"
+                  value={formData.daysAfterStageStart}
+                  onChangeText={(value) => updateField('daysAfterStageStart', value)}
+                  keyboardType="numeric"
+                />
+              </Input>
+              {errors.daysAfterStageStart && (
+                <Text className="text-sm text-error-600">{errors.daysAfterStageStart}</Text>
               )}
               <Text className="text-xs text-typography-500">
-                Use YYYY-MM-DD format (e.g., 2024-01-15)
+                Days after beginning of stage on which to being the task
               </Text>
             </VStack>
           </VStack>

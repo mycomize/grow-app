@@ -16,14 +16,14 @@ from backend.schemas.iot_entity import (
     IoTEntityCreate,
     IoTEntityUpdate,
 )
-from backend.database import get_grow_db, grow_engine
+from backend.database import get_mycomize_db, engine
 from backend.security import get_current_active_user
 
 # Create the models
 from backend.models.iot import Base
 from backend.models.iot_entity import Base as EntityBase
-Base.metadata.create_all(bind=grow_engine)
-EntityBase.metadata.create_all(bind=grow_engine)
+Base.metadata.create_all(bind=engine)
+EntityBase.metadata.create_all(bind=engine)
 
 router = APIRouter(
     prefix="/iot-gateways",
@@ -38,7 +38,7 @@ router = APIRouter(
 @router.post("/", response_model=IoTGatewaySchema, status_code=status.HTTP_201_CREATED)
 async def create_iot_gateway(
     gateway: IoTGatewayCreate, 
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Create a new IoT gateway for the current user"""
@@ -62,7 +62,7 @@ async def create_iot_gateway(
 async def read_iot_gateways(
     skip: int = 0, 
     limit: int = 100, 
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all IoT gateways for the current user"""
@@ -72,7 +72,7 @@ async def read_iot_gateways(
 @router.get("/{gateway_id}", response_model=IoTGatewaySchema)
 async def read_iot_gateway(
     gateway_id: int, 
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get a specific IoT gateway by ID"""
@@ -86,7 +86,7 @@ async def read_iot_gateway(
 @router.get("/{gateway_id}/entities", response_model=List[IoTEntitySchema])
 async def get_gateway_entities(
     gateway_id: int,
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all enabled entities for a gateway"""
@@ -102,7 +102,7 @@ async def get_gateway_entities(
 async def add_entity_to_gateway(
     gateway_id: int,
     entity: IoTEntityCreate,
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Add an entity to a gateway"""
@@ -140,7 +140,7 @@ async def update_entity(
     gateway_id: int,
     entity_id: int,
     entity_update: IoTEntityUpdate,
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Update an entity"""
@@ -171,7 +171,7 @@ async def update_entity(
 async def remove_entity_from_gateway(
     gateway_id: int,
     entity_id: int,
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Remove an entity from a gateway"""
@@ -199,7 +199,7 @@ async def remove_entity_from_gateway(
 async def update_iot_gateway(
     gateway_id: int, 
     gateway: IoTGatewayUpdate, 
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Update a IoT gateway"""
@@ -219,7 +219,7 @@ async def update_iot_gateway(
 @router.delete("/{gateway_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_iot_gateway(
     gateway_id: int, 
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Delete a IoT gateway"""
@@ -245,7 +245,7 @@ async def delete_iot_gateway(
 async def link_gateway_with_grow(
     gateway_id: int,
     grow_id: int,
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Link an IoT gateway with a grow"""
@@ -276,7 +276,7 @@ async def link_gateway_with_grow(
 @router.put("/{gateway_id}/unlink", response_model=IoTGatewaySchema)
 async def unlink_gateway_from_grow(
     gateway_id: int,
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Unlink an IoT gateway from its grow"""
@@ -299,7 +299,7 @@ async def unlink_gateway_from_grow(
 @router.put("/{gateway_id}/enable", response_model=IoTGatewaySchema)
 async def enable_gateway(
     gateway_id: int,
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Enable an IoT gateway"""
@@ -322,7 +322,7 @@ async def enable_gateway(
 @router.put("/{gateway_id}/disable", response_model=IoTGatewaySchema)
 async def disable_gateway(
     gateway_id: int,
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Disable an IoT gateway"""

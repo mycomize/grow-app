@@ -58,11 +58,11 @@ export const MaterialsList: React.FC<MaterialsListProps> = ({ materials, onUpdat
   return (
     <VStack space="sm">
       {/* Header */}
-      <HStack className="items-center justify-between">
+      <HStack className="mb-2 items-center justify-between">
         <Text className="font-medium text-typography-700">Materials</Text>
         <Button variant="outline" size="sm" onPress={handleAddMaterial}>
           <ButtonIcon as={Plus} size="sm" />
-          <ButtonText>Add Material</ButtonText>
+          <ButtonText>Add</ButtonText>
         </Button>
       </HStack>
 
@@ -72,9 +72,7 @@ export const MaterialsList: React.FC<MaterialsListProps> = ({ materials, onUpdat
           className="items-center rounded-lg border border-dashed border-typography-300 p-6"
           space="sm">
           <Icon as={Package} className="text-typography-400" size="xl" />
-          <Text className="text-center text-typography-500">
-            No materials added yet. Click "Add Material" to get started.
-          </Text>
+          <Text className="text-center text-typography-500">No materials added yet</Text>
         </VStack>
       ) : (
         <VStack space="xs">
@@ -101,7 +99,7 @@ export const MaterialsList: React.FC<MaterialsListProps> = ({ materials, onUpdat
                     </HStack>
                   )}
                 </VStack>
-                <HStack space="xs">
+                <HStack space="lg">
                   <Pressable onPress={() => handleEditMaterial(material)} className="rounded p-2">
                     <Icon as={Edit2} className="text-typography-500" size="sm" />
                   </Pressable>

@@ -8,17 +8,18 @@ export interface Material {
 
 export interface EnvironmentalCondition {
   id: string;
-  name: string; // e.g., "Temperature", "Humidity", "CO2 Level"
-  type: string; // e.g., "temperature", "humidity", "co2" - free form
-  value: string; // Free-form (e.g., "68-72°F", "85-90%", ">1000ppm")
-  unit: string; // e.g., "°F", "%", "ppm"
+  name: string; // e.g., "Max incubator temperature", "Fruiting humidity"
+  type: string; // "Temperature", "Humidity", "CO2", "pH", "Volatile Organic Compounds"
+  lowerBound: number; // Lower bound value
+  upperBound: number; // Upper bound value
+  unit: string; // Unit based on type (e.g., "°F", "%", "ppm")
 }
 
 export interface Task {
   id: string;
   action: string; // e.g., "Break and shake", "Mist substrate"
   frequency: string; // Free-form text (e.g., "Daily for 7 days", "Once", "Every 3 days")
-  estimatedStartDate: string; // ISO date string
+  daysAfterStageStart: number; // Number of days after the stage begins (e.g., 14 for break and shake on day 14)
 }
 
 export interface StageData {
@@ -34,7 +35,8 @@ export interface MonotubTekTemplateData {
   description: string;
   species: string;
   variant: string;
-  isPublic: boolean;
+  type: string; // e.g., "Monotub", "Shoebox", "Martha Tent"
+  is_public: boolean;
   tags: string[];
 
   // Stage-based data
@@ -47,7 +49,7 @@ export interface MonotubTekTemplateData {
   };
 }
 
-export const CULTIVATION_STAGES = {
+export const MONOTUB_TEK_STAGES = {
   inoculation: 'Inoculation',
   spawnColonization: 'Spawn Colonization',
   bulkColonization: 'Bulk Colonization',
@@ -55,7 +57,34 @@ export const CULTIVATION_STAGES = {
   harvest: 'Harvest',
 } as const;
 
-export type CultivationStage = keyof typeof CULTIVATION_STAGES;
+export type MonotubCultivationStage = keyof typeof MONOTUB_TEK_STAGES;
+
+export const TEK_TYPES = {
+  monotub: 'Monotub',
+  // Future tek types can be added here
+  // shoebox: 'Shoebox',
+  // martha: 'Martha Tent',
+} as const;
+
+export type TekType = keyof typeof TEK_TYPES;
+
+export const ENVIRONMENTAL_CONDITION_TYPES = {
+  temperature: 'Temperature',
+  humidity: 'Humidity',
+  co2: 'CO₂',
+  ph: 'pH',
+  voc: 'Volatile Organic Compounds',
+} as const;
+
+export type EnvironmentalConditionType = keyof typeof ENVIRONMENTAL_CONDITION_TYPES;
+
+export const CONDITION_UNITS = {
+  temperature: ['°F', '°C'],
+  humidity: ['%'],
+  co2: ['ppm', 'ppb'],
+  ph: ['pH'],
+  voc: ['ppm', 'ppb', 'mg/m³'],
+} as const;
 
 // Helper function to create empty stage data
 export const createEmptyStageData = (): StageData => ({
@@ -71,7 +100,8 @@ export const createEmptyTemplateData = (): MonotubTekTemplateData => ({
   description: '',
   species: '',
   variant: '',
-  isPublic: false,
+  type: 'Monotub', // Default to Monotub
+  is_public: false,
   tags: [],
   stages: {
     inoculation: createEmptyStageData(),
@@ -81,6 +111,31 @@ export const createEmptyTemplateData = (): MonotubTekTemplateData => ({
     harvest: createEmptyStageData(),
   },
 });
+
+// Template interface for API responses
+export interface MonotubTekTemplate {
+  id: number;
+  name: string;
+  description?: string;
+  species: string;
+  variant?: string;
+  type: string;
+  tags?: string[];
+  is_public: boolean;
+  created_by: number;
+  created_at: string;
+  updated_at?: string;
+  usage_count: number;
+  creator_name?: string;
+  creator_profile_image?: string;
+  stages?: {
+    inoculation: StageData;
+    spawnColonization: StageData;
+    bulkColonization: StageData;
+    fruiting: StageData;
+    harvest: StageData;
+  };
+}
 
 // Helper function to generate unique IDs
 export const generateId = (): string => {

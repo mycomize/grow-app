@@ -61,11 +61,11 @@ export const EnvironmentalConditionsList: React.FC<EnvironmentalConditionsListPr
   return (
     <VStack space="sm">
       {/* Header */}
-      <HStack className="items-center justify-between">
+      <HStack className="mb-2 items-center justify-between">
         <Text className="font-medium text-typography-700">Environmental Conditions</Text>
         <Button variant="outline" size="sm" onPress={handleAddCondition}>
           <ButtonIcon as={Plus} size="sm" />
-          <ButtonText>Add Condition</ButtonText>
+          <ButtonText>Add</ButtonText>
         </Button>
       </HStack>
 
@@ -76,7 +76,7 @@ export const EnvironmentalConditionsList: React.FC<EnvironmentalConditionsListPr
           space="sm">
           <Icon as={Thermometer} className="text-typography-400" size="xl" />
           <Text className="text-center text-typography-500">
-            No environmental conditions added yet. Click "Add Condition" to get started.
+            No environmental conditions added yet
           </Text>
         </VStack>
       ) : (
@@ -93,11 +93,12 @@ export const EnvironmentalConditionsList: React.FC<EnvironmentalConditionsListPr
                     <Text className="text-sm text-typography-600">Type: {condition.type}</Text>
                   )}
                   <HStack className="items-center" space="xs">
-                    <Text className="text-sm text-typography-600">Value: {condition.value}</Text>
-                    <Text className="text-sm text-typography-600">{condition.unit}</Text>
+                    <Text className="text-sm text-typography-600">
+                      Range: {condition.lowerBound} - {condition.upperBound} {condition.unit}
+                    </Text>
                   </HStack>
                 </VStack>
-                <HStack space="xs">
+                <HStack space="lg">
                   <Pressable onPress={() => handleEditCondition(condition)} className="rounded p-2">
                     <Icon as={Edit2} className="text-typography-500" size="sm" />
                   </Pressable>

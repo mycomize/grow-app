@@ -48,9 +48,6 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
                 <Icon as={AlertTriangle} className="text-error-600" size="lg" />
                 <Text className="text-lg font-semibold">{title}</Text>
               </HStack>
-              <ModalCloseButton>
-                <Icon as={X} />
-              </ModalCloseButton>
             </HStack>
           </VStack>
         </ModalHeader>
@@ -68,7 +65,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
               <ButtonText>Cancel</ButtonText>
             </Button>
             <Button variant="solid" action="negative" onPress={handleConfirm} className="flex-1">
-              <ButtonText>Delete</ButtonText>
+              <ButtonText className="text-white">Delete</ButtonText>
             </Button>
           </HStack>
         </ModalFooter>

@@ -10,12 +10,12 @@ from backend.schemas.inventory import (
     InventoryItem as InventoryItemSchema, 
     InventoryItemUpdate,
 )
-from backend.database import get_grow_db, grow_engine
+from backend.database import get_mycomize_db, engine
 from backend.security import get_current_active_user
 
 # Create the models
 from backend.models.inventory import Base
-Base.metadata.create_all(bind=grow_engine)
+Base.metadata.create_all(bind=engine)
 
 router = APIRouter(
     prefix="/inventory",
@@ -28,7 +28,7 @@ router = APIRouter(
 @router.post("/item", response_model=InventoryItemSchema, status_code=status.HTTP_201_CREATED)
 async def create_inventory_item(
     item: InventoryItemCreate, 
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Create a new inventory item"""
@@ -62,7 +62,7 @@ async def read_inventory_items(
     skip: int = 0, 
     limit: int = 100, 
     item_type: str = None,
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get inventory items for the current user with optional type filtering"""
@@ -77,7 +77,7 @@ async def read_inventory_items(
 @router.get("/item/{item_id}", response_model=InventoryItemSchema)
 async def read_inventory_item(
     item_id: int, 
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get a specific inventory item by ID"""
@@ -95,7 +95,7 @@ async def read_inventory_item(
 async def update_inventory_item(
     item_id: int, 
     item_update: InventoryItemUpdate, 
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Update an inventory item"""
@@ -119,7 +119,7 @@ async def update_inventory_item(
 @router.delete("/item/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_inventory_item(
     item_id: int, 
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Delete an inventory item"""
@@ -141,7 +141,7 @@ async def delete_inventory_item(
 async def read_all_items(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all inventory items for the current user"""

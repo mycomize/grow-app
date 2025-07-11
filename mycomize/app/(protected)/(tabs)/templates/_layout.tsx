@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { BackButton } from '~/components/ui/back-button';
-import { useTheme } from '@/components/ui/themeprovider/themeprovider';
+import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 
 export default function TemplatesLayout() {
   const { theme } = useTheme();
@@ -29,7 +29,7 @@ export default function TemplatesLayout() {
       <Stack.Screen
         name="new"
         options={{
-          title: 'New Template',
+          title: 'New Tek',
           headerShown: true,
           headerLeft: () => <BackButton />,
         }}
@@ -37,7 +37,7 @@ export default function TemplatesLayout() {
       <Stack.Screen
         name="[id]/index"
         options={{
-          title: 'Edit Template',
+          title: 'Edit Tek',
           headerShown: true,
           headerLeft: () => <BackButton />,
         }}

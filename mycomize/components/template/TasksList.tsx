@@ -67,11 +67,11 @@ export const TasksList: React.FC<TasksListProps> = ({ tasks, onUpdateTasks }) =>
   return (
     <VStack space="sm">
       {/* Header */}
-      <HStack className="items-center justify-between">
+      <HStack className="mb-2 items-center justify-between">
         <Text className="font-medium text-typography-700">Tasks</Text>
         <Button variant="outline" size="sm" onPress={handleAddTask}>
           <ButtonIcon as={Plus} size="sm" />
-          <ButtonText>Add Task</ButtonText>
+          <ButtonText>Add</ButtonText>
         </Button>
       </HStack>
 
@@ -81,9 +81,7 @@ export const TasksList: React.FC<TasksListProps> = ({ tasks, onUpdateTasks }) =>
           className="items-center rounded-lg border border-dashed border-typography-300 p-6"
           space="sm">
           <Icon as={CheckSquare} className="text-typography-400" size="xl" />
-          <Text className="text-center text-typography-500">
-            No tasks added yet. Click "Add Task" to get started.
-          </Text>
+          <Text className="text-center text-typography-500">No tasks added yet</Text>
         </VStack>
       ) : (
         <VStack space="xs">
@@ -97,13 +95,12 @@ export const TasksList: React.FC<TasksListProps> = ({ tasks, onUpdateTasks }) =>
                   <Text className="font-medium text-typography-900">{task.action}</Text>
                   <Text className="text-sm text-typography-600">Frequency: {task.frequency}</Text>
                   <HStack className="items-center" space="xs">
-                    <Icon as={Calendar} className="text-typography-500" size="sm" />
                     <Text className="text-sm text-typography-600">
-                      Start: {formatDate(task.estimatedStartDate)}
+                      Day {task.daysAfterStageStart} of stage
                     </Text>
                   </HStack>
                 </VStack>
-                <HStack space="xs">
+                <HStack space="lg">
                   <Pressable onPress={() => handleEditTask(task)} className="rounded p-2">
                     <Icon as={Edit2} className="text-typography-500" size="sm" />
                   </Pressable>

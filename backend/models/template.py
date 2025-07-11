@@ -13,83 +13,30 @@ class MonotubTekTemplate(Base):
     species = Column(String(64), nullable=False, index=True)  # Indexed for search
     variant = Column(String(64), nullable=True)
     
-    # Tek abstraction - allows for different cultivation techniques
-    tek_type = Column(String(64), nullable=False, default="monotub_bulk", index=True)
-    difficulty = Column(String(32), nullable=True, default="Beginner")
-    estimated_timeline = Column(Integer, nullable=True)  # days
+    # Tek type - matches frontend field name
+    type = Column(String(64), nullable=False, default="Monotub", index=True)
     tags = Column(JSON, nullable=True)  # Array of tags
     
-    # Required user inputs
-    spawn_type = Column(String(128), nullable=False)
-    spawn_amount = Column(Float, nullable=False)  # in lbs
-    bulk_type = Column(String(128), nullable=False)
-    bulk_amount = Column(Float, nullable=False)  # in lbs
-    
-    # Privacy and ownership
+    # Privacy and ownership - matches frontend field name
     is_public = Column(Boolean, default=False, index=True)  # Indexed for search
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
-    # AI Generated Environmental Conditions (JSON for flexibility)
-    environmental_conditions = Column(JSON, nullable=True)
+    # Stage-based data structure (JSON for flexibility)
+    stages = Column(JSON, nullable=True)
     # Expected structure:
     # {
-    #   "spawn_temp_range": [min, max],
-    #   "bulk_temp_range": [min, max],
-    #   "fruiting_temp_range": [min, max],
-    #   "humidity_ranges": {
-    #     "bulk": [min, max],
-    #     "fruiting": [min, max]
+    #   "inoculation": {
+    #     "materials": [{"id": "...", "description": "...", "vendor": "...", "quantity": "...", "url": "..."}],
+    #     "environmentalConditions": [{"id": "...", "name": "...", "type": "...", "lowerBound": 0, "upperBound": 0, "unit": "..."}],
+    #     "tasks": [{"id": "...", "action": "...", "frequency": "...", "daysAfterStageStart": 0}],
+    #     "notes": "..."
     #   },
-    #   "co2_targets": {
-    #     "colonization": value,
-    #     "fruiting": value
-    #   },
-    #   "voc_targets": {
-    #     "colonization": value,
-    #     "fruiting": value
-    #   },
-    #   "ph_ranges": {
-    #     "bulk": [min, max],
-    #     "fruiting": [min, max]
-    #   },
-    #   "lighting_schedule": {
-    #     "colonization": {"hours": n, "intensity": n},
-    #     "fruiting": {"hours": n, "intensity": n}
-    #   }
-    # }
-    
-    # Environmental sensor parameters (user definable)
-    environmental_sensors = Column(JSON, nullable=True)
-    # Expected structure: Array of
-    # {
-    #   "name": "VOC",
-    #   "target_range": [min, max],
-    #   "unit": "ppm",
-    #   "stage_specific": false
-    # }
-    
-    # AI Generated Schedule
-    scheduled_actions = Column(JSON, nullable=True)
-    # Expected structure: Array of
-    # {
-    #   "stage": "spawn_colonization",
-    #   "day_offset": 7,
-    #   "action_type": "check",
-    #   "description": "Check colonization progress",
-    #   "frequency": "daily",
-    #   "is_critical": true
-    # }
-    
-    # AI Generated or calculated stage durations
-    stage_durations = Column(JSON, nullable=True)
-    # Expected structure:
-    # {
-    #   "spawn_colonization": [min_days, max_days],
-    #   "bulk_colonization": [min_days, max_days],
-    #   "pinning": [min_days, max_days],
-    #   "fruiting": [min_days, max_days]
+    #   "spawnColonization": {...},
+    #   "bulkColonization": {...},
+    #   "fruiting": {...},
+    #   "harvest": {...}
     # }
     
     # Usage statistics (for template popularity)

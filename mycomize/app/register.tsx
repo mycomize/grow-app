@@ -4,7 +4,7 @@ import { ScrollView } from '@/components/ui/scroll-view';
 import { Box } from '@/components/ui/box';
 import { useContext } from 'react';
 import { AuthContext } from '~/lib/AuthContext';
-import { Button, ButtonText } from '~/components/ui/button';
+import { Button, ButtonIcon, ButtonText } from '~/components/ui/button';
 import { FormControl } from '@/components/ui/form-control';
 import { Heading } from '@/components/ui/heading';
 import { Input, InputField } from '@/components/ui/input';
@@ -17,7 +17,7 @@ import { Link, LinkText } from '@/components/ui/link';
 import { Text } from '~/components/ui/text';
 import { useToast, Toast, ToastTitle, ToastDescription } from '@/components/ui/toast';
 import { useRouter } from 'expo-router';
-import { CircleX } from 'lucide-react-native';
+import { CircleX, UserPlus, LogIn } from 'lucide-react-native';
 import { Icon } from '@/components/ui/icon';
 
 import MycomizeLogo from '~/assets/mycomize-logo.svg';
@@ -149,16 +149,18 @@ export default function SignUpScreen() {
                   onPress={handleSignUp}
                   isDisabled={isLoading}>
                   <ButtonText className="text-white">Sign Up</ButtonText>
+                  <ButtonIcon className="text-white" as={UserPlus} size="md" />
                 </Button>
               </VStack>
             </FormControl>
           </VStack>
-          <Link className="my-10" onPress={() => router.replace('/login')}>
-            <HStack>
-              <Text>Already have an account? </Text>
-              <LinkText className="text-success-300">Log In</LinkText>
-            </HStack>
-          </Link>
+          <HStack className="my-8 items-center gap-4">
+            <Text>Already have an account?</Text>
+            <Button onPress={() => router.replace('/login')} variant="solid" action="positive">
+              <ButtonText className="text-white">Login</ButtonText>
+              <ButtonIcon className="text-white" as={LogIn} size="md" />
+            </Button>
+          </HStack>
         </View>
       </ScrollView>
     </Box>

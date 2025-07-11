@@ -19,8 +19,6 @@ Guidelines for backend development focusing on code organization, security, and 
 
 - Only make changes when highly confident they will not introduce security vulnerabilities
 - Maintain existing security patterns and authentication flows
-- Prioritize code reliability over ambitious refactoring
-- Be conservative with structural changes that could affect system stability
 
 ## Development approach
 

@@ -7,7 +7,6 @@ Expert-level guidelines for React Native development with Expo, Gluestack UI, an
 - Follow Expo Router conventions for file-based routing and layout structure
 - Use TypeScript strictly with proper type definitions for all components and functions
 - Implement proper error boundaries and error handling patterns
-- Follow React Native performance best practices including proper use of FlatList, memoization, and avoiding unnecessary re-renders
 - Use Expo SDK features appropriately and stay within managed workflow constraints
 
 ## Gluestack UI implementation
@@ -47,12 +46,10 @@ Expert-level guidelines for React Native development with Expo, Gluestack UI, an
 - Implement proper loading states and skeleton screens for better user experience
 - Optimize image loading and caching strategies
 - Use proper navigation patterns to minimize memory usage
-- Profile and monitor app performance regularly
 
 ## Code quality standards
 
 - Write comprehensive TypeScript interfaces and types
-- Implement proper error handling with try-catch blocks and error boundaries
 - Use consistent naming conventions following React Native/JavaScript standards
 - Write self-documenting code with clear function and variable names
 - Implement proper component composition and reusability patterns

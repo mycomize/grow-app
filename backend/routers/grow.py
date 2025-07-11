@@ -20,12 +20,12 @@ from backend.schemas.grow import (
     GrowWithIoTGateways,
     GrowComplete
 )
-from backend.database import get_grow_db, grow_engine
+from backend.database import get_mycomize_db, engine
 from backend.security import get_current_active_user, load_config
 
 # Create the models
 from backend.models.grow import Base
-Base.metadata.create_all(bind=grow_engine)
+Base.metadata.create_all(bind=engine)
 
 # Pydantic model for milestone response schema
 class MilestoneResponse(BaseModel):
@@ -61,7 +61,7 @@ router = APIRouter(
 @router.post("/", response_model=GrowSchema, status_code=status.HTTP_201_CREATED)
 async def create_grow(
     grow: GrowCreate,
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Create a new grow for the current user"""
@@ -94,7 +94,7 @@ async def create_grow(
 async def read_grows(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all grows for the current user"""
@@ -103,7 +103,7 @@ async def read_grows(
 
 @router.get("/all", response_model=List[GrowComplete])
 async def read_all_grows(
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all grows with complete data for the current user"""
@@ -115,7 +115,7 @@ async def read_all_grows(
 @router.get("/{grow_id}", response_model=GrowWithIoTGateways)
 async def read_grow(
     grow_id: int,
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get a specific grow by ID with its IoT gateways"""
@@ -129,7 +129,7 @@ async def read_grow(
 async def update_grow(
     grow_id: int,
     grow: GrowUpdate,
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Update a grow"""
@@ -153,7 +153,7 @@ async def update_grow(
 @router.delete("/{grow_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_grow(
     grow_id: int,
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Delete a grow"""
@@ -181,7 +181,7 @@ def generate_input_hash(*args) -> str:
 @router.get("/{grow_id}/optimal-conditions", response_model=OptimalConditionsResponse)
 async def get_optimal_conditions(
     grow_id: int,
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get AI-predicted optimal conditions for a specific grow"""
@@ -346,7 +346,7 @@ Skip the preamble in your response and only return the JSON object with the prov
 @router.get("/{grow_id}/milestones", response_model=MilestoneResponse)
 async def get_grow_milestones(
     grow_id: int,
-    db: Session = Depends(get_grow_db),
+    db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get AI-predicted milestones for a specific grow"""

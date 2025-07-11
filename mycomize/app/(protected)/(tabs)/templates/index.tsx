@@ -22,7 +22,8 @@ import {
 import { Spinner } from '~/components/ui/spinner';
 import { useToast, Toast } from '~/components/ui/toast';
 import {
-  PlusIcon,
+  Plus,
+  CirclePlus,
   Search,
   X,
   ArrowUpDown,
@@ -39,23 +40,7 @@ import { AuthContext } from '~/lib/AuthContext';
 import { TemplateCard } from '~/components/grow/TemplateCard';
 import { CountBadge } from '~/components/ui/count-badge';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
-
-interface MonotubTekTemplate {
-  id: number;
-  name: string;
-  description?: string;
-  species: string;
-  variant?: string;
-  tek_type: string;
-  difficulty: string;
-  estimated_timeline?: number;
-  tags?: string[];
-  is_public: boolean;
-  created_by: number;
-  created_at: string;
-  usage_count: number;
-  creator_name?: string;
-}
+import { MonotubTekTemplate } from '~/lib/templateTypes';
 
 export default function TemplatesLibraryScreen() {
   const { token } = useContext(AuthContext);
@@ -154,11 +139,6 @@ export default function TemplatesLibraryScreen() {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); // Most recent first
         case 'usage_count':
           return b.usage_count - a.usage_count; // Most used first
-        case 'difficulty':
-          const difficultyOrder = ['beginner', 'intermediate', 'advanced'];
-          const diffA = difficultyOrder.indexOf(a.difficulty.toLowerCase());
-          const diffB = difficultyOrder.indexOf(b.difficulty.toLowerCase());
-          return diffA - diffB;
         default:
           return 0;
       }
@@ -189,7 +169,6 @@ export default function TemplatesLibraryScreen() {
         (template.species?.toLowerCase()?.includes(searchLower) ?? false) ||
         (template.description?.toLowerCase()?.includes(searchLower) ?? false) ||
         (template.variant?.toLowerCase()?.includes(searchLower) ?? false) ||
-        (template.difficulty?.toLowerCase()?.includes(searchLower) ?? false) ||
         (template.creator_name?.toLowerCase()?.includes(searchLower) ?? false) ||
         (template.tags?.some((tag) => tag.toLowerCase().includes(searchLower)) ?? false);
 
@@ -216,7 +195,7 @@ export default function TemplatesLibraryScreen() {
       placement: 'top',
       duration: 3000,
       render: () => (
-        <Toast variant="outline" className={`mx-auto mt-28 w-full p-4 ${bgColor}`}>
+        <Toast variant="outline" className={`mx-auto mt-32 w-full p-4 ${bgColor}`}>
           <VStack space="xs" className="w-full">
             <HStack className="flex-row gap-2">
               <Icon
@@ -313,16 +292,18 @@ export default function TemplatesLibraryScreen() {
     );
   }
 
-  return templates.length === 0 ? (
+  return publicTemplates.length === 0 && privateTemplates.length === 0 ? (
     <VStack className="flex-1 items-center justify-center gap-5 bg-background-50">
       <Icon as={Layers} size="xl" className="text-typography-400" />
-      <Text className="text-center text-lg text-typography-600">Create Your First Template!</Text>
+      <Text className="text-center text-sm text-typography-500">
+        Create your first template to get started!
+      </Text>
       <Button
         variant="solid"
         className="h-16 w-16 rounded-full"
         action="positive"
         onPress={() => router.push('/templates/new')}>
-        <ButtonIcon as={PlusIcon} className="h-8 w-8 text-white" />
+        <ButtonIcon as={Plus} className="h-8 w-8 text-white" />
       </Button>
     </VStack>
   ) : (
@@ -335,16 +316,13 @@ export default function TemplatesLibraryScreen() {
           <VStack className="p-2" space="md">
             <HStack className="">
               <HStack className="items-center gap-2">
-                <Icon as={Layers} size="xl" className="text-typography-900" />
-                <Heading size="xl">Tek Library</Heading>
-              </HStack>
-              <HStack className="ml-auto items-center gap-2">
+                <Icon as={Layers} size="xl" className="text-typography-600" />
                 <CountBadge count={templates.length} label="TOTAL" variant="success" />
                 {publicTemplates.length > 0 && (
                   <CountBadge count={publicTemplates.length} label="PUBLIC" variant="green-dark" />
                 )}
                 {privateTemplates.length > 0 && (
-                  <CountBadge count={privateTemplates.length} label="PRIVATE" variant="warning" />
+                  <CountBadge count={privateTemplates.length} label="PRIVATE" variant="error" />
                 )}
               </HStack>
             </HStack>
@@ -366,13 +344,13 @@ export default function TemplatesLibraryScreen() {
             {/* Action Buttons */}
             <HStack className="mt-2 items-center justify-around gap-2">
               <Pressable onPress={handleSortModalOpen}>
-                <Icon as={ArrowUpDown} size="lg" />
+                <Icon className="text-typography-300" as={ArrowUpDown} size="md" />
               </Pressable>
               <Pressable onPress={handleFilterModalOpen}>
-                <Icon as={Filter} size="lg" />
+                <Icon className="text-typography-300" as={Filter} size="md" />
               </Pressable>
               <Pressable onPress={() => router.push('/templates/new')}>
-                <Icon className="text-white" as={PlusIcon} size="lg" />
+                <Icon className="text-typography-300" as={CirclePlus} size="md" />
               </Pressable>
             </HStack>
           </VStack>
@@ -392,13 +370,13 @@ export default function TemplatesLibraryScreen() {
         ))}
 
         {filteredAndSortedTemplates.length === 0 && (searchQuery || filterBy !== 'all') && (
-          <VStack className="items-center justify-center p-8">
+          <VStack className="items-center justify-center  gap-3 p-8">
             <Icon as={Layers} size="xl" className="text-typography-400" />
-            <Text className="text-center text-typography-500">
+            <Text className="mt-0 text-center text-typography-500">
               {searchQuery && filterBy !== 'all'
                 ? `No ${getFilterDisplayText().toLowerCase()} found matching "${searchQuery}"`
                 : searchQuery
-                  ? `No templates found matching "${searchQuery}"`
+                  ? `No teks found matching "${searchQuery}"`
                   : `No ${getFilterDisplayText().toLowerCase()} found`}
             </Text>
           </VStack>
@@ -424,7 +402,6 @@ export default function TemplatesLibraryScreen() {
                   { value: 'species', label: 'Species' },
                   { value: 'created_at', label: 'Created Date' },
                   { value: 'usage_count', label: 'Usage Count' },
-                  { value: 'difficulty', label: 'Difficulty' },
                 ].map((option) => (
                   <Pressable
                     key={option.value}
@@ -445,7 +422,7 @@ export default function TemplatesLibraryScreen() {
                 <ButtonText>Cancel</ButtonText>
               </Button>
               <Button action="positive" onPress={handleSortConfirm}>
-                <ButtonText>Apply Sort</ButtonText>
+                <ButtonText className="text-typography-900">Apply Sort</ButtonText>
               </Button>
             </HStack>
           </ModalFooter>
@@ -507,7 +484,7 @@ export default function TemplatesLibraryScreen() {
                 <ButtonText>Cancel</ButtonText>
               </Button>
               <Button action="positive" onPress={handleFilterConfirm}>
-                <ButtonText>Apply Filter</ButtonText>
+                <ButtonText className="text-typography-900">Apply Filter</ButtonText>
               </Button>
             </HStack>
           </ModalFooter>

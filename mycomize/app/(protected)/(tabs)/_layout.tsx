@@ -54,10 +54,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="templates"
         options={{
-          title: 'Tek Library',
-          tabBarLabel: 'Tek Library',
+          title: 'Tek',
+          tabBarLabel: 'Tek',
           tabBarIcon: ({ color }) => <Layers color={color} />,
-          headerShown: false,
+          headerShown: true,
         }}
       />
       <Tabs.Screen

@@ -57,7 +57,7 @@
     "expo-router": "~5.1.0",
     "expo-secure-store": "^14.2.3",
     "expo-status-bar": "~2.2.3",
-    "expo-system-ui": "~5.0.8",
+    "expo-system-ui": "~5.0.10",
     "expo-web-browser": "~14.1.6",
     "lucide-react-native": "^0.507.0",
     "nativewind": "^4.1.23",
@@ -74,7 +74,10 @@
     "react-native-safe-area-context": "^5.4.0",
     "react-native-screens": "~4.11.1",
     "react-native-svg": "15.11.2",
-    "react-native-web": "^0.20.0"
+    "react-native-web": "^0.20.0",
+    "expo-image-picker": "~16.1.4",
+    "expo-file-system": "~18.1.11",
+    "expo-image-manipulator": "~13.1.7"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
