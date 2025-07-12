@@ -5,7 +5,7 @@ import { Text } from '~/components/ui/text';
 import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
-import { Plus, Edit2, Trash2, CheckSquare, Calendar } from 'lucide-react-native';
+import { Plus, Edit2, Trash2, CheckSquare, Calendar, Copy } from 'lucide-react-native';
 import { Task } from '~/lib/templateTypes';
 import { TaskModal } from './modals/TaskModal';
 import { DeleteConfirmationModal } from './modals/DeleteConfirmationModal';
@@ -47,6 +47,15 @@ export const TasksList: React.FC<TasksListProps> = ({ tasks, onUpdateTasks }) =>
     }
   };
 
+  const handleCopyTask = (task: Task) => {
+    const newTask: Task = {
+      ...task,
+      id: Date.now().toString(), // Generate a new ID
+      action: `${task.action}`,
+    };
+    onUpdateTasks([...tasks, newTask]);
+  };
+
   const handleConfirmDelete = () => {
     if (taskToDelete) {
       const updatedTasks = tasks.filter((t) => t.id !== taskToDelete.id);
@@ -84,7 +93,7 @@ export const TasksList: React.FC<TasksListProps> = ({ tasks, onUpdateTasks }) =>
           <Text className="text-center text-typography-500">No tasks added yet</Text>
         </VStack>
       ) : (
-        <VStack space="xs">
+        <VStack space="md">
           {tasks.map((task) => (
             <VStack
               key={task.id}
@@ -101,11 +110,14 @@ export const TasksList: React.FC<TasksListProps> = ({ tasks, onUpdateTasks }) =>
                   </HStack>
                 </VStack>
                 <HStack space="lg">
+                  <Pressable onPress={() => handleCopyTask(task)} className="rounded p-2">
+                    <Icon as={Copy} className="text-typography-500" size="sm" />
+                  </Pressable>
                   <Pressable onPress={() => handleEditTask(task)} className="rounded p-2">
                     <Icon as={Edit2} className="text-typography-500" size="sm" />
                   </Pressable>
                   <Pressable onPress={() => handleDeleteTask(task)} className="rounded p-2">
-                    <Icon as={Trash2} className="text-error-600" size="sm" />
+                    <Icon as={Trash2} className="text-typography-500" size="sm" />
                   </Pressable>
                 </HStack>
               </HStack>

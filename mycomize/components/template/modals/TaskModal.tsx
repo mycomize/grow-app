@@ -116,7 +116,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
           <VStack space="md">
             {/* Action */}
             <VStack space="xs">
-              <Text className="font-medium">Action *</Text>
+              <Text className="font-medium">Action</Text>
               <Input className={errors.action ? 'border-error-500' : ''}>
                 <InputField
                   placeholder="e.g., Break and shake, Mist substrate, Check for pins"
@@ -129,7 +129,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
 
             {/* Frequency */}
             <VStack space="xs">
-              <Text className="font-medium">Frequency *</Text>
+              <Text className="font-medium">Frequency</Text>
               <Input className={errors.frequency ? 'border-error-500' : ''}>
                 <InputField
                   placeholder="e.g., Once, Daily for 7 days, Every 3 days, As needed"

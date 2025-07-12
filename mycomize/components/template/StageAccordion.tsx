@@ -49,9 +49,9 @@ export const StageAccordion: React.FC<StageAccordionProps> = ({
   const getItemCounts = (stage: MonotubCultivationStage) => {
     const stageData = templateData.stages[stage];
     return {
-      materials: stageData.materials.length,
-      conditions: stageData.environmentalConditions.length,
-      tasks: stageData.tasks.length,
+      materials: stageData.items?.length || 0,
+      conditions: stageData.environmentalConditions?.length || 0,
+      tasks: stageData.tasks?.length || 0,
     };
   };
 
@@ -109,7 +109,11 @@ export const StageAccordion: React.FC<StageAccordionProps> = ({
   return (
     <VStack space="sm">
       <Text className="text-lg font-semibold">{templateData.type} Tek</Text>
-      <Accordion type="multiple" variant="unfilled" className="w-full gap-2" defaultValue={['']}>
+      <Accordion
+        type="multiple"
+        variant="unfilled"
+        className="m-0 w-full gap-0 p-0"
+        defaultValue={['']}>
         {stageOrder.map((stage) => (
           <AccordionItem key={stage} value={stage} className="rounded-md bg-background-0">
             <AccordionHeader>

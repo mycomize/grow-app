@@ -66,9 +66,9 @@ export function TemplateForm({
   return (
     <VStack className="flex-1 bg-background-50">
       <ScrollView className="flex-1">
-        <VStack className="p-4" space="md">
+        <VStack className="p-2" space="md">
           {/* Accordion for all sections */}
-          <Accordion type="multiple" variant="unfilled" className="w-full gap-4">
+          <Accordion type="multiple" variant="unfilled" className="w-full gap-4 p-0">
             {/* Basics Section */}
             <AccordionItem value="basics" className="rounded-md bg-background-0">
               <AccordionHeader>
@@ -98,6 +98,7 @@ export function TemplateForm({
                         placeholder="e.g., Super Awesome High Yield Monotub 3000"
                         value={templateData.name}
                         onChangeText={(value) => onUpdateField('name', value)}
+                        maxLength={120}
                       />
                     </Input>
                   </VStack>
@@ -122,6 +123,7 @@ export function TemplateForm({
                         value={templateData.description}
                         onChangeText={(value) => onUpdateField('description', value)}
                         style={{ textAlignVertical: 'top' }}
+                        maxLength={500}
                       />
                     </Textarea>
                   </VStack>
@@ -135,16 +137,18 @@ export function TemplateForm({
                           placeholder="e.g., Psilocybe cubensis"
                           value={templateData.species}
                           onChangeText={(value) => onUpdateField('species', value)}
+                          maxLength={50}
                         />
                       </Input>
                     </VStack>
                     <VStack className="flex-1" space="sm">
-                      <Text className="font-medium">Variant</Text>
+                      <Text className="font-medium">Strain</Text>
                       <Input>
                         <InputField
                           placeholder="e.g., Golden Teacher"
                           value={templateData.variant}
                           onChangeText={(value) => onUpdateField('variant', value)}
+                          maxLength={50}
                         />
                       </Input>
                     </VStack>
@@ -155,7 +159,7 @@ export function TemplateForm({
                     <VStack className="flex-1" space="xs">
                       <Text className="font-medium">Make Public</Text>
                       <Text className="text-sm text-typography-500">
-                        Allow other users to discover and use this template
+                        Allow other mycomize users to view and use this template
                       </Text>
                     </VStack>
                     <Switch
@@ -196,7 +200,7 @@ export function TemplateForm({
                 </AccordionTrigger>
               </AccordionHeader>
               <AccordionContent>
-                <VStack className="p-2" space="md">
+                <VStack space="md">
                   <StageAccordion
                     templateData={templateData}
                     onUpdateTemplateData={onSetTemplateData}
@@ -212,9 +216,8 @@ export function TemplateForm({
       <HStack className="bg-background-50 p-4" space="md">
         <Button
           variant="outline"
-          action="secondary"
-          onPress={() => router.back()}
-          className="h-12 flex-1">
+          className="h-12 flex-1 border border-outline-300"
+          onPress={() => router.back()}>
           <ButtonText>Cancel</ButtonText>
         </Button>
 

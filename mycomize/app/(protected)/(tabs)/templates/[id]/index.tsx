@@ -56,11 +56,11 @@ export default function EditTemplateScreen() {
         is_public: template.is_public,
         tags: template.tags || [],
         stages: template.stages || {
-          inoculation: { materials: [], environmentalConditions: [], tasks: [], notes: '' },
-          spawnColonization: { materials: [], environmentalConditions: [], tasks: [], notes: '' },
-          bulkColonization: { materials: [], environmentalConditions: [], tasks: [], notes: '' },
-          fruiting: { materials: [], environmentalConditions: [], tasks: [], notes: '' },
-          harvest: { materials: [], environmentalConditions: [], tasks: [], notes: '' },
+          inoculation: { items: [], environmentalConditions: [], tasks: [], notes: '' },
+          spawnColonization: { items: [], environmentalConditions: [], tasks: [], notes: '' },
+          bulkColonization: { items: [], environmentalConditions: [], tasks: [], notes: '' },
+          fruiting: { items: [], environmentalConditions: [], tasks: [], notes: '' },
+          harvest: { items: [], environmentalConditions: [], tasks: [], notes: '' },
         },
       };
 
@@ -116,7 +116,7 @@ export default function EditTemplateScreen() {
       onHandleTypeModalOpen={formLogic.handleTypeModalOpen}
       onHandleTypeConfirm={formLogic.handleTypeConfirm}
       onSaveTemplate={formLogic.saveTemplate}
-      saveButtonText="Save Changes"
+      saveButtonText="Save"
     />
   );
 }

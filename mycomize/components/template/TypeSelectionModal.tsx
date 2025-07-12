@@ -45,7 +45,6 @@ export function TypeSelectionModal({
         </ModalHeader>
         <ModalBody>
           <VStack space="lg">
-            <Text className="text-typography-600">Choose the type of cultivation technique:</Text>
             <VStack space="md">
               {Object.entries(TEK_TYPES).map(([key, value]) => (
                 <Pressable

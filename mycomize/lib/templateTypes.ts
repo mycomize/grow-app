@@ -1,4 +1,4 @@
-export interface Material {
+export interface Item {
   id: string;
   description: string;
   vendor: string;
@@ -23,7 +23,7 @@ export interface Task {
 }
 
 export interface StageData {
-  materials: Material[];
+  items: Item[];
   environmentalConditions: EnvironmentalCondition[];
   tasks: Task[];
   notes: string;
@@ -88,7 +88,7 @@ export const CONDITION_UNITS = {
 
 // Helper function to create empty stage data
 export const createEmptyStageData = (): StageData => ({
-  materials: [],
+  items: [],
   environmentalConditions: [],
   tasks: [],
   notes: '',

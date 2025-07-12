@@ -15,21 +15,16 @@ import { Button, ButtonText } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Input, InputField } from '~/components/ui/input';
 import { X, Package } from 'lucide-react-native';
-import { Material, generateId } from '~/lib/templateTypes';
+import { Item, generateId } from '~/lib/templateTypes';
 
-interface MaterialModalProps {
+interface ItemModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (material: Material) => void;
-  material?: Material | null;
+  onSave: (item: Item) => void;
+  item?: Item | null;
 }
 
-export const MaterialModal: React.FC<MaterialModalProps> = ({
-  isOpen,
-  onClose,
-  onSave,
-  material,
-}) => {
+export const ItemModal: React.FC<ItemModalProps> = ({ isOpen, onClose, onSave, item }) => {
   const [formData, setFormData] = useState({
     description: '',
     vendor: '',
@@ -38,16 +33,16 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const isEditing = !!material;
+  const isEditing = !!item;
 
   useEffect(() => {
     if (isOpen) {
-      if (material) {
+      if (item) {
         setFormData({
-          description: material.description,
-          vendor: material.vendor,
-          quantity: material.quantity,
-          url: material.url,
+          description: item.description,
+          vendor: item.vendor,
+          quantity: item.quantity,
+          url: item.url,
         });
       } else {
         setFormData({
@@ -59,7 +54,7 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
       }
       setErrors({});
     }
-  }, [isOpen, material]);
+  }, [isOpen, item]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -81,15 +76,15 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
       return;
     }
 
-    const materialData: Material = {
-      id: material?.id || generateId(),
+    const itemData: Item = {
+      id: item?.id || generateId(),
       description: formData.description.trim(),
       vendor: formData.vendor.trim(),
       quantity: formData.quantity.trim(),
       url: formData.url.trim(),
     };
 
-    onSave(materialData);
+    onSave(itemData);
     onClose();
   };
 
@@ -110,7 +105,7 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
               <HStack className="items-center" space="sm">
                 <Icon as={Package} className="text-primary-600" size="lg" />
                 <Text className="text-lg font-semibold">
-                  {isEditing ? 'Edit Material' : 'Add Material'}
+                  {isEditing ? 'Edit Item' : 'Add Item'}
                 </Text>
               </HStack>
             </HStack>
@@ -121,10 +116,10 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
           <VStack space="md">
             {/* Description */}
             <VStack space="xs">
-              <Text className="font-medium">Description *</Text>
+              <Text className="font-medium">Description</Text>
               <Input className={errors.description ? 'border-error-500' : ''}>
                 <InputField
-                  placeholder="e.g., Brown rice flour"
+                  placeholder="e.g., Brown rice flour, casing, syringe, etc."
                   value={formData.description}
                   onChangeText={(value) => updateField('description', value)}
                 />
@@ -139,7 +134,7 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
               <Text className="font-medium">Vendor</Text>
               <Input>
                 <InputField
-                  placeholder="e.g., Midwest Grow Kits"
+                  placeholder="e.g., self, Midwest Grow Kits, etc."
                   value={formData.vendor}
                   onChangeText={(value) => updateField('vendor', value)}
                 />
@@ -148,10 +143,10 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
 
             {/* Quantity */}
             <VStack space="xs">
-              <Text className="font-medium">Quantity *</Text>
+              <Text className="font-medium">Amount</Text>
               <Input className={errors.quantity ? 'border-error-500' : ''}>
                 <InputField
-                  placeholder="e.g., 2 lbs, 500ml, 1 bag"
+                  placeholder="e.g., 2 lbs, 10 mL, etc."
                   value={formData.quantity}
                   onChangeText={(value) => updateField('quantity', value)}
                 />
@@ -168,7 +163,6 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
                   value={formData.url}
                   onChangeText={(value) => updateField('url', value)}
                   autoCapitalize="none"
-                  keyboardType="url"
                 />
               </Input>
             </VStack>
@@ -181,7 +175,7 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
               <ButtonText>Cancel</ButtonText>
             </Button>
             <Button variant="solid" action="primary" onPress={handleSave} className="flex-1">
-              <ButtonText>{isEditing ? 'Update' : 'Add'} Material</ButtonText>
+              <ButtonText>{isEditing ? 'Update' : 'Add'} Item</ButtonText>
             </Button>
           </HStack>
         </ModalFooter>

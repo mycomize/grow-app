@@ -1,6 +1,6 @@
 export { StageAccordion } from './StageAccordion';
 export { StageSection } from './StageSection';
-export { MaterialsList } from './MaterialsList';
+export { MaterialsList } from './ItemsList';
 export { EnvironmentalConditionsList } from './EnvironmentalConditionsList';
 export { TasksList } from './TasksList';
 export { StageNotes } from './StageNotes';
@@ -9,6 +9,9 @@ export { StageNotes } from './StageNotes';
 export { TemplateForm } from './TemplateForm';
 export { TagManager } from './TagManager';
 export { TypeSelectionModal } from './TypeSelectionModal';
+
+// Skeleton components
+export { TemplateCardSkeleton } from './TemplateCardSkeleton';
 
 // Modal exports
 export { DeleteConfirmationModal } from './modals/DeleteConfirmationModal';

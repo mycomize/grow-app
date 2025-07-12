@@ -20,6 +20,7 @@ import {
   ModalCloseButton,
 } from '~/components/ui/modal';
 import { Spinner } from '~/components/ui/spinner';
+import { Skeleton, SkeletonText } from '~/components/ui/skeleton';
 import { useToast, Toast } from '~/components/ui/toast';
 import {
   Plus,
@@ -38,6 +39,7 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '~/lib/AuthContext';
 import { TemplateCard } from '~/components/grow/TemplateCard';
+import { TemplateCardSkeleton } from '~/components/template';
 import { CountBadge } from '~/components/ui/count-badge';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import { MonotubTekTemplate } from '~/lib/templateTypes';
@@ -159,18 +161,19 @@ export default function TemplatesLibraryScreen() {
         (filterBy === 'private' && !template.is_public);
 
       // Search filter
-      if (searchQuery === '') {
-        return matchesFilter;
-      }
-
-      const searchLower = searchQuery?.toLowerCase() ?? '';
       const matchesSearch =
-        (template.name?.toLowerCase()?.includes(searchLower) ?? false) ||
-        (template.species?.toLowerCase()?.includes(searchLower) ?? false) ||
-        (template.description?.toLowerCase()?.includes(searchLower) ?? false) ||
-        (template.variant?.toLowerCase()?.includes(searchLower) ?? false) ||
-        (template.creator_name?.toLowerCase()?.includes(searchLower) ?? false) ||
-        (template.tags?.some((tag) => tag.toLowerCase().includes(searchLower)) ?? false);
+        searchQuery === '' ||
+        (() => {
+          const searchLower = searchQuery?.toLowerCase() ?? '';
+          return (
+            (template.name?.toLowerCase()?.includes(searchLower) ?? false) ||
+            (template.species?.toLowerCase()?.includes(searchLower) ?? false) ||
+            (template.description?.toLowerCase()?.includes(searchLower) ?? false) ||
+            (template.variant?.toLowerCase()?.includes(searchLower) ?? false) ||
+            (template.creator_name?.toLowerCase()?.includes(searchLower) ?? false) ||
+            (template.tags?.some((tag) => tag.toLowerCase().includes(searchLower)) ?? false)
+          );
+        })();
 
       return matchesFilter && matchesSearch;
     })
@@ -278,6 +281,10 @@ export default function TemplatesLibraryScreen() {
     });
   };
 
+  const handleTagPress = (tag: string) => {
+    setSearchQuery(tag);
+  };
+
   const getFilterDisplayText = () => {
     switch (filterBy) {
       case 'public':
@@ -299,25 +306,50 @@ export default function TemplatesLibraryScreen() {
 
   if (loading) {
     return (
-      <VStack className="flex-1 items-center justify-center bg-background-50">
-        <Spinner size="large" />
-        <Text className="mt-4">Loading templates...</Text>
-      </VStack>
+      <ScrollView className="m-0 flex-1 bg-background-50">
+        <VStack className="items-center gap-4 pb-16">
+          <View className="mt-2" />
+
+          {/* Template Control Card Skeleton */}
+          <Card className="mx-4 w-11/12 bg-background-0">
+            <VStack className="p-2" space="md">
+              <HStack className="">
+                <HStack className="items-center gap-2">
+                  <Skeleton className="h-8 w-8 rounded" />
+                  <SkeletonText className="h-6 w-16" />
+                  <SkeletonText className="h-6 w-20" />
+                </HStack>
+              </HStack>
+
+              <HStack className="mt-2 items-center justify-around gap-2">
+                <Skeleton className="h-6 w-6 rounded" />
+                <Skeleton className="h-6 w-6 rounded" />
+                <Skeleton className="h-6 w-6 rounded" />
+              </HStack>
+            </VStack>
+          </Card>
+
+          {/* Template Card Skeletons */}
+          {Array.from({ length: 3 }).map((_, index) => (
+            <TemplateCardSkeleton key={index} />
+          ))}
+        </VStack>
+      </ScrollView>
     );
   }
 
   return publicTemplates.length === 0 && privateTemplates.length === 0 ? (
     <VStack className="flex-1 items-center justify-center gap-5 bg-background-50">
       <Icon as={Layers} size="xl" className="text-typography-400" />
-      <Text className="text-center text-sm text-typography-500">
-        Create your first template to get started!
+      <Text className="text-md text-center text-typography-500">
+        Create your first tek to get started!
       </Text>
       <Button
         variant="solid"
         className="h-16 w-16 rounded-full"
         action="positive"
         onPress={() => router.push('/templates/new')}>
-        <ButtonIcon as={Plus} className="h-8 w-8 text-white" />
+        <ButtonIcon as={Plus} className="h-6 w-6 text-white" />
       </Button>
     </VStack>
   ) : (
@@ -344,7 +376,7 @@ export default function TemplatesLibraryScreen() {
             <Input className="mt-2">
               <InputIcon as={Search} className="ml-3" />
               <InputField
-                placeholder="Search templates..."
+                placeholder="Search teks..."
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
@@ -382,6 +414,7 @@ export default function TemplatesLibraryScreen() {
             onConvertToGrow={handleConvertToGrow}
             onUseForNewGrow={handleUseForNewGrow}
             onCopyToNewTek={handleCopyToNewTek}
+            onTagPress={handleTagPress}
           />
         ))}
 

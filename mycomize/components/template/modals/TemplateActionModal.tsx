@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Modal,
   ModalBackdrop,
@@ -9,11 +9,12 @@ import {
   ModalFooter,
 } from '~/components/ui/modal';
 import { VStack } from '~/components/ui/vstack';
+import { HStack } from '~/components/ui/hstack';
 import { Button, ButtonText } from '~/components/ui/button';
 import { Text } from '~/components/ui/text';
-import { Heading } from '~/components/ui/heading';
 import { Icon } from '~/components/ui/icon';
-import { X } from 'lucide-react-native';
+import { Pressable } from '~/components/ui/pressable';
+import { X, Import, Copy, Check } from 'lucide-react-native';
 import { MonotubTekTemplate } from '~/lib/templateTypes';
 
 interface TemplateActionModalProps {
@@ -31,49 +32,70 @@ export const TemplateActionModal: React.FC<TemplateActionModalProps> = ({
   onUseForNewGrow,
   onCopyToNewTek,
 }) => {
-  const handleUseForNewGrow = () => {
-    onUseForNewGrow();
-    onClose();
-  };
+  const [selectedAction, setSelectedAction] = useState<string>('');
 
-  const handleCopyToNewTek = () => {
-    onCopyToNewTek();
+  const handleConfirm = () => {
+    if (selectedAction === 'new-grow') {
+      onUseForNewGrow();
+    } else if (selectedAction === 'copy-tek') {
+      onCopyToNewTek();
+    }
     onClose();
   };
 
   // Only show options if template is a monotub
   const isMonotub = template.type.toLowerCase() === 'monotub';
 
+  const actions = [
+    {
+      id: 'new-grow',
+      label: 'Import to new grow',
+      icon: Import,
+    },
+    {
+      id: 'copy-tek',
+      label: 'Copy to new tek',
+      icon: Copy,
+    },
+  ];
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="md">
       <ModalBackdrop />
       <ModalContent>
         <ModalHeader>
-          <Heading className="text-lg font-semibold">Template Actions</Heading>
-          <ModalCloseButton>
-            <Icon as={X} size="md" />
+          <Text className="text-lg font-semibold">Tek Actions</Text>
+          <ModalCloseButton onPress={onClose}>
+            <Icon as={X} />
           </ModalCloseButton>
         </ModalHeader>
         <ModalBody>
-          <VStack space="md">
-            <Text className="text-sm text-typography-600">
+          <VStack space="lg">
+            <Text className="text-typography-600">
               What would you like to do with "{template.name}"?
             </Text>
 
             {isMonotub && (
-              <>
-                <Button variant="outline" className="w-full" onPress={handleUseForNewGrow}>
-                  <ButtonText>Use for New Grow</ButtonText>
-                </Button>
-
-                <Button variant="outline" className="w-full" onPress={handleCopyToNewTek}>
-                  <ButtonText>Copy to New Tek</ButtonText>
-                </Button>
-              </>
+              <VStack space="md">
+                {actions.map((action) => (
+                  <Pressable
+                    key={action.id}
+                    onPress={() => setSelectedAction(action.id)}
+                    className="flex-row items-center justify-between rounded-lg border border-outline-200 p-4">
+                    <HStack className="items-center" space="sm">
+                      <Icon as={action.icon} className="text-typography-600" size="sm" />
+                      <Text className="text-typography-900">{action.label}</Text>
+                    </HStack>
+                    {selectedAction === action.id && (
+                      <Icon as={Check} className="text-success-600" size="sm" />
+                    )}
+                  </Pressable>
+                ))}
+              </VStack>
             )}
 
             {!isMonotub && (
-              <Text className="text-center text-sm text-typography-500">
+              <Text className="text-center text-typography-500">
                 This template is not a monotub template. Actions are only available for monotub
                 templates.
               </Text>
@@ -81,9 +103,14 @@ export const TemplateActionModal: React.FC<TemplateActionModalProps> = ({
           </VStack>
         </ModalBody>
         <ModalFooter>
-          <Button variant="outline" onPress={onClose}>
-            <ButtonText>Cancel</ButtonText>
-          </Button>
+          <HStack space="sm" className="w-full justify-end">
+            <Button variant="outline" onPress={onClose}>
+              <ButtonText>Cancel</ButtonText>
+            </Button>
+            <Button action="positive" onPress={handleConfirm} isDisabled={!selectedAction}>
+              <ButtonText className="text-white">Confirm</ButtonText>
+            </Button>
+          </HStack>
         </ModalFooter>
       </ModalContent>
     </Modal>

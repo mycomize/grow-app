@@ -5,7 +5,7 @@ import { Text } from '~/components/ui/text';
 import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
-import { Plus, Edit2, Trash2, Thermometer } from 'lucide-react-native';
+import { Plus, Edit2, Trash2, Thermometer, Copy } from 'lucide-react-native';
 import { EnvironmentalCondition } from '~/lib/templateTypes';
 import { EnvironmentalConditionModal } from './modals/EnvironmentalConditionModal';
 import { DeleteConfirmationModal } from './modals/DeleteConfirmationModal';
@@ -50,6 +50,15 @@ export const EnvironmentalConditionsList: React.FC<EnvironmentalConditionsListPr
     }
   };
 
+  const handleCopyCondition = (condition: EnvironmentalCondition) => {
+    const newCondition: EnvironmentalCondition = {
+      ...condition,
+      id: Date.now().toString(), // Generate a new ID
+      name: `${condition.name}`,
+    };
+    onUpdateConditions([...conditions, newCondition]);
+  };
+
   const handleConfirmDelete = () => {
     if (conditionToDelete) {
       const updatedConditions = conditions.filter((c) => c.id !== conditionToDelete.id);
@@ -80,7 +89,7 @@ export const EnvironmentalConditionsList: React.FC<EnvironmentalConditionsListPr
           </Text>
         </VStack>
       ) : (
-        <VStack space="xs">
+        <VStack space="md">
           {conditions.map((condition) => (
             <VStack
               key={condition.id}
@@ -99,13 +108,16 @@ export const EnvironmentalConditionsList: React.FC<EnvironmentalConditionsListPr
                   </HStack>
                 </VStack>
                 <HStack space="lg">
+                  <Pressable onPress={() => handleCopyCondition(condition)} className="rounded p-2">
+                    <Icon as={Copy} className="text-typography-500" size="sm" />
+                  </Pressable>
                   <Pressable onPress={() => handleEditCondition(condition)} className="rounded p-2">
                     <Icon as={Edit2} className="text-typography-500" size="sm" />
                   </Pressable>
                   <Pressable
                     onPress={() => handleDeleteCondition(condition)}
                     className="rounded p-2">
-                    <Icon as={Trash2} className="text-error-600" size="sm" />
+                    <Icon as={Trash2} className="text-typography-500" size="sm" />
                   </Pressable>
                 </HStack>
               </HStack>

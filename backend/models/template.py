@@ -28,7 +28,7 @@ class MonotubTekTemplate(Base):
     # Expected structure:
     # {
     #   "inoculation": {
-    #     "materials": [{"id": "...", "description": "...", "vendor": "...", "quantity": "...", "url": "..."}],
+    #     "items": [{"id": "...", "description": "...", "vendor": "...", "quantity": "...", "url": "..."}],
     #     "environmentalConditions": [{"id": "...", "name": "...", "type": "...", "lowerBound": 0, "upperBound": 0, "unit": "..."}],
     #     "tasks": [{"id": "...", "action": "...", "frequency": "...", "daysAfterStageStart": 0}],
     #     "notes": "..."

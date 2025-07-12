@@ -1,5 +1,5 @@
 import { Tabs, useRouter, useSegments } from 'expo-router';
-import { CircuitBoard, User, Beaker, Layers } from 'lucide-react-native';
+import { CircuitBoard, User, FlaskConical, Layers } from 'lucide-react-native';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
 import MushroomIcon from '~/components/icons/MushroomIcon';
 
@@ -93,7 +93,7 @@ export default function TabLayout() {
         options={{
           title: 'Lab',
           tabBarLabel: 'Lab',
-          tabBarIcon: ({ color }) => <Beaker color={color} />,
+          tabBarIcon: ({ color }) => <FlaskConical color={color} />,
           headerShown: false,
         }}
       />

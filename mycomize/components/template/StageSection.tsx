@@ -5,12 +5,12 @@ import { Button } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Package, Thermometer, CheckSquare, FileText } from 'lucide-react-native';
 import { StageData } from '~/lib/templateTypes';
-import { MaterialsList } from './MaterialsList';
+import { ItemsList } from './ItemsList';
 import { EnvironmentalConditionsList } from './EnvironmentalConditionsList';
 import { TasksList } from './TasksList';
 import { StageNotes } from './StageNotes';
 
-type TabType = 'materials' | 'conditions' | 'tasks' | 'notes';
+type TabType = 'items' | 'conditions' | 'tasks' | 'notes';
 
 interface StageSectionProps {
   stageData: StageData;
@@ -18,12 +18,12 @@ interface StageSectionProps {
 }
 
 export const StageSection: React.FC<StageSectionProps> = ({ stageData, onUpdateStageData }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('materials');
+  const [activeTab, setActiveTab] = useState<TabType>('items');
 
-  const handleUpdateMaterials = (materials: typeof stageData.materials) => {
+  const handleUpdateItems = (items: typeof stageData.items) => {
     onUpdateStageData({
       ...stageData,
-      materials,
+      items,
     });
   };
 
@@ -51,14 +51,14 @@ export const StageSection: React.FC<StageSectionProps> = ({ stageData, onUpdateS
   };
 
   const tabs = [
-    { id: 'materials' as TabType, icon: Package },
+    { id: 'items' as TabType, icon: Package },
     { id: 'conditions' as TabType, icon: Thermometer },
     { id: 'tasks' as TabType, icon: CheckSquare },
     { id: 'notes' as TabType, icon: FileText },
   ];
 
   return (
-    <VStack space="md" className="p-2">
+    <VStack space="md" className="p-0">
       {/* Tab Buttons */}
       <HStack space="xs" className="mb-2 justify-center">
         {tabs.map((tab) => (
@@ -83,11 +83,8 @@ export const StageSection: React.FC<StageSectionProps> = ({ stageData, onUpdateS
 
       {/* Tab Content */}
       <VStack space="md">
-        {activeTab === 'materials' && (
-          <MaterialsList
-            materials={stageData.materials}
-            onUpdateMaterials={handleUpdateMaterials}
-          />
+        {activeTab === 'items' && (
+          <ItemsList items={stageData.items} onUpdateItems={handleUpdateItems} />
         )}
         {activeTab === 'conditions' && (
           <EnvironmentalConditionsList

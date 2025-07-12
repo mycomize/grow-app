@@ -24,7 +24,7 @@ class Task(BaseModel):
     daysAfterStageStart: int
 
 class StageData(BaseModel):
-    materials: List[Material] = []
+    items: List[Material] = []
     environmentalConditions: List[EnvironmentalCondition] = []
     tasks: List[Task] = []
     notes: str = ""

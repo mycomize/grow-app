@@ -188,7 +188,7 @@ export const EnvironmentalConditionModal: React.FC<EnvironmentalConditionModalPr
           <VStack space="md">
             {/* Name */}
             <VStack space="xs">
-              <Text className="font-medium">Name *</Text>
+              <Text className="font-medium">Name</Text>
               <Input className={errors.name ? 'border-error-500' : ''}>
                 <InputField
                   placeholder="e.g., Max incubator temperature"
@@ -201,7 +201,7 @@ export const EnvironmentalConditionModal: React.FC<EnvironmentalConditionModalPr
 
             {/* Type */}
             <VStack space="xs">
-              <Text className="font-medium">Type *</Text>
+              <Text className="font-medium">Type</Text>
               <Pressable
                 onPress={() => {
                   setTempSelectedType(formData.type);
@@ -216,7 +216,7 @@ export const EnvironmentalConditionModal: React.FC<EnvironmentalConditionModalPr
 
             {/* Lower Bound */}
             <VStack space="xs">
-              <Text className="font-medium">Lower Bound *</Text>
+              <Text className="font-medium">Lower Bound</Text>
               <Input className={errors.lowerBound ? 'border-error-500' : ''}>
                 <InputField
                   placeholder="e.g., 68, 85, 1000"
@@ -232,7 +232,7 @@ export const EnvironmentalConditionModal: React.FC<EnvironmentalConditionModalPr
 
             {/* Upper Bound */}
             <VStack space="xs">
-              <Text className="font-medium">Upper Bound *</Text>
+              <Text className="font-medium">Upper Bound</Text>
               <Input className={errors.upperBound ? 'border-error-500' : ''}>
                 <InputField
                   placeholder="e.g., 72, 90, 2000"
@@ -248,7 +248,7 @@ export const EnvironmentalConditionModal: React.FC<EnvironmentalConditionModalPr
 
             {/* Unit */}
             <VStack space="xs">
-              <Text className="font-medium">Unit *</Text>
+              <Text className="font-medium">Unit</Text>
               <Pressable
                 onPress={() => {
                   setTempSelectedUnit(formData.unit);

@@ -34,6 +34,7 @@ export function TagManager({
             onChangeText={onTagInputChange}
             onSubmitEditing={onAddTag}
             autoCapitalize={'none'}
+            maxLength={50}
           />
         </Input>
         <Button size="sm" variant="outline" onPress={onAddTag}>

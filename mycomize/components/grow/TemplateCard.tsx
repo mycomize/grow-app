@@ -32,6 +32,7 @@ interface TemplateCardProps {
   onConvertToGrow: (template: MonotubTekTemplate) => void;
   onUseForNewGrow: (template: MonotubTekTemplate) => void;
   onCopyToNewTek: (template: MonotubTekTemplate) => void;
+  onTagPress?: (tag: string) => void;
 }
 
 export const TemplateCard: React.FC<TemplateCardProps> = ({
@@ -43,6 +44,7 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
   onConvertToGrow,
   onUseForNewGrow,
   onCopyToNewTek,
+  onTagPress,
 }) => {
   const [cachedImage, setCachedImage] = useState<string | null>(null);
   const [showPopover, setShowPopover] = useState(false);
@@ -171,7 +173,7 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
                 <PopoverContent>
                   <PopoverBody>
                     <Text className="text-sm text-typography-500">
-                      This template is public and can be used by other users.
+                      This tek is public and can be viewd and used by other users.
                     </Text>
                   </PopoverBody>
                 </PopoverContent>
@@ -196,7 +198,7 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
                 <PopoverContent>
                   <PopoverBody>
                     <Text className="text-sm text-typography-500">
-                      This template is private and can only be used by the creator.
+                      This tek is private and can only be viewed and used by you.
                     </Text>
                   </PopoverBody>
                 </PopoverContent>
@@ -229,9 +231,13 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
           {template.tags && template.tags.length > 0 && (
             <VStack className="mb-4" space="xs">
               <HStack space="xs" className="flex-wrap items-center">
-                <Icon as={Tag} size="md" className="mr-2 text-typography-300" />
                 {template.tags.slice(0, 3).map((tag, index) => (
-                  <InfoBadge key={index} text={tag} variant="default" size="sm" />
+                  <Pressable
+                    key={index}
+                    onPress={() => onTagPress?.(tag)}
+                    className="rounded-md px-0 py-0.5">
+                    <Text className="text-md text-blue-400">#{tag}</Text>
+                  </Pressable>
                 ))}
                 {template.tags.length > 3 && (
                   <Text className="text-xs text-typography-400">
