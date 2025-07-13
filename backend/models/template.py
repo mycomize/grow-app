@@ -3,9 +3,9 @@ from sqlalchemy import Column, Integer, String, Text, Boolean, Float, JSON, Fore
 from sqlalchemy.orm import relationship
 from backend.database import Base
 
-class MonotubTekTemplate(Base):
-    """Template model for monotub bulk substrate tek templates"""
-    __tablename__ = "monotub_tek_templates"
+class BulkGrowTekTemplate(Base):
+    """Template model for bulk_grow bulk substrate tek templates"""
+    __tablename__ = "bulk_grow_tek_templates"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(128), nullable=False)
@@ -14,7 +14,7 @@ class MonotubTekTemplate(Base):
     variant = Column(String(64), nullable=True)
     
     # Tek type - matches frontend field name
-    type = Column(String(64), nullable=False, default="Monotub", index=True)
+    type = Column(String(64), nullable=False, default="BulkGrow", index=True)
     tags = Column(JSON, nullable=True)  # Array of tags
     
     # Privacy and ownership - matches frontend field name

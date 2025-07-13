@@ -44,7 +44,6 @@ export const BasicsSection: React.FC<BasicsSectionProps> = ({ growData, updateFi
         </FormControlLabel>
         <Input>
           <InputField
-            placeholder="Enter grow name"
             value={growData.name || ''}
             onChangeText={(value) => updateField('name', value)}
           />
@@ -57,7 +56,6 @@ export const BasicsSection: React.FC<BasicsSectionProps> = ({ growData, updateFi
         </FormControlLabel>
         <Textarea>
           <TextareaInput
-            placeholder="Enter description for this grow"
             value={growData.description || ''}
             onChangeText={(value) => updateField('description', value)}
             style={{ textAlignVertical: 'top' }}
@@ -72,7 +70,6 @@ export const BasicsSection: React.FC<BasicsSectionProps> = ({ growData, updateFi
         </FormControlLabel>
         <Input>
           <InputField
-            placeholder="Enter species"
             value={growData.species || ''}
             onChangeText={(value) => updateField('species', value)}
           />
@@ -85,7 +82,6 @@ export const BasicsSection: React.FC<BasicsSectionProps> = ({ growData, updateFi
         </FormControlLabel>
         <Input>
           <InputField
-            placeholder="Enter strain"
             value={growData.variant || ''}
             onChangeText={(value) => updateField('variant', value)}
           />
@@ -98,7 +94,6 @@ export const BasicsSection: React.FC<BasicsSectionProps> = ({ growData, updateFi
         </FormControlLabel>
         <Input>
           <InputField
-            placeholder="Enter location of the grow"
             value={growData.space || ''}
             onChangeText={(value) => updateField('space', value)}
           />

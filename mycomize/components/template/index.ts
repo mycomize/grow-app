@@ -15,6 +15,6 @@ export { TemplateCardSkeleton } from './TemplateCardSkeleton';
 
 // Modal exports
 export { DeleteConfirmationModal } from './modals/DeleteConfirmationModal';
-export { MaterialModal } from './modals/MaterialModal';
+export { MaterialModal } from './modals/ItemModal';
 export { EnvironmentalConditionModal } from './modals/EnvironmentalConditionModal';
 export { TaskModal } from './modals/TaskModal';

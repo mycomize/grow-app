@@ -10,6 +10,7 @@ import { Icon } from '~/components/ui/icon';
 import { Input, InputField, InputIcon } from '~/components/ui/input';
 import { Pressable } from '~/components/ui/pressable';
 import { Card } from '~/components/ui/card';
+import MushroomIcon from '~/components/icons/MushroomIcon';
 import {
   Modal,
   ModalBackdrop,
@@ -230,11 +231,7 @@ export default function GrowScreen() {
         (grow.variant?.toLowerCase()?.includes(searchLower) ?? false) ||
         (grow.tek?.toLowerCase()?.includes(searchLower) ?? false) ||
         (grow.stage?.toLowerCase()?.includes(searchLower) ?? false) ||
-        (grow.status?.toLowerCase()?.includes(searchLower) ?? false) ||
-        (grow.notes?.toLowerCase()?.includes(searchLower) ?? false) ||
-        (grow.syringe_brand?.toLowerCase()?.includes(searchLower) ?? false) ||
-        (grow.spawn_type?.toLowerCase()?.includes(searchLower) ?? false) ||
-        (grow.bulk_type?.toLowerCase()?.includes(searchLower) ?? false);
+        (grow.status?.toLowerCase()?.includes(searchLower) ?? false);
 
       return matchesActiveFilter && matchesSearch;
     })
@@ -264,7 +261,8 @@ export default function GrowScreen() {
 
   return grows.length == 0 ? (
     <VStack className="flex-1 items-center justify-center gap-5 bg-background-50">
-      <Text className="text-lg">Add Your First Grow!</Text>
+      <MushroomIcon height={22} width={22} strokeWidth={2} color="#888888" />
+      <Text className="text-lg">Add your first grow to get started!</Text>
       <Button
         variant="solid"
         className="h-16 w-16 rounded-full"
@@ -272,7 +270,7 @@ export default function GrowScreen() {
         onPress={() => {
           router.push('/grows/new');
         }}>
-        <ButtonIcon as={PlusIcon} className="h-8 w-8 text-white" />
+        <ButtonIcon as={PlusIcon} className="h-6 w-6 text-white" />
       </Button>
     </VStack>
   ) : (

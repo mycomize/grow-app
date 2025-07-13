@@ -1,8 +1,8 @@
 """Initial migration
 
-Revision ID: 3c35259764a4
+Revision ID: 456dd6336083
 Revises: 
-Create Date: 2025-07-11 06:47:07.330522
+Create Date: 2025-07-12 18:18:28.055034
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '3c35259764a4'
+revision: str = '456dd6336083'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -35,6 +35,29 @@ def upgrade() -> None:
         batch_op.create_index(batch_op.f('ix_users_id'), ['id'], unique=False)
         batch_op.create_index(batch_op.f('ix_users_username'), ['username'], unique=True)
 
+    op.create_table('bulk_grow_tek_templates',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=128), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('species', sa.String(length=64), nullable=False),
+    sa.Column('variant', sa.String(length=64), nullable=True),
+    sa.Column('type', sa.String(length=64), nullable=False),
+    sa.Column('tags', sa.JSON(), nullable=True),
+    sa.Column('is_public', sa.Boolean(), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.Column('stages', sa.JSON(), nullable=True),
+    sa.Column('usage_count', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('bulk_grow_tek_templates', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_bulk_grow_tek_templates_id'), ['id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_bulk_grow_tek_templates_is_public'), ['is_public'], unique=False)
+        batch_op.create_index(batch_op.f('ix_bulk_grow_tek_templates_species'), ['species'], unique=False)
+        batch_op.create_index(batch_op.f('ix_bulk_grow_tek_templates_type'), ['type'], unique=False)
+
     op.create_table('grows',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=128), nullable=True),
@@ -54,26 +77,10 @@ def upgrade() -> None:
     sa.Column('harvest_date', sa.Date(), nullable=True),
     sa.Column('harvest_dry_weight_grams', sa.Float(), nullable=True),
     sa.Column('harvest_wet_weight_grams', sa.Float(), nullable=True),
-    sa.Column('syringe_vendor', sa.String(length=128), nullable=True),
-    sa.Column('syringe_volume_ml', sa.Float(), nullable=True),
-    sa.Column('syringe_cost', sa.Float(), nullable=True),
-    sa.Column('syringe_created_at', sa.Date(), nullable=True),
-    sa.Column('syringe_expiration_date', sa.Date(), nullable=True),
-    sa.Column('syringe_status', sa.String(length=64), nullable=True),
-    sa.Column('spawn_weight_lbs', sa.Float(), nullable=True),
-    sa.Column('spawn_cost', sa.Float(), nullable=True),
-    sa.Column('spawn_vendor', sa.String(length=128), nullable=True),
+    sa.Column('inoculation_status', sa.String(length=64), nullable=True),
     sa.Column('spawn_status', sa.String(length=64), nullable=True),
-    sa.Column('bulk_weight_lbs', sa.Float(), nullable=True),
-    sa.Column('bulk_cost', sa.Float(), nullable=True),
-    sa.Column('bulk_vendor', sa.String(length=128), nullable=True),
-    sa.Column('bulk_created_at', sa.Date(), nullable=True),
-    sa.Column('bulk_expiration_date', sa.Date(), nullable=True),
     sa.Column('bulk_status', sa.String(length=64), nullable=True),
-    sa.Column('fruiting_start_date', sa.Date(), nullable=True),
     sa.Column('fruiting_pin_date', sa.Date(), nullable=True),
-    sa.Column('fruiting_mist_frequency', sa.String(length=64), nullable=True),
-    sa.Column('fruiting_fan_frequency', sa.String(length=64), nullable=True),
     sa.Column('fruiting_status', sa.String(length=64), nullable=True),
     sa.Column('predicted_full_spawn_colonization', sa.Date(), nullable=True),
     sa.Column('predicted_full_bulk_colonization', sa.Date(), nullable=True),
@@ -126,28 +133,18 @@ def upgrade() -> None:
     with op.batch_alter_table('inventory_items', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_inventory_items_id'), ['id'], unique=False)
 
-    op.create_table('monotub_tek_templates',
+    op.create_table('harvest_flushes',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(length=128), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('species', sa.String(length=64), nullable=False),
-    sa.Column('variant', sa.String(length=64), nullable=True),
-    sa.Column('type', sa.String(length=64), nullable=False),
-    sa.Column('tags', sa.JSON(), nullable=True),
-    sa.Column('is_public', sa.Boolean(), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.Column('updated_at', sa.DateTime(), nullable=True),
-    sa.Column('stages', sa.JSON(), nullable=True),
-    sa.Column('usage_count', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.Column('grow_id', sa.Integer(), nullable=False),
+    sa.Column('harvest_date', sa.Date(), nullable=True),
+    sa.Column('wet_weight_grams', sa.Float(), nullable=True),
+    sa.Column('dry_weight_grams', sa.Float(), nullable=True),
+    sa.Column('concentration_mg_per_gram', sa.Float(), nullable=True),
+    sa.ForeignKeyConstraint(['grow_id'], ['grows.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('monotub_tek_templates', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_monotub_tek_templates_id'), ['id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_monotub_tek_templates_is_public'), ['is_public'], unique=False)
-        batch_op.create_index(batch_op.f('ix_monotub_tek_templates_species'), ['species'], unique=False)
-        batch_op.create_index(batch_op.f('ix_monotub_tek_templates_type'), ['type'], unique=False)
+    with op.batch_alter_table('harvest_flushes', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_harvest_flushes_id'), ['id'], unique=False)
 
     op.create_table('iot_gateways',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -202,13 +199,10 @@ def downgrade() -> None:
         batch_op.drop_index(batch_op.f('ix_iot_gateways_id'))
 
     op.drop_table('iot_gateways')
-    with op.batch_alter_table('monotub_tek_templates', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_monotub_tek_templates_type'))
-        batch_op.drop_index(batch_op.f('ix_monotub_tek_templates_species'))
-        batch_op.drop_index(batch_op.f('ix_monotub_tek_templates_is_public'))
-        batch_op.drop_index(batch_op.f('ix_monotub_tek_templates_id'))
+    with op.batch_alter_table('harvest_flushes', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_harvest_flushes_id'))
 
-    op.drop_table('monotub_tek_templates')
+    op.drop_table('harvest_flushes')
     with op.batch_alter_table('inventory_items', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_inventory_items_id'))
 
@@ -217,6 +211,13 @@ def downgrade() -> None:
         batch_op.drop_index(batch_op.f('ix_grows_id'))
 
     op.drop_table('grows')
+    with op.batch_alter_table('bulk_grow_tek_templates', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_bulk_grow_tek_templates_type'))
+        batch_op.drop_index(batch_op.f('ix_bulk_grow_tek_templates_species'))
+        batch_op.drop_index(batch_op.f('ix_bulk_grow_tek_templates_is_public'))
+        batch_op.drop_index(batch_op.f('ix_bulk_grow_tek_templates_id'))
+
+    op.drop_table('bulk_grow_tek_templates')
     with op.batch_alter_table('users', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_users_username'))
         batch_op.drop_index(batch_op.f('ix_users_id'))

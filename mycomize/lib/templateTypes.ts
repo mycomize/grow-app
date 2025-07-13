@@ -4,6 +4,9 @@ export interface Item {
   vendor: string;
   quantity: string; // Free-form text (e.g., "2 lbs", "500ml", "1 bag")
   url: string;
+  cost?: string;
+  createdDate?: string; // ISO date string
+  expirationDate?: string; // ISO date string
 }
 
 export interface EnvironmentalCondition {
@@ -29,13 +32,13 @@ export interface StageData {
   notes: string;
 }
 
-export interface MonotubTekTemplateData {
+export interface BulkGrowTekTemplateData {
   // Basic info
   name: string;
   description: string;
   species: string;
   variant: string;
-  type: string; // e.g., "Monotub", "Shoebox", "Martha Tent"
+  type: string; // e.g., "BulkGrow", "Shoebox", "Martha Tent"
   is_public: boolean;
   tags: string[];
 
@@ -49,7 +52,7 @@ export interface MonotubTekTemplateData {
   };
 }
 
-export const MONOTUB_TEK_STAGES = {
+export const BULK_GROW_TEK_STAGES = {
   inoculation: 'Inoculation',
   spawnColonization: 'Spawn Colonization',
   bulkColonization: 'Bulk Colonization',
@@ -57,13 +60,10 @@ export const MONOTUB_TEK_STAGES = {
   harvest: 'Harvest',
 } as const;
 
-export type MonotubCultivationStage = keyof typeof MONOTUB_TEK_STAGES;
+export type BulkGrowCultivationStage = keyof typeof BULK_GROW_TEK_STAGES;
 
 export const TEK_TYPES = {
-  monotub: 'Monotub',
-  // Future tek types can be added here
-  // shoebox: 'Shoebox',
-  // martha: 'Martha Tent',
+  bulk_grow: 'Bulk Grow',
 } as const;
 
 export type TekType = keyof typeof TEK_TYPES;
@@ -95,12 +95,12 @@ export const createEmptyStageData = (): StageData => ({
 });
 
 // Helper function to create empty template data
-export const createEmptyTemplateData = (): MonotubTekTemplateData => ({
+export const createEmptyTemplateData = (): BulkGrowTekTemplateData => ({
   name: '',
   description: '',
   species: '',
   variant: '',
-  type: 'Monotub', // Default to Monotub
+  type: 'Bulk Grow', // Default to BulkGrow
   is_public: false,
   tags: [],
   stages: {
@@ -113,7 +113,7 @@ export const createEmptyTemplateData = (): MonotubTekTemplateData => ({
 });
 
 // Template interface for API responses
-export interface MonotubTekTemplate {
+export interface BulkGrowTekTemplate {
   id: number;
   name: string;
   description?: string;

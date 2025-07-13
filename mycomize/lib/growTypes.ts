@@ -31,41 +31,24 @@ export interface Grow {
   fruiting_start_date?: string;
   harvest_date?: string;
 
-  // New unified fields from the enhanced model
-  syringe_brand?: string;
-  syringe_type?: string;
-  syringe_cost?: number;
-  syringe_vendor?: string;
-  syringe_created_at?: string;
-  syringe_expiration_date?: string;
-
-  spawn_weight_lbs?: number;
-  spawn_cost?: number;
-  spawn_vendor?: string;
-  spawn_created_at?: string;
-  spawn_expiration_date?: string;
-
-  bulk_weight_lbs?: number;
-  bulk_cost?: number;
-  bulk_vendor?: string;
-  bulk_created_at?: string;
-  bulk_expiration_date?: string;
-
+  // Updated fields after simplification
+  inoculation_status?: string;
+  spawn_status?: string;
+  bulk_status?: string;
   fruiting_pin_date?: string;
-  fruiting_mist_frequency?: string;
-  fruiting_fan_frequency?: string;
+  fruiting_status?: string;
 
   harvest_flushes?: any[];
 }
 
 // Grow tek options - must match backend enum values
 export const growTeks = {
-  MONOTUB: 'Monotub',
+  BULK_GROW: 'Bulk Grow',
 };
 
 // Human-readable tek names
 export const tekLabels = {
-  [growTeks.MONOTUB]: 'Monotub',
+  [growTeks.BULK_GROW]: 'Bulk Grow',
 };
 
 // Grow status options - must match backend enum values

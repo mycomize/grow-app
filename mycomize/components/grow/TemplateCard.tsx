@@ -20,18 +20,18 @@ import { Alert } from 'react-native';
 import { RefreshCw, Clock, Eye, Users, Tag, Trash2, Lock, SquarePen } from 'lucide-react-native';
 import { InfoBadge } from '~/components/ui/info-badge';
 import { getCachedProfileImage, cacheProfileImage } from '~/lib/imageCache';
-import { MonotubTekTemplate } from '~/lib/templateTypes';
+import { BulkGrowTekTemplate } from '~/lib/templateTypes';
 import { TemplateActionModal } from '~/components/template/modals/TemplateActionModal';
 
 interface TemplateCardProps {
-  template: MonotubTekTemplate;
-  onPress: (template: MonotubTekTemplate) => void;
-  onUseTemplate: (template: MonotubTekTemplate) => void;
-  onDelete: (template: MonotubTekTemplate) => void;
-  onEdit: (template: MonotubTekTemplate) => void;
-  onConvertToGrow: (template: MonotubTekTemplate) => void;
-  onUseForNewGrow: (template: MonotubTekTemplate) => void;
-  onCopyToNewTek: (template: MonotubTekTemplate) => void;
+  template: BulkGrowTekTemplate;
+  onPress: (template: BulkGrowTekTemplate) => void;
+  onUseTemplate: (template: BulkGrowTekTemplate) => void;
+  onDelete: (template: BulkGrowTekTemplate) => void;
+  onEdit: (template: BulkGrowTekTemplate) => void;
+  onConvertToGrow: (template: BulkGrowTekTemplate) => void;
+  onUseForNewGrow: (template: BulkGrowTekTemplate) => void;
+  onCopyToNewTek: (template: BulkGrowTekTemplate) => void;
   onTagPress?: (tag: string) => void;
 }
 

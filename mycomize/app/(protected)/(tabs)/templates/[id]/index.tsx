@@ -6,7 +6,7 @@ import { Spinner } from '~/components/ui/spinner';
 
 import { AuthContext } from '~/lib/AuthContext';
 import { getBackendUrl } from '~/lib/backendUrl';
-import { MonotubTekTemplateData, MonotubTekTemplate } from '~/lib/templateTypes';
+import { BulkGrowTekTemplateData, BulkGrowTekTemplate } from '~/lib/templateTypes';
 import { useTemplateFormLogic } from '~/lib/useTemplateFormLogic';
 import { TemplateForm } from '~/components/template/TemplateForm';
 
@@ -15,7 +15,7 @@ export default function EditTemplateScreen() {
   const { token } = useContext(AuthContext);
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-  const [loadedTemplateData, setLoadedTemplateData] = useState<MonotubTekTemplateData | null>(null);
+  const [loadedTemplateData, setLoadedTemplateData] = useState<BulkGrowTekTemplateData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Load template data
@@ -26,7 +26,7 @@ export default function EditTemplateScreen() {
     setError(null);
 
     try {
-      const response = await fetch(`${getBackendUrl()}/monotub-tek-templates/${id}`, {
+      const response = await fetch(`${getBackendUrl()}/bulk-grow-tek-templates/${id}`, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -44,10 +44,10 @@ export default function EditTemplateScreen() {
         throw new Error('Failed to load template');
       }
 
-      const template: MonotubTekTemplate = await response.json();
+      const template: BulkGrowTekTemplate = await response.json();
 
       // Convert template to editable format
-      const editableTemplate: MonotubTekTemplateData = {
+      const editableTemplate: BulkGrowTekTemplateData = {
         name: template.name,
         description: template.description || '',
         species: template.species,

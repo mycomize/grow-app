@@ -75,7 +75,6 @@ async def create_grow(
         tek=grow.tek,
         stage=grow.stage,
         status=grow.status,
-        notes=grow.notes,
         cost=grow.cost,
         harvest_date=grow.harvest_date,
         harvest_dry_weight_grams=grow.harvest_dry_weight_grams,
@@ -197,20 +196,12 @@ async def get_optimal_conditions(
     if not grow.variant:
         raise HTTPException(status_code=400, detail="Variant is required for milestone prediction")
     
-    if not grow.spawn_type:
-        raise HTTPException(status_code=400, detail="Spawn type is required for milestone prediction")
-    
-    if not grow.bulk_type:
-        raise HTTPException(status_code=400, detail="Bulk type is required for milestone prediction")
-    
     # Prepare input parameters
     species = grow.species
     variant = grow.variant or "standard"
-    spawn_type = grow.spawn_type
-    bulk_type = grow.bulk_type
     
     # Generate hash of current inputs
-    current_hash = generate_input_hash(species, variant, spawn_type, bulk_type)
+    current_hash = generate_input_hash(species, variant)
     
     # Check if we have cached conditions with the same input hash
     if (grow.conditions_inputs_hash and 
@@ -266,12 +257,10 @@ async def get_optimal_conditions(
     Always provide dates in YYYY-MM-DD format and ensure logical progression."""
     
     # User prompt for AI predictions
-    user_prompt = f"""Based on the following mushroom monotub grow parameters:
+    user_prompt = f"""Based on the following mushroom bulk_grow grow parameters:
 
 Species: {species}
 Variant: {variant}
-Spawn Type: {spawn_type}
-Bulk Type: {bulk_type}
 
 Provide the optimal temperature range for spawn colonization as a decimal number in Fahrenheit for the following fields:
 "optimal_spawn_temp_low": Lower bound of the optimal temperature range for spawn colonization
@@ -362,24 +351,16 @@ async def get_grow_milestones(
     if not grow.variant:
         raise HTTPException(status_code=400, detail="Variant is required for milestone prediction")
     
-    if not grow.spawn_type:
-        raise HTTPException(status_code=400, detail="Spawn type is required for milestone prediction")
-    
-    if not grow.bulk_type:
-        raise HTTPException(status_code=400, detail="Bulk type is required for milestone prediction")
-    
     if not grow.inoculation_date:
         raise HTTPException(status_code=400, detail="Inoculation date is required for milestone prediction")
     
     # Prepare input parameters
     species = grow.species
     variant = grow.variant or "standard"
-    spawn_type = grow.spawn_type
-    bulk_type = grow.bulk_type
     inoculation_date = grow.inoculation_date.strftime("%Y-%m-%d")
     
     # Generate hash of current inputs
-    current_hash = generate_input_hash(species, variant, spawn_type, bulk_type, inoculation_date)
+    current_hash = generate_input_hash(species, variant, inoculation_date)
     
     # Check if we have cached predictions with the same input hash
     if (grow.prediction_inputs_hash and 
@@ -414,8 +395,6 @@ async def get_grow_milestones(
 
 Species: {species}
 Variant: {variant}
-Spawn Type: {spawn_type}
-Bulk Type: {bulk_type}
 Inoculation Date: {inoculation_date}
 
 Provide date predictions for the following fields:
@@ -424,7 +403,7 @@ Provide date predictions for the following fields:
 "first_harvest_date": This is the date when the harvest of the first flush can be expected
 
 Assume optimal growing conditions throughout the grow based on the provided parameters
-and consider typical cultivation timelines for this species, variety, spawn type, bulk substrate type.
+and consider typical cultivation timelines for this species and variety.
 Ensure dates progress logically from the inoculation date. Skip the preamble in your response and only 
 return the JSON object with the provided fields."""
 

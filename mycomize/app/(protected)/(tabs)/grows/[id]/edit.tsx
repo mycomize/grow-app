@@ -120,7 +120,7 @@ export default function GrowEditScreen() {
   const { theme } = useTheme();
 
   const [growData, setGrowData] = useState<GrowData>({
-    tek: 'Monotub',
+    tek: 'Bulk Grow',
     stage: 'spawn_colonization',
     current_stage: undefined,
     status: 'growing',
@@ -171,12 +171,15 @@ export default function GrowEditScreen() {
       const fetchTemplate = async () => {
         setIsLoading(true);
         try {
-          const response = await fetch(`${getBackendUrl()}/monotub-tek-templates/${fromTemplate}`, {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-          });
+          const response = await fetch(
+            `${getBackendUrl()}/bulk-grow-tek-templates/${fromTemplate}`,
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
 
           if (!response.ok) {
             if (response.status === 401) {
@@ -188,7 +191,7 @@ export default function GrowEditScreen() {
 
           const templateData = await response.json();
 
-          // Populate grow data from template
+          // Populate grow data from template - copy all basic tek template fields
           setGrowData((prev) => ({
             ...prev,
             name: `${templateData.name} Grow`,
@@ -196,6 +199,7 @@ export default function GrowEditScreen() {
             species: templateData.species || '',
             variant: templateData.variant || '',
             tags: templateData.tags || [],
+            tek: templateData.type || 'Bulk Grow', // Set tek from template type
             // Keep space empty for user input
             space: '',
           }));

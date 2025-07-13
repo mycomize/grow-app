@@ -8,7 +8,7 @@ from .routers.auth import router as auth_router
 from .routers.grow import router as grow_router
 from .routers.iot import router as iot_router
 from .routers.inventory import router as inventory_router
-from .routers.monotub_tek_template import router as template_router
+from .routers.bulk_grow_tek_template import router as template_router
 
 app = FastAPI(title="Mycomize Grow API")
 

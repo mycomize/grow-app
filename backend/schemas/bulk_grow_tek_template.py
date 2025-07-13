@@ -36,12 +36,12 @@ class Stages(BaseModel):
     fruiting: StageData
     harvest: StageData
 
-class MonotubTekTemplateBase(BaseModel):
+class BulkGrowTekTemplateBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=128)
     description: Optional[str] = None
     species: str = Field(..., min_length=1, max_length=64)
     variant: Optional[str] = Field(None, max_length=64)
-    type: str = Field(default="Monotub", max_length=64)
+    type: str = Field(default="BulkGrow", max_length=64)
     tags: Optional[List[str]] = []
     
     # Template visibility
@@ -50,12 +50,12 @@ class MonotubTekTemplateBase(BaseModel):
     # Stage-based data structure
     stages: Stages
 
-class MonotubTekTemplateCreate(MonotubTekTemplateBase):
-    """Schema for creating a new monotub tek template"""
+class BulkGrowTekTemplateCreate(BulkGrowTekTemplateBase):
+    """Schema for creating a new bulk_grow tek template"""
     pass
 
-class MonotubTekTemplateUpdate(BaseModel):
-    """Schema for updating a monotub tek template"""
+class BulkGrowTekTemplateUpdate(BaseModel):
+    """Schema for updating a bulk_grow tek template"""
     name: Optional[str] = Field(None, min_length=1, max_length=128)
     description: Optional[str] = None
     species: Optional[str] = Field(None, min_length=1, max_length=64)
@@ -67,8 +67,8 @@ class MonotubTekTemplateUpdate(BaseModel):
     
     stages: Optional[Stages] = None
 
-class MonotubTekTemplate(MonotubTekTemplateBase):
-    """Schema for returning a monotub tek template"""
+class BulkGrowTekTemplate(BulkGrowTekTemplateBase):
+    """Schema for returning a bulk_grow tek template"""
     id: int
     created_by: int
     created_at: datetime
@@ -79,8 +79,8 @@ class MonotubTekTemplate(MonotubTekTemplateBase):
     class Config:
         from_attributes = True
 
-class MonotubTekTemplateListItem(BaseModel):
-    """Simplified monotub tek template schema for list views (performance)"""
+class BulkGrowTekTemplateListItem(BaseModel):
+    """Simplified bulk_grow tek template schema for list views (performance)"""
     id: int
     name: str
     description: Optional[str]
@@ -98,8 +98,8 @@ class MonotubTekTemplateListItem(BaseModel):
     class Config:
         from_attributes = True
 
-class MonotubTekTemplateSearchFilters(BaseModel):
-    """Schema for monotub tek template search filters"""
+class BulkGrowTekTemplateSearchFilters(BaseModel):
+    """Schema for bulk_grow tek template search filters"""
     species: Optional[str] = None
     tags: Optional[List[str]] = None
     is_public: Optional[bool] = True

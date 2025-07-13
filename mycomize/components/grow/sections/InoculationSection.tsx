@@ -3,6 +3,7 @@ import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Button } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
+import { Input, InputField, InputIcon, InputSlot } from '~/components/ui/input';
 import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
 import {
   Select,
@@ -16,7 +17,15 @@ import {
   SelectDragIndicator,
   SelectItem,
 } from '~/components/ui/select';
-import { Package, Thermometer, CheckSquare, FileText, ChevronDown } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import {
+  Package,
+  Thermometer,
+  CheckSquare,
+  FileText,
+  CalendarDays,
+  ChevronDown,
+} from 'lucide-react-native';
 
 // Import template components
 import { ItemsList } from '~/components/template/ItemsList';
@@ -30,10 +39,11 @@ import { StageData } from '~/lib/templateTypes';
 type TabType = 'items' | 'conditions' | 'tasks' | 'notes';
 
 interface GrowData {
-  bulk_status?: string;
+  inoculation_date?: string;
+  inoculation_status?: string;
 }
 
-interface BulkSectionProps {
+interface InoculationSectionProps {
   growData: GrowData;
   updateField: (field: string, value: any) => void;
   activeDatePicker: string | null;
@@ -46,9 +56,13 @@ interface BulkSectionProps {
   onUpdateStageData?: (stageData: any) => void;
 }
 
-export const BulkSection: React.FC<BulkSectionProps> = ({
+export const InoculationSection: React.FC<InoculationSectionProps> = ({
   growData,
   updateField,
+  activeDatePicker,
+  setActiveDatePicker,
+  handleDateChange,
+  parseDate,
   stageData,
   onUpdateStageData,
 }) => {
@@ -152,18 +166,40 @@ export const BulkSection: React.FC<BulkSectionProps> = ({
         )}
       </VStack>
 
-      {/* Bulk-specific fields */}
+      {/* Inoculation-specific fields */}
       <VStack space="md" className="mt-6 border-t border-background-200 pt-4">
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Inoculation Date</FormControlLabelText>
+          </FormControlLabel>
+          <Input isReadOnly>
+            <InputField
+              value={parseDate(growData.inoculation_date)?.toDateString() || 'Select date'}
+              className={!growData.inoculation_date ? 'text-typography-400' : ''}
+            />
+            <InputSlot onPress={() => setActiveDatePicker('inoculation_date')}>
+              <Icon as={CalendarDays} className="mr-3 text-typography-400" />
+            </InputSlot>
+          </Input>
+          {activeDatePicker === 'inoculation_date' && (
+            <DateTimePicker
+              value={parseDate(growData.inoculation_date) || new Date()}
+              mode="date"
+              onChange={(event, date) => handleDateChange('inoculation_date', date, event)}
+            />
+          )}
+        </FormControl>
+
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText>Status</FormControlLabelText>
           </FormControlLabel>
           <Select
-            selectedValue={growData.bulk_status}
-            onValueChange={(value) => updateField('bulk_status', value)}>
+            selectedValue={growData.inoculation_status}
+            onValueChange={(value) => updateField('inoculation_status', value)}>
             <SelectTrigger variant="outline" size="md">
               <SelectInput
-                value={growData.bulk_status}
+                value={growData.inoculation_status}
                 placeholder="Select status"
                 className="mt-1 placeholder:text-sm"
               />

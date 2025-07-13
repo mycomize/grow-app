@@ -3,6 +3,7 @@ import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Button } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
+import { Input, InputField, InputIcon, InputSlot } from '~/components/ui/input';
 import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
 import {
   Select,
@@ -16,7 +17,16 @@ import {
   SelectDragIndicator,
   SelectItem,
 } from '~/components/ui/select';
-import { Package, Thermometer, CheckSquare, FileText, ChevronDown } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import {
+  Package,
+  Thermometer,
+  CheckSquare,
+  FileText,
+  CalendarDays,
+  DollarSign,
+  ChevronDown,
+} from 'lucide-react-native';
 
 // Import template components
 import { ItemsList } from '~/components/template/ItemsList';
@@ -29,28 +39,48 @@ import { StageData } from '~/lib/templateTypes';
 
 type TabType = 'items' | 'conditions' | 'tasks' | 'notes';
 
-interface GrowData {
-  bulk_status?: string;
-}
-
-interface BulkSectionProps {
-  growData: GrowData;
+interface GrowStageSectionProps {
+  growData: any;
   updateField: (field: string, value: any) => void;
   activeDatePicker: string | null;
   setActiveDatePicker: (field: string | null) => void;
   handleDateChange: (field: string, date?: Date, event?: any) => void;
   parseDate: (dateString?: string) => Date | null;
 
-  // Template stage data (if available from template)
-  stageData?: any;
-  onUpdateStageData?: (stageData: any) => void;
+  // Stage-specific field prefixes
+  costField: string;
+  createdAtField?: string;
+  expirationDateField?: string;
+  statusField: string;
+
+  // Template stage data (if available from template) - editable
+  stageData?: StageData;
+  onUpdateStageData?: (stageData: StageData) => void;
+
+  // Additional fields based on stage type
+  additionalFields?: Array<{
+    field: string;
+    label: string;
+    placeholder: string;
+    icon?: any;
+    type?: 'text' | 'number';
+  }>;
 }
 
-export const BulkSection: React.FC<BulkSectionProps> = ({
+export const GrowStageSection: React.FC<GrowStageSectionProps> = ({
   growData,
   updateField,
+  activeDatePicker,
+  setActiveDatePicker,
+  handleDateChange,
+  parseDate,
+  costField,
+  createdAtField,
+  expirationDateField,
+  statusField,
   stageData,
   onUpdateStageData,
+  additionalFields = [],
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('items');
 
@@ -152,18 +182,102 @@ export const BulkSection: React.FC<BulkSectionProps> = ({
         )}
       </VStack>
 
-      {/* Bulk-specific fields */}
+      {/* Stage-specific fields */}
       <VStack space="md" className="mt-6 border-t border-background-200 pt-4">
+        {/* Additional Fields */}
+        {additionalFields.map((field) => (
+          <FormControl key={field.field}>
+            <FormControlLabel>
+              <FormControlLabelText>{field.label}</FormControlLabelText>
+            </FormControlLabel>
+            <Input>
+              <InputField
+                placeholder={field.placeholder}
+                value={growData[field.field] || ''}
+                onChangeText={(value) => updateField(field.field, value)}
+                keyboardType={field.type === 'number' ? 'numeric' : 'default'}
+              />
+              {field.icon && <InputIcon as={field.icon} className="mr-2" />}
+            </Input>
+          </FormControl>
+        ))}
+
+        {/* Cost Field */}
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Cost</FormControlLabelText>
+          </FormControlLabel>
+          <Input>
+            <InputField
+              placeholder="Enter cost"
+              value={growData[costField] || ''}
+              onChangeText={(value) => updateField(costField, value)}
+            />
+            <InputIcon as={DollarSign} className="mr-2" />
+          </Input>
+        </FormControl>
+
+        {/* Created Date Field */}
+        {createdAtField && (
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>Created Date</FormControlLabelText>
+            </FormControlLabel>
+            <Input isReadOnly>
+              <InputField
+                value={parseDate(growData[createdAtField])?.toDateString() || 'Select date'}
+                className={!growData[createdAtField] ? 'text-typography-400' : ''}
+              />
+              <InputSlot onPress={() => setActiveDatePicker(createdAtField)}>
+                <InputIcon as={CalendarDays} className="mr-2" />
+              </InputSlot>
+            </Input>
+            {activeDatePicker === createdAtField && (
+              <DateTimePicker
+                value={parseDate(growData[createdAtField]) || new Date()}
+                mode="date"
+                onChange={(event, date) => handleDateChange(createdAtField, date, event)}
+              />
+            )}
+          </FormControl>
+        )}
+
+        {/* Expiration Date Field */}
+        {expirationDateField && (
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>Expiration Date</FormControlLabelText>
+            </FormControlLabel>
+            <Input isReadOnly>
+              <InputField
+                value={parseDate(growData[expirationDateField])?.toDateString() || 'Select date'}
+                className={!growData[expirationDateField] ? 'text-typography-400' : ''}
+              />
+              <InputSlot onPress={() => setActiveDatePicker(expirationDateField)}>
+                <InputIcon as={CalendarDays} className="mr-2" />
+              </InputSlot>
+            </Input>
+            {activeDatePicker === expirationDateField && (
+              <DateTimePicker
+                value={parseDate(growData[expirationDateField]) || new Date()}
+                mode="date"
+                onChange={(event, date) => handleDateChange(expirationDateField, date, event)}
+              />
+            )}
+          </FormControl>
+        )}
+
+        {/* Status Field */}
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText>Status</FormControlLabelText>
           </FormControlLabel>
           <Select
-            selectedValue={growData.bulk_status}
-            onValueChange={(value) => updateField('bulk_status', value)}>
+            selectedValue={growData[statusField]}
+            onValueChange={(value) => updateField(statusField, value)}>
             <SelectTrigger variant="outline" size="md">
               <SelectInput
-                value={growData.bulk_status}
+                value={growData[statusField]}
                 placeholder="Select status"
                 className="mt-1 placeholder:text-sm"
               />

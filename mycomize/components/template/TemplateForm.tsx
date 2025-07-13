@@ -19,19 +19,19 @@ import {
 import { Save, ChevronDown, ChevronRight, FileText, Layers } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
-import { MonotubTekTemplateData } from '~/lib/templateTypes';
+import { BulkGrowTekTemplateData } from '~/lib/templateTypes';
 import { StageAccordion } from '~/components/template/StageAccordion';
 import { TypeSelectionModal } from '~/components/template/TypeSelectionModal';
 import { TagManager } from '~/components/template/TagManager';
 
 interface TemplateFormProps {
-  templateData: MonotubTekTemplateData;
+  templateData: BulkGrowTekTemplateData;
   isSaving: boolean;
   tagInput: string;
   showTypeModal: boolean;
   tempSelectedType: string;
-  onUpdateField: (field: keyof MonotubTekTemplateData, value: any) => void;
-  onSetTemplateData: (data: MonotubTekTemplateData) => void;
+  onUpdateField: (field: keyof BulkGrowTekTemplateData, value: any) => void;
+  onSetTemplateData: (data: BulkGrowTekTemplateData) => void;
   onTagInputChange: (value: string) => void;
   onAddTag: () => void;
   onRemoveTag: (tag: string) => void;
@@ -134,7 +134,6 @@ export function TemplateForm({
                       <Text className="font-medium">Species</Text>
                       <Input>
                         <InputField
-                          placeholder="e.g., Psilocybe cubensis"
                           value={templateData.species}
                           onChangeText={(value) => onUpdateField('species', value)}
                           maxLength={50}
@@ -145,7 +144,6 @@ export function TemplateForm({
                       <Text className="font-medium">Strain</Text>
                       <Input>
                         <InputField
-                          placeholder="e.g., Golden Teacher"
                           value={templateData.variant}
                           onChangeText={(value) => onUpdateField('variant', value)}
                           maxLength={50}

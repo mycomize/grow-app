@@ -8,7 +8,7 @@ from backend.database import Base
 
 class GrowTek(enum.Enum):
     """Enum for grow techniques"""
-    MONOTUB = "Monotub"
+    BULK_GROW = "BulkGrow"
 
 class GrowStage(enum.Enum):
     """Enum for grow stages"""
@@ -41,7 +41,7 @@ class Grow(Base):
     tags = Column(JSON, nullable=True)  # Added tags field (array of strings)
     space = Column(String(128), nullable=True)
     inoculation_date = Column(Date, nullable=True)
-    tek = Column(String(64), default=GrowTek.MONOTUB.value)
+    tek = Column(String(64), default=GrowTek.BULK_GROW.value)
     stage = Column(String(64), default=GrowStage.SPAWN_COLONIZATION.value)
     current_stage = Column(String(64), nullable=True)  # Track current stage in timeline
     status = Column(String(64), default=GrowStatus.GROWING.value)
@@ -56,33 +56,17 @@ class Grow(Base):
     harvest_dry_weight_grams = Column(Float, default=0)
     harvest_wet_weight_grams = Column(Float, default=0)
     
-    # Syringe fields
-    syringe_vendor = Column(String(128), nullable=True)
-    syringe_volume_ml = Column(Float, nullable=True)
-    syringe_cost = Column(Float, nullable=True)
-    syringe_created_at = Column(Date, nullable=True)
-    syringe_expiration_date = Column(Date, nullable=True)
-    syringe_status = Column(String(64), nullable=True)
+    # Inoculation fields - renamed from syringe_, removed vendor and volume
+    inoculation_status = Column(String(64), nullable=True)
     
-    # Spawn fields
-    spawn_weight_lbs = Column(Float, nullable=True)
-    spawn_cost = Column(Float, nullable=True)
-    spawn_vendor = Column(String(128), nullable=True)
+    # Spawn fields - removed weight_lbs, cost, vendor
     spawn_status = Column(String(64), nullable=True)
     
-    # Bulk substrate fields
-    bulk_weight_lbs = Column(Float, nullable=True)
-    bulk_cost = Column(Float, nullable=True)
-    bulk_vendor = Column(String(128), nullable=True)
-    bulk_created_at = Column(Date, nullable=True)
-    bulk_expiration_date = Column(Date, nullable=True)
+    # Bulk substrate fields - removed weight_lbs, cost, vendor, created_at, expiration_date
     bulk_status = Column(String(64), nullable=True)
     
-    # Fruiting fields
-    fruiting_start_date = Column(Date, nullable=True)
+    # Fruiting fields - removed start_date, mist_frequency, fan_frequency
     fruiting_pin_date = Column(Date, nullable=True)
-    fruiting_mist_frequency = Column(String(64), nullable=True)
-    fruiting_fan_frequency = Column(String(64), nullable=True)
     fruiting_status = Column(String(64), nullable=True)
     
     # Predicted milestone fields (cached AI predictions)
@@ -118,3 +102,20 @@ class Grow(Base):
     
     # One-to-many relationship with IoT gateways
     iot_gateways = relationship("IoTGateway", back_populates="grow")
+    
+    # One-to-many relationship with harvest flushes
+    harvest_flushes = relationship("HarvestFlush", back_populates="grow", cascade="all, delete-orphan")
+
+class HarvestFlush(Base):
+    """Model for individual harvest flushes within a grow"""
+    __tablename__ = "harvest_flushes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    grow_id = Column(Integer, ForeignKey("grows.id"), nullable=False)
+    harvest_date = Column(Date, nullable=True)
+    wet_weight_grams = Column(Float, nullable=True)
+    dry_weight_grams = Column(Float, nullable=True)
+    concentration_mg_per_gram = Column(Float, nullable=True)
+    
+    # Relationship back to grow
+    grow = relationship("Grow", back_populates="harvest_flushes")

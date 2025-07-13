@@ -10,10 +10,10 @@ import { AlertCircle, CheckCircle } from 'lucide-react-native';
 
 import { AuthContext } from '~/lib/AuthContext';
 import { getBackendUrl } from '~/lib/backendUrl';
-import { MonotubTekTemplateData, createEmptyTemplateData } from '~/lib/templateTypes';
+import { BulkGrowTekTemplateData, createEmptyTemplateData } from '~/lib/templateTypes';
 
 interface UseTemplateFormLogicProps {
-  initialData?: MonotubTekTemplateData;
+  initialData?: BulkGrowTekTemplateData;
   templateId?: string;
 }
 
@@ -23,7 +23,7 @@ export function useTemplateFormLogic({ initialData, templateId }: UseTemplateFor
   const toast = useToast();
   const { theme } = useTheme();
 
-  const [templateData, setTemplateData] = useState<MonotubTekTemplateData>(
+  const [templateData, setTemplateData] = useState<BulkGrowTekTemplateData>(
     initialData || createEmptyTemplateData()
   );
   const [isSaving, setIsSaving] = useState(false);
@@ -31,7 +31,7 @@ export function useTemplateFormLogic({ initialData, templateId }: UseTemplateFor
   const [success, setSuccess] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState('');
   const [showTypeModal, setShowTypeModal] = useState(false);
-  const [tempSelectedType, setTempSelectedType] = useState('Monotub');
+  const [tempSelectedType, setTempSelectedType] = useState('Bulk Grow');
 
   // Update template data when initialData changes
   useEffect(() => {
@@ -41,8 +41,8 @@ export function useTemplateFormLogic({ initialData, templateId }: UseTemplateFor
   }, [initialData]);
 
   // Update template data field
-  const updateField = (field: keyof MonotubTekTemplateData, value: any) => {
-    setTemplateData((prev: MonotubTekTemplateData) => ({ ...prev, [field]: value }));
+  const updateField = (field: keyof BulkGrowTekTemplateData, value: any) => {
+    setTemplateData((prev: BulkGrowTekTemplateData) => ({ ...prev, [field]: value }));
   };
 
   // Add tag
@@ -127,8 +127,8 @@ export function useTemplateFormLogic({ initialData, templateId }: UseTemplateFor
     try {
       const isEdit = !!templateId;
       const url = isEdit
-        ? `${getBackendUrl()}/monotub-tek-templates/${templateId}`
-        : `${getBackendUrl()}/monotub-tek-templates/`;
+        ? `${getBackendUrl()}/bulk-grow-tek-templates/${templateId}`
+        : `${getBackendUrl()}/bulk-grow-tek-templates/`;
       const method = isEdit ? 'PUT' : 'POST';
 
       // Debug logging

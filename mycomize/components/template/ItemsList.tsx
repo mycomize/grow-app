@@ -8,7 +8,7 @@ import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { Plus, Edit2, Trash2, Package, ExternalLink, Copy } from 'lucide-react-native';
 import { Item } from '~/lib/templateTypes';
-import { ItemModal } from './modals/MaterialModal';
+import { ItemModal } from './modals/ItemModal';
 import { DeleteConfirmationModal } from './modals/DeleteConfirmationModal';
 
 interface ItemsListProps {

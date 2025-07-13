@@ -11,7 +11,7 @@ import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
 import { Icon } from '~/components/ui/icon';
 import { InfoBadge } from '~/components/ui/info-badge';
-import { MonotubTekIcon } from '~/lib/monotubTypes';
+import { BulkGrowTekIcon } from '~/lib/bulkGrowTypes';
 import {
   ChevronDown,
   ChevronRight,
@@ -21,22 +21,22 @@ import {
   FileText,
 } from 'lucide-react-native';
 import {
-  MonotubTekTemplateData,
-  MonotubCultivationStage,
-  MONOTUB_TEK_STAGES,
+  BulkGrowTekTemplateData,
+  BulkGrowCultivationStage,
+  BULK_GROW_TEK_STAGES,
 } from '~/lib/templateTypes';
 import { StageSection } from './StageSection';
 
 interface StageAccordionProps {
-  templateData: MonotubTekTemplateData;
-  onUpdateTemplateData: (templateData: MonotubTekTemplateData) => void;
+  templateData: BulkGrowTekTemplateData;
+  onUpdateTemplateData: (templateData: BulkGrowTekTemplateData) => void;
 }
 
 export const StageAccordion: React.FC<StageAccordionProps> = ({
   templateData,
   onUpdateTemplateData,
 }) => {
-  const handleUpdateStageData = (stage: MonotubCultivationStage, stageData: any) => {
+  const handleUpdateStageData = (stage: BulkGrowCultivationStage, stageData: any) => {
     onUpdateTemplateData({
       ...templateData,
       stages: {
@@ -46,7 +46,7 @@ export const StageAccordion: React.FC<StageAccordionProps> = ({
     });
   };
 
-  const getItemCounts = (stage: MonotubCultivationStage) => {
+  const getItemCounts = (stage: BulkGrowCultivationStage) => {
     const stageData = templateData.stages[stage];
     return {
       materials: stageData.items?.length || 0,
@@ -55,7 +55,7 @@ export const StageAccordion: React.FC<StageAccordionProps> = ({
     };
   };
 
-  const renderCountBadges = (stage: MonotubCultivationStage) => {
+  const renderCountBadges = (stage: BulkGrowCultivationStage) => {
     const counts = getItemCounts(stage);
     const badges = [];
 
@@ -98,7 +98,7 @@ export const StageAccordion: React.FC<StageAccordionProps> = ({
     return badges.length > 0 ? badges : null;
   };
 
-  const stageOrder: MonotubCultivationStage[] = [
+  const stageOrder: BulkGrowCultivationStage[] = [
     'inoculation',
     'spawnColonization',
     'bulkColonization',
@@ -121,10 +121,10 @@ export const StageAccordion: React.FC<StageAccordionProps> = ({
                 {({ isExpanded }: { isExpanded: boolean }) => (
                   <HStack className="flex-1 items-center justify-between">
                     <HStack className="flex-1 items-center" space="sm">
-                      <MonotubTekIcon stage={stage} />
+                      <BulkGrowTekIcon stage={stage} />
                       <VStack className="ml-2 flex-1 items-start" space="xs">
                         <Text className="text-lg font-semibold text-typography-700">
-                          {MONOTUB_TEK_STAGES[stage]}
+                          {BULK_GROW_TEK_STAGES[stage]}
                         </Text>
                         <HStack space="xs">{renderCountBadges(stage)}</HStack>
                       </VStack>

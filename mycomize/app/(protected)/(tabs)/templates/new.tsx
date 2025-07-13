@@ -22,7 +22,7 @@ export default function NewTemplateScreen() {
       onHandleTypeModalOpen={formLogic.handleTypeModalOpen}
       onHandleTypeConfirm={formLogic.handleTypeConfirm}
       onSaveTemplate={formLogic.saveTemplate}
-      saveButtonText="Save Template"
+      saveButtonText="Save Tek"
     />
   );
 }

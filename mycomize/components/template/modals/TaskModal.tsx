@@ -119,7 +119,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
               <Text className="font-medium">Action</Text>
               <Input className={errors.action ? 'border-error-500' : ''}>
                 <InputField
-                  placeholder="e.g., Break and shake, Mist substrate, Check for pins"
+                  placeholder="e.g., Break and shake, Mist substrate"
                   value={formData.action}
                   onChangeText={(value) => updateField('action', value)}
                 />

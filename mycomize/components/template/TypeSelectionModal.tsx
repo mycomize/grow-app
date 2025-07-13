@@ -62,7 +62,7 @@ export function TypeSelectionModal({
         </ModalBody>
         <ModalFooter>
           <HStack space="sm" className="w-full justify-end">
-            <Button variant="outline" onPress={onClose}>
+            <Button variant="outline" className="border border-outline-300" onPress={onClose}>
               <ButtonText>Cancel</ButtonText>
             </Button>
             <Button action="positive" onPress={onConfirm}>

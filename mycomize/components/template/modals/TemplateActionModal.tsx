@@ -15,12 +15,12 @@ import { Text } from '~/components/ui/text';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { X, Import, Copy, Check } from 'lucide-react-native';
-import { MonotubTekTemplate } from '~/lib/templateTypes';
+import { BulkGrowTekTemplate } from '~/lib/templateTypes';
 
 interface TemplateActionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  template: MonotubTekTemplate;
+  template: BulkGrowTekTemplate;
   onUseForNewGrow: () => void;
   onCopyToNewTek: () => void;
 }
@@ -43,8 +43,8 @@ export const TemplateActionModal: React.FC<TemplateActionModalProps> = ({
     onClose();
   };
 
-  // Only show options if template is a monotub
-  const isMonotub = template.type.toLowerCase() === 'monotub';
+  // Only show options if template is a bulk grow
+  const isBulkGrow = template.type.toLowerCase() === 'bulk grow';
 
   const actions = [
     {
@@ -75,7 +75,7 @@ export const TemplateActionModal: React.FC<TemplateActionModalProps> = ({
               What would you like to do with "{template.name}"?
             </Text>
 
-            {isMonotub && (
+            {isBulkGrow && (
               <VStack space="md">
                 {actions.map((action) => (
                   <Pressable
@@ -94,9 +94,9 @@ export const TemplateActionModal: React.FC<TemplateActionModalProps> = ({
               </VStack>
             )}
 
-            {!isMonotub && (
+            {!isBulkGrow && (
               <Text className="text-center text-typography-500">
-                This template is not a monotub template. Actions are only available for monotub
+                This template is not a bulk grow template. Actions are only available for bulk grow
                 templates.
               </Text>
             )}

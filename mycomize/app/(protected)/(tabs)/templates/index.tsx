@@ -42,7 +42,7 @@ import { TemplateCard } from '~/components/grow/TemplateCard';
 import { TemplateCardSkeleton } from '~/components/template';
 import { CountBadge } from '~/components/ui/count-badge';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
-import { MonotubTekTemplate } from '~/lib/templateTypes';
+import { BulkGrowTekTemplate } from '~/lib/templateTypes';
 
 export default function TemplatesLibraryScreen() {
   const { token } = useContext(AuthContext);
@@ -50,7 +50,7 @@ export default function TemplatesLibraryScreen() {
   const toast = useToast();
   const { theme } = useTheme();
 
-  const [templates, setTemplates] = useState<MonotubTekTemplate[]>([]);
+  const [templates, setTemplates] = useState<BulkGrowTekTemplate[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,13 +70,13 @@ export default function TemplatesLibraryScreen() {
 
       // Load both public and private templates
       const [publicResponse, myResponse] = await Promise.all([
-        fetch(`${getBackendUrl()}/monotub-tek-templates/public?limit=100`, {
+        fetch(`${getBackendUrl()}/bulk-grow-tek-templates/public?limit=100`, {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
         }),
-        fetch(`${getBackendUrl()}/monotub-tek-templates/my?limit=100`, {
+        fetch(`${getBackendUrl()}/bulk-grow-tek-templates/my?limit=100`, {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
@@ -130,7 +130,7 @@ export default function TemplatesLibraryScreen() {
   };
 
   // Sort templates function
-  const sortTemplates = (templatesToSort: MonotubTekTemplate[]) => {
+  const sortTemplates = (templatesToSort: BulkGrowTekTemplate[]) => {
     return [...templatesToSort].sort((a, b) => {
       switch (sortBy) {
         case 'name':
@@ -223,21 +223,21 @@ export default function TemplatesLibraryScreen() {
     }
   }, [error, theme]);
 
-  const handleTemplatePress = (template: MonotubTekTemplate) => {
+  const handleTemplatePress = (template: BulkGrowTekTemplate) => {
     router.push(`/templates/${template.id}`);
   };
 
-  const handleUseTemplate = (template: MonotubTekTemplate) => {
+  const handleUseTemplate = (template: BulkGrowTekTemplate) => {
     router.push(`/templates/${template.id}/use`);
   };
 
-  const handleEditTemplate = (template: MonotubTekTemplate) => {
+  const handleEditTemplate = (template: BulkGrowTekTemplate) => {
     router.push(`/templates/${template.id}`);
   };
 
-  const handleDeleteTemplate = async (template: MonotubTekTemplate) => {
+  const handleDeleteTemplate = async (template: BulkGrowTekTemplate) => {
     try {
-      const response = await fetch(`${getBackendUrl()}/monotub-tek-templates/${template.id}`, {
+      const response = await fetch(`${getBackendUrl()}/bulk-grow-tek-templates/${template.id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -260,21 +260,21 @@ export default function TemplatesLibraryScreen() {
     }
   };
 
-  const handleConvertToGrow = (template: MonotubTekTemplate) => {
+  const handleConvertToGrow = (template: BulkGrowTekTemplate) => {
     router.push({
       pathname: '/grows/new',
       params: { fromTemplate: template.id.toString() },
     });
   };
 
-  const handleUseForNewGrow = (template: MonotubTekTemplate) => {
+  const handleUseForNewGrow = (template: BulkGrowTekTemplate) => {
     router.push({
       pathname: '/grows/new',
       params: { fromTemplate: template.id.toString() },
     });
   };
 
-  const handleCopyToNewTek = (template: MonotubTekTemplate) => {
+  const handleCopyToNewTek = (template: BulkGrowTekTemplate) => {
     router.push({
       pathname: '/templates/new',
       params: { copyFromTemplate: template.id.toString() },
@@ -341,9 +341,7 @@ export default function TemplatesLibraryScreen() {
   return publicTemplates.length === 0 && privateTemplates.length === 0 ? (
     <VStack className="flex-1 items-center justify-center gap-5 bg-background-50">
       <Icon as={Layers} size="xl" className="text-typography-400" />
-      <Text className="text-md text-center text-typography-500">
-        Create your first tek to get started!
-      </Text>
+      <Text className="text-center text-lg ">Create your first tek to get started!</Text>
       <Button
         variant="solid"
         className="h-16 w-16 rounded-full"

@@ -3,6 +3,26 @@ from typing import Optional, List
 from datetime import date, datetime
 from backend.schemas.iot import IoTGateway
 
+# HarvestFlush schemas
+class HarvestFlushBase(BaseModel):
+    harvest_date: Optional[date] = None
+    wet_weight_grams: Optional[float] = None
+    dry_weight_grams: Optional[float] = None
+    concentration_mg_per_gram: Optional[float] = None
+
+class HarvestFlushCreate(HarvestFlushBase):
+    grow_id: int
+
+class HarvestFlushUpdate(HarvestFlushBase):
+    pass
+
+class HarvestFlush(HarvestFlushBase):
+    id: int
+    grow_id: int
+    
+    class Config:
+        from_attributes = True
+
 class GrowBase(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
@@ -11,7 +31,7 @@ class GrowBase(BaseModel):
     tags: Optional[List[str]] = None
     space: Optional[str] = None
     inoculation_date: Optional[date] = None
-    tek: str = "Monotub"
+    tek: str = "BulkGrow"
     stage: str = "spawn_colonization"
     current_stage: Optional[str] = None
     status: str = "growing"
@@ -26,33 +46,17 @@ class GrowBase(BaseModel):
     harvest_dry_weight_grams: Optional[float] = 0
     harvest_wet_weight_grams: Optional[float] = 0
     
-    # Syringe fields
-    syringe_vendor: Optional[str] = None
-    syringe_volume_ml: Optional[float] = None
-    syringe_cost: Optional[float] = None
-    syringe_created_at: Optional[date] = None
-    syringe_expiration_date: Optional[date] = None
-    syringe_status: Optional[str] = None
+    # Inoculation fields - renamed from syringe_, removed vendor and volume
+    inoculation_status: Optional[str] = None
     
-    # Spawn fields
-    spawn_weight_lbs: Optional[float] = None
-    spawn_cost: Optional[float] = None
-    spawn_vendor: Optional[str] = None
+    # Spawn fields - removed weight_lbs, cost, vendor
     spawn_status: Optional[str] = None
     
-    # Bulk substrate fields
-    bulk_weight_lbs: Optional[float] = None
-    bulk_cost: Optional[float] = None
-    bulk_vendor: Optional[str] = None
-    bulk_created_at: Optional[date] = None
-    bulk_expiration_date: Optional[date] = None
+    # Bulk substrate fields - removed weight_lbs, cost, vendor, created_at, expiration_date
     bulk_status: Optional[str] = None
     
-    # Fruiting fields
-    fruiting_start_date: Optional[date] = None
+    # Fruiting fields - removed start_date, mist_frequency, fan_frequency
     fruiting_pin_date: Optional[date] = None
-    fruiting_mist_frequency: Optional[str] = None
-    fruiting_fan_frequency: Optional[str] = None
     fruiting_status: Optional[str] = None
 
 class GrowCreate(GrowBase):
@@ -144,31 +148,15 @@ class GrowUpdate(BaseModel):
     harvest_dry_weight_grams: Optional[float] = None
     harvest_wet_weight_grams: Optional[float] = None
     
-    # Syringe fields
-    syringe_vendor: Optional[str] = None
-    syringe_volume_ml: Optional[float] = None
-    syringe_cost: Optional[float] = None
-    syringe_created_at: Optional[date] = None
-    syringe_expiration_date: Optional[date] = None
-    syringe_status: Optional[str] = None
+    # Inoculation fields - renamed from syringe_, removed vendor and volume
+    inoculation_status: Optional[str] = None
     
-    # Spawn fields
-    spawn_weight_lbs: Optional[float] = None
-    spawn_cost: Optional[float] = None
-    spawn_vendor: Optional[str] = None
+    # Spawn fields - removed weight_lbs, cost, vendor
     spawn_status: Optional[str] = None
     
-    # Bulk substrate fields
-    bulk_weight_lbs: Optional[float] = None
-    bulk_cost: Optional[float] = None
-    bulk_vendor: Optional[str] = None
-    bulk_created_at: Optional[date] = None
-    bulk_expiration_date: Optional[date] = None
+    # Bulk substrate fields - removed weight_lbs, cost, vendor, created_at, expiration_date
     bulk_status: Optional[str] = None
     
-    # Fruiting fields
-    fruiting_start_date: Optional[date] = None
+    # Fruiting fields - removed start_date, mist_frequency, fan_frequency
     fruiting_pin_date: Optional[date] = None
-    fruiting_mist_frequency: Optional[str] = None
-    fruiting_fan_frequency: Optional[str] = None
     fruiting_status: Optional[str] = None

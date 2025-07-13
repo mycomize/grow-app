@@ -20,7 +20,7 @@ import {
 
 import MushroomIcon from '~/components/icons/MushroomIcon';
 import { View } from 'react-native';
-import { SyringeSection } from './SyringeSection';
+import { InoculationSection } from './InoculationSection';
 import { SpawnSection } from './SpawnSection';
 import { BulkSection } from './BulkSection';
 import { FruitingSection } from './FruitingSection';
@@ -227,16 +227,6 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
 
   return (
     <VStack space="lg" className="bg-background-0 p-2">
-      {/* Stats Display */}
-      <VStack className="">
-        {/* Total Days Display */}
-        {totalDays !== null && (
-          <Text className="font-semibold text-primary-700">Duration: {totalDays} days</Text>
-        )}
-        {/* Total Cost Display */}
-        <Text className="font-semibold text-primary-700">Total Cost: ${totalCost.toFixed(2)}</Text>
-      </VStack>
-
       {/* Timeline */}
       <VStack space="xs">
         {stages.map((stage, index) => {
@@ -249,12 +239,12 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
             <VStack key={stage.id} space="xs">
               <HStack space="md" className="items-start">
                 {/* Timeline indicator */}
-                <VStack className="items-center" style={{ width: 32 }}>
+                <VStack className="items-center" style={{ width: 8 }}>
                   {/* Stage circle/checkmark */}
                   {status === 'completed' ? (
                     <Icon as={CheckCircle} size="xl" className="my-0.5 text-green-600" />
                   ) : status === 'active' ? (
-                    <Icon as={Disc2} size="xl" className="my-0.5 text-success-400"></Icon>
+                    <Icon as={Disc2} size="xl" className="my-0.5 mt-2 text-success-400"></Icon>
                   ) : (
                     <Icon as={Circle} size="xl" className="my-0.5 text-typography-300" />
                   )}
@@ -272,11 +262,37 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
 
                 {/* Stage content */}
                 <VStack className="flex-1 pb-4">
-                  <HStack className="items-center justify-between">
-                    <VStack space="xs" className="flex-1">
-                      <HStack className="justify-between">
+                  <VStack space="xs">
+                    {/* Stage name row with advance button */}
+                    <HStack className="items-center justify-between">
+                      <HStack className="flex-1 items-center gap-2">
+                        {stage.name === 'Inoculation' && (
+                          <Icon as={Syringe} size="md" className="ml-1 mt-0 text-typography-400" />
+                        )}
+                        {stage.name === 'Spawn Colonization' && (
+                          <Icon as={Wheat} size="md" className="ml-1 mt-1 text-typography-400" />
+                        )}
+                        {stage.name === 'Bulk Colonization' && (
+                          <Icon as={Box} size="md" className="ml-1 mt-1 text-typography-400" />
+                        )}
+                        {stage.name === 'Fruiting' && (
+                          <MushroomIcon
+                            height={18}
+                            width={18}
+                            strokeWidth={2}
+                            color="#9ca3af"
+                            className="mt-1"
+                          />
+                        )}
+                        {stage.name === 'Harvest' && (
+                          <Icon
+                            as={ShoppingBasket}
+                            size="md"
+                            className="ml-1 mt-1 text-typography-400"
+                          />
+                        )}
                         {status === 'active' && (
-                          <Text className="text-lg font-semibold text-success-400">
+                          <Text className="text-lg font-semibold text-typography-900">
                             {stage.name}
                           </Text>
                         )}
@@ -286,113 +302,87 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                             {stage.name}
                           </Text>
                         )}
-                        {stage.name === 'Inoculation' && (
-                          <Icon as={Syringe} size="md" className="ml-auto text-typography-500" />
-                        )}
-                        {stage.name === 'Spawn Colonization' && (
-                          <Icon as={Wheat} size="md" className="ml-auto text-typography-500" />
-                        )}
-                        {stage.name === 'Bulk Colonization' && (
-                          <Icon as={Box} size="md" className="ml-auto text-typography-500" />
-                        )}
-                        {stage.name === 'Fruiting' && (
-                          <MushroomIcon
-                            height={18}
-                            width={18}
-                            strokeWidth={2}
-                            color="#9ca3af"
-                            className=""
-                          />
-                        )}
-                        {stage.name === 'Harvest' && (
-                          <Icon
-                            as={ShoppingBasket}
-                            size="md"
-                            className="ml-auto text-typography-500"
-                          />
-                        )}
                       </HStack>
 
-                      {/* Stage date and duration */}
-                      {stageDate && (
-                        <HStack space="sm" className="items-center">
-                          {stage.id === 'inoculation' && (
-                            <Text className="text-sm font-medium text-typography-600">
-                              Inoculated: {new Date(stageDate).toLocaleDateString()}
-                            </Text>
-                          )}
-                          {stage.id !== 'inoculation' && (
-                            <Text className="text-sm font-medium text-typography-600">
-                              Started: {new Date(stageDate).toLocaleDateString()}
-                            </Text>
-                          )}
-                          {daysSince !== null && (
-                            <>
-                              <Text className="text-typography-400">•</Text>
-                              <Text className="text-sm font-medium text-typography-600">
-                                {daysSince} days
-                              </Text>
-                            </>
-                          )}
-                        </HStack>
+                      {/* Advance button aligned to the right */}
+                      {status === 'active' && (
+                        <Button
+                          size="sm"
+                          variant="solid"
+                          onPress={advanceToNextStage}
+                          className="mt-1 bg-success-300">
+                          <ButtonText className="text-white">Complete</ButtonText>
+                          <Icon as={ArrowDownToDot} className="ml-1" size="sm" />
+                        </Button>
                       )}
 
-                      {/* Flush count for harvest stage */}
-                      {stage.id === 'harvest' && status !== 'pending' && flushCount > 0 && (
-                        <Text className="text-sm font-medium text-orange-600">
-                          {flushCount} {flushCount === 1 ? 'Flush' : 'Flushes'} completed
-                        </Text>
+                      {/* Inoculate button for first stage */}
+                      {currentStageIndex === -1 && index === 0 && (
+                        <Button
+                          size="sm"
+                          variant="solid"
+                          onPress={advanceToNextStage}
+                          className="bg-success-300">
+                          <ButtonText className="text-white">Complete</ButtonText>
+                          <Icon as={ArrowDownToDot} className="ml-1" size="sm" />
+                        </Button>
                       )}
-                    </VStack>
-                  </HStack>
+                    </HStack>
+
+                    {/* Stage date and duration */}
+                    {stageDate && (
+                      <HStack space="sm" className="items-center">
+                        {stage.id === 'inoculation' && (
+                          <Text className="text-sm font-medium text-typography-600">
+                            Inoculated: {new Date(stageDate).toLocaleDateString()}
+                          </Text>
+                        )}
+                        {stage.id !== 'inoculation' && (
+                          <Text className="text-sm font-medium text-typography-600">
+                            Started: {new Date(stageDate).toLocaleDateString()}
+                          </Text>
+                        )}
+                        {daysSince !== null && (
+                          <>
+                            <Text className="text-typography-400">•</Text>
+                            <Text className="text-sm font-medium text-typography-600">
+                              {daysSince} days
+                            </Text>
+                          </>
+                        )}
+                      </HStack>
+                    )}
+
+                    {/* Flush count for harvest stage */}
+                    {stage.id === 'harvest' && status !== 'pending' && flushCount > 0 && (
+                      <Text className="text-sm font-medium text-orange-600">
+                        {flushCount} {flushCount === 1 ? 'Flush' : 'Flushes'} completed
+                      </Text>
+                    )}
+                  </VStack>
 
                   {/* Expand/Collapse button and sub-section */}
                   {(status !== 'pending' ||
                     (stage.id === 'inoculation' && currentStageIndex === -1)) && (
                     <VStack space="sm" className="mt-3">
-                      <HStack>
-                        <Pressable
-                          onPress={() => toggleStageExpansion(stage.id)}
-                          className="flex-row items-center">
-                          <Text className="text-md font-medium text-primary-600">
-                            {expandedStages.includes(stage.id) ? 'Hide' : 'Show'} Details
-                          </Text>
-                          <Icon
-                            as={expandedStages.includes(stage.id) ? ChevronDown : ChevronRight}
-                            size="sm"
-                            className="ml-1 text-primary-600"
-                          />
-                        </Pressable>
-                        {/* Advance button */}
-                        {status === 'active' && (
-                          <Button
-                            size="sm"
-                            variant="solid"
-                            onPress={advanceToNextStage}
-                            className="ml-auto bg-success-300">
-                            <ButtonText className="text-white">Complete</ButtonText>
-                            <Icon as={ArrowDownToDot} className="ml-1" size="sm" />
-                          </Button>
-                        )}
-
-                        {/* Inoculate button for first stage */}
-                        {currentStageIndex === -1 && index === 0 && (
-                          <Button
-                            size="sm"
-                            variant="solid"
-                            onPress={advanceToNextStage}
-                            className="ml-auto bg-success-300">
-                            <ButtonText className="text-white">Complete</ButtonText>
-                            <Icon as={ArrowDownToDot} className="ml-1" size="sm" />
-                          </Button>
-                        )}
-                      </HStack>
+                      <Pressable
+                        onPress={() => toggleStageExpansion(stage.id)}
+                        className="flex-row items-center">
+                        <Text className="text-md font-medium text-primary-600">
+                          {expandedStages.includes(stage.id) ? 'Hide' : 'Show'} Details
+                        </Text>
+                        <Icon
+                          as={expandedStages.includes(stage.id) ? ChevronDown : ChevronRight}
+                          size="sm"
+                          className="ml-1 text-primary-600"
+                        />
+                      </Pressable>
 
                       {/* Render sub-sections */}
                       {expandedStages.includes(stage.id) && (
                         <View className="mt-0 rounded-lg  bg-background-50">
                           {stage.id === 'inoculation' && (
-                            <SyringeSection
+                            <InoculationSection
                               growData={growData}
                               updateField={updateField}
                               activeDatePicker={activeDatePicker}
@@ -434,12 +424,11 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                           {stage.id === 'harvest' && (
                             <HarvestSection
                               flushes={flushes}
-                              addFlush={addFlush}
-                              updateFlush={updateFlush}
-                              removeFlush={removeFlush}
-                              activeDatePicker={activeDatePicker}
-                              setActiveDatePicker={setActiveDatePicker}
-                              handleDateChange={handleDateChange}
+                              onUpdateFlushes={(updatedFlushes) => {
+                                // This should be handled by the parent component
+                                // For now, we'll need to update the parent interface
+                                // The parent should pass an onUpdateFlushes callback
+                              }}
                             />
                           )}
                         </View>

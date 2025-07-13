@@ -35,7 +35,7 @@ class GrowTemplateBase(BaseModel):
     description: Optional[str] = None
     species: str = Field(..., min_length=1, max_length=64)
     variant: Optional[str] = Field(None, max_length=64)
-    technique: str = Field(default="Monotub", max_length=64)
+    technique: str = Field(default="BulkGrow", max_length=64)
     difficulty: str = Field(default="Beginner", pattern="^(Beginner|Intermediate|Advanced)$")
     estimated_timeline: Optional[int] = Field(None, ge=1, le=365)  # 1-365 days
     tags: Optional[List[str]] = []
