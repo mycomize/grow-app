@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .routers.auth import router as auth_router
 from .routers.grow import router as grow_router
 from .routers.iot import router as iot_router
-from .routers.bulk_grow_tek_template import router as template_router
+from .routers.tek import router as tek_router
 
 app = FastAPI(title="Mycomize Grow API")
 
@@ -37,7 +37,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(grow_router)
 app.include_router(iot_router)
-app.include_router(template_router)
+app.include_router(tek_router)
 
 @app.get("/")
 async def root():

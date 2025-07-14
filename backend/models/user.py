@@ -15,11 +15,11 @@ class User(Base):
     created_at = Column(DateTime, nullable=False)
     updated_at = Column(DateTime, nullable=False, onupdate=datetime.now)
 
-    # Relationship with Grow (one-to-many)
-    grows = relationship("Grow", back_populates="user", cascade="all, delete-orphan")
+    # Relationship with BulkGrow (one-to-many)
+    bulk_grows = relationship("BulkGrow", back_populates="user", cascade="all, delete-orphan")
 
     # Relationship with IoTGateway (one-to-many)
     iot_gateways = relationship("IoTGateway", back_populates="user", cascade="all, delete-orphan")
 
-    # Relationship with BulkGrowTekTemplate (one-to-many)
-    templates = relationship("BulkGrowTekTemplate", back_populates="creator", cascade="all, delete-orphan")
+    # Relationship with BulkGrowTek (one-to-many)
+    bulk_grow_teks = relationship("BulkGrowTek", back_populates="creator", cascade="all, delete-orphan")

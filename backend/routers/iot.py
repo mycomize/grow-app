@@ -4,7 +4,7 @@ from typing import List
 
 from backend.models.iot import IoTGateway
 from backend.models.iot_entity import IoTEntity
-from backend.models.grow import Grow
+from backend.models.grow import BulkGrow
 from backend.models.user import User
 from backend.schemas.iot import (
     IoTGateway as IoTGatewaySchema,

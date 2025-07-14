@@ -22,15 +22,15 @@ class IoTGateway(Base):
     api_key = Column(String(256), nullable=False)
     is_active = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.now, nullable=False)
-    
+
     # Foreign key to grow (optional)
-    grow_id = Column(Integer, ForeignKey("grows.id"), nullable=True)
+    bulk_grow_id = Column(Integer, ForeignKey("bulk_grows.id"), nullable=True)
 
     # Relationship with User (back reference)
     user = relationship("User", back_populates="iot_gateways")
 
-    # Relationship with Grow (can be associated with at most one grow)
-    grow = relationship("Grow", back_populates="iot_gateways", foreign_keys=[grow_id])
+    # Relationship with BulkGrow (can be associated with at most one grow)
+    bulk_grow = relationship("BulkGrow", back_populates="iot_gateways", foreign_keys=[bulk_grow_id])
 
     # Relationship with IoTEntities
     entities = relationship("IoTEntity", back_populates="gateway", cascade="all, delete-orphan")

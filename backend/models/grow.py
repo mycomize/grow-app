@@ -6,116 +6,82 @@ from sqlalchemy.orm import relationship
 from datetime import date
 from backend.database import Base
 
-class GrowTek(enum.Enum):
-    """Enum for grow techniques"""
-    BULK_GROW = "BulkGrow"
-
-class GrowStage(enum.Enum):
-    """Enum for grow stages"""
+class BulkGrowStage(enum.Enum):
+    """Enum for bulk grow stages"""
+    INOCULATION = "inoculation"
     SPAWN_COLONIZATION = "spawn_colonization"
     BULK_COLONIZATION = "bulk_colonization"
     FRUITING = "fruiting"
     HARVEST = "harvest"
 
-class GrowStatus(enum.Enum):
-    """Enum for grow status"""
-    GROWING = "growing"
+class BulkGrowStatus(enum.Enum):
+    """Enum for overall grow status"""
+    HEALTHY = "healthy"
+    SUSPECT = "suspect"
     CONTAMINATED = "contaminated"
     HARVESTED = "harvested"
 
-class SectionStatus(enum.Enum):
-    """Enum for section status (syringe, spawn, bulk, fruiting)"""
+class BulkGrowStageStatus(enum.Enum):
+    """Enum for section status (inoculation, spawn colonization, bulk colonization, fruiting)"""
     HEALTHY = "Healthy"
     SUSPECT = "Suspect"
     CONTAMINATED = "Contaminated"
-    
-class Grow(Base):
-    """Grow model for mushroom cultivation tracking"""
-    __tablename__ = "grows"
+
+class BulkGrow(Base):
+    """Model for bulk mushroom grows"""
+    __tablename__ = "bulk_grows"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(128), nullable=True)
-    description = Column(Text, nullable=True)  # Added description field
-    species = Column(String(64), nullable=True)
-    variant = Column(String(64), nullable=True)
-    tags = Column(JSON, nullable=True)  # Added tags field (array of strings)
-    space = Column(String(128), nullable=True)
+    description = Column(Text, nullable=True)
+    species = Column(String(64), nullable=True, index=True)
+    variant = Column(String(64), nullable=True, index=True)
+    location = Column(String(128), nullable=True)
+    tags = Column(JSON, nullable=True) # array of strings
+
+    # Stage specific fields that are above and beyond what is included
+    # in each stage's lists (items, env conditions, tasks) and notes
     inoculation_date = Column(Date, nullable=True)
-    tek = Column(String(64), default=GrowTek.BULK_GROW.value)
-    stage = Column(String(64), default=GrowStage.SPAWN_COLONIZATION.value)
-    current_stage = Column(String(64), nullable=True)  # Track current stage in timeline
-    status = Column(String(64), default=GrowStatus.GROWING.value)
-    cost = Column(Float, default=0.0)
-    
-    # Stage date fields for timeline tracking
-    spawn_colonization_date = Column(Date, nullable=True)
-    bulk_colonization_date = Column(Date, nullable=True)
-    
-    # Harvest fields
-    harvest_date = Column(Date, nullable=True)
-    harvest_dry_weight_grams = Column(Float, default=0)
-    harvest_wet_weight_grams = Column(Float, default=0)
-    
-    # Inoculation fields - renamed from syringe_, removed vendor and volume
-    inoculation_status = Column(String(64), nullable=True)
-    
-    # Spawn fields - removed weight_lbs, cost, vendor
-    spawn_status = Column(String(64), nullable=True)
-    
-    # Bulk substrate fields - removed weight_lbs, cost, vendor, created_at, expiration_date
-    bulk_status = Column(String(64), nullable=True)
-    
-    # Fruiting fields - removed start_date, mist_frequency, fan_frequency
+    inoculation_status = Column(String(32), nullable=True)
+    spawn_colonization_status = Column(String(32), nullable=True)
+    bulk_colonization_status = Column(String(32), nullable=True)
+    full_spawn_colonization_date = Column(Date, nullable=True)
+    full_bulk_colonization_date = Column(Date, nullable=True)
     fruiting_pin_date = Column(Date, nullable=True)
-    fruiting_status = Column(String(64), nullable=True)
-    
-    # Predicted milestone fields (cached AI predictions)
-    predicted_full_spawn_colonization = Column(Date, nullable=True)
-    predicted_full_bulk_colonization = Column(Date, nullable=True)
-    predicted_first_harvest_date = Column(Date, nullable=True)
-    prediction_inputs_hash = Column(String(64), nullable=True)  # Hash of inputs used for predictions
-    
-    # Predicted optimal conditions fields (cached AI predictions)
-    optimal_spawn_temp_low = Column(Float, nullable=True)
-    optimal_spawn_temp_high = Column(Float, nullable=True)
-    optimal_bulk_temp_low = Column(Float, nullable=True)
-    optimal_bulk_temp_high = Column(Float, nullable=True)
-    optimal_bulk_relative_humidity_low = Column(Float, nullable=True)
-    optimal_bulk_relative_humidity_high = Column(Float, nullable=True)
-    optimal_bulk_co2_low = Column(Float, nullable=True)
-    optimal_bulk_co2_high = Column(Float, nullable=True)
-    optimal_fruiting_temp_low = Column(Float, nullable=True)
-    optimal_fruiting_temp_high = Column(Float, nullable=True)
-    optimal_fruiting_relative_humidity_low = Column(Float, nullable=True)
-    optimal_fruiting_relative_humidity_high = Column(Float, nullable=True)
-    optimal_fruiting_co2_low = Column(Float, nullable=True)
-    optimal_fruiting_co2_high = Column(Float, nullable=True)
-    optimal_fruiting_light_low = Column(Float, nullable=True)
-    optimal_fruiting_light_high = Column(Float, nullable=True)
-    conditions_inputs_hash = Column(String(64), nullable=True)  # Hash of inputs used for conditions predictions
-    
+    fruiting_status = Column(String(32), nullable=True)
+
+    current_stage = Column(String(64), nullable=True)  # Track current stage in timeline
+    status = Column(String(64), nullable=True)
+    total_cost = Column(Float, default=0.0)
+
+    # Stage-based data structure (JSON for flexibility)
+    # Stages include: inoculation, spawn colonization, bulk colonization, fruiting, and harvest
+    # Each stage has: Item list, EnvironmentalConditions list, Task list, and notes. These
+    # lists and notes are optional though. See backend/schemas/bulk_stage.py for definitions.
+    stages = Column(JSON, nullable=True)
+
     # Foreign key to user
     user_id = Column(Integer, ForeignKey("users.id"))
-    
-    # Relationship with User (back reference)
-    user = relationship("User", back_populates="grows")
-    
-    # One-to-many relationship with IoT gateways
-    iot_gateways = relationship("IoTGateway", back_populates="grow")
-    
-    # One-to-many relationship with harvest flushes
-    harvest_flushes = relationship("HarvestFlush", back_populates="grow", cascade="all, delete-orphan")
 
-class HarvestFlush(Base):
-    """Model for individual harvest flushes within a grow"""
-    __tablename__ = "harvest_flushes"
+    # Relationship with User (back reference)
+    user = relationship("User", back_populates="bulk_grows")
+
+    # One-to-many relationship with IoT gateways
+    iot_gateways = relationship("IoTGateway", back_populates="bulk_grow")
+
+    # One-to-many relationship with flushes
+    flushes = relationship("BulkGrowFlush", back_populates="bulk_grow", cascade="all, delete-orphan")
+
+class BulkGrowFlush(Base):
+    """Model for individual flushes within a bulk grow"""
+    __tablename__ = "flushes"
 
     id = Column(Integer, primary_key=True, index=True)
-    grow_id = Column(Integer, ForeignKey("grows.id"), nullable=False)
+    bulk_grow_id = Column(Integer, ForeignKey("bulk_grows.id"), nullable=False)
     harvest_date = Column(Date, nullable=True)
     wet_weight_grams = Column(Float, nullable=True)
     dry_weight_grams = Column(Float, nullable=True)
     concentration_mg_per_gram = Column(Float, nullable=True)
-    
+
     # Relationship back to grow
-    grow = relationship("Grow", back_populates="harvest_flushes")
+    bulk_grow = relationship("BulkGrow", back_populates="flushes")
