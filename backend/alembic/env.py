@@ -14,7 +14,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from backend.database import Base
 from backend.models.user import User
 from backend.models.grow import Grow
-from backend.models.inventory import InventoryItem
 from backend.models.iot import IoTGateway
 from backend.models.iot_entity import IoTEntity
 from backend.models.template import BulkGrowTekTemplate
@@ -78,7 +77,7 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, 
+            connection=connection,
             target_metadata=target_metadata,
             render_as_batch=True,  # Enable batch mode for SQLite
         )
