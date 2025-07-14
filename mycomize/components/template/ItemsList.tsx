@@ -52,7 +52,7 @@ export const ItemsList: React.FC<ItemsListProps> = ({ items, onUpdateItems }) =>
     const newItem: Item = {
       ...item,
       id: Date.now().toString(), // Generate a new ID
-      description: `${item.description} (Copy)`,
+      description: `${item.description}`,
     };
     onUpdateItems([...items, newItem]);
   };
@@ -93,12 +93,12 @@ export const ItemsList: React.FC<ItemsListProps> = ({ items, onUpdateItems }) =>
           <Text className="text-center text-typography-500">No items added yet</Text>
         </VStack>
       ) : (
-        <VStack space="xs">
+        <VStack space="md">
           {items.map((item) => (
             <VStack
               key={item.id}
               className="rounded-lg border border-background-200 bg-background-0 p-3"
-              space="sm">
+              space="md">
               <HStack className="items-start justify-between">
                 <VStack className="flex-1" space="xs">
                   <Text className="font-medium text-typography-900">{item.description}</Text>
@@ -106,6 +106,11 @@ export const ItemsList: React.FC<ItemsListProps> = ({ items, onUpdateItems }) =>
                     <Text className="text-sm text-typography-600">Vendor: {item.vendor}</Text>
                   )}
                   <Text className="text-sm text-typography-600">Quantity: {item.quantity}</Text>
+                  {item.cost && (
+                    <Text className="text-sm text-typography-600">
+                      Cost: ${parseFloat(item.cost).toFixed(2)}
+                    </Text>
+                  )}
                   {item.url && (
                     <Pressable onPress={() => handleOpenURL(item.url!)}>
                       <HStack className="items-center" space="xs">

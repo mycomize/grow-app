@@ -59,39 +59,15 @@ interface GrowData {
   status?: string;
   cost?: number;
 
-  // Harvest fields
-  harvest_date?: string;
-  harvest_dry_weight_grams?: number;
-  harvest_wet_weight_grams?: number;
-
-  // Syringe fields
-  syringe_vendor?: string;
-  syringe_volume_ml?: string;
-  syringe_cost?: string;
-  syringe_created_at?: string;
-  syringe_expiration_date?: string;
-  syringe_status?: string;
-
-  // Spawn fields
-  spawn_weight_lbs?: string;
-  spawn_cost?: string;
-  spawn_vendor?: string;
+  // Status fields that match backend schema
+  inoculation_status?: string;
   spawn_status?: string;
-
-  // Bulk substrate fields
-  bulk_weight_lbs?: string;
-  bulk_cost?: string;
-  bulk_vendor?: string;
-  bulk_created_at?: string;
-  bulk_expiration_date?: string;
   bulk_status?: string;
-
-  // Fruiting fields
-  fruiting_start_date?: string;
   fruiting_pin_date?: string;
-  fruiting_mist_frequency?: string;
-  fruiting_fan_frequency?: string;
   fruiting_status?: string;
+
+  // Stage-based data structure - similar to templates
+  stages?: any; // Will contain the stage structure from StagesSection
 }
 
 interface HarvestFlush {
@@ -120,7 +96,7 @@ export default function GrowEditScreen() {
   const { theme } = useTheme();
 
   const [growData, setGrowData] = useState<GrowData>({
-    tek: 'Bulk Grow',
+    tek: 'BulkGrow',
     stage: 'spawn_colonization',
     current_stage: undefined,
     status: 'growing',
@@ -199,7 +175,7 @@ export default function GrowEditScreen() {
             species: templateData.species || '',
             variant: templateData.variant || '',
             tags: templateData.tags || [],
-            tek: templateData.type || 'Bulk Grow', // Set tek from template type
+            tek: templateData.type === 'Bulk Grow' ? 'BulkGrow' : templateData.type || 'BulkGrow', // Set tek from template type
             // Keep space empty for user input
             space: '',
           }));
@@ -237,34 +213,19 @@ export default function GrowEditScreen() {
         const data = await response.json();
 
         // Convert numeric fields to strings for form inputs
-        const convertedData = {
-          ...data,
-          // Syringe fields
-          syringe_volume_ml: data.syringe_volume_ml?.toString() || '',
-          syringe_cost: data.syringe_cost?.toString() || '',
+        setGrowData(data);
 
-          // Spawn fields
-          spawn_weight_lbs: data.spawn_weight_lbs?.toString() || '',
-          spawn_cost: data.spawn_cost?.toString() || '',
-
-          // Bulk fields
-          bulk_weight_lbs: data.bulk_weight_lbs?.toString() || '',
-          bulk_cost: data.bulk_cost?.toString() || '',
-        };
-
-        setGrowData(convertedData);
-
-        // Set up flushes based on harvest data
-        if (data.harvest_dry_weight_grams > 0 || data.harvest_wet_weight_grams > 0) {
-          setFlushes([
-            {
-              id: generateId(),
-              harvestDate: parseDate(data.harvest_date),
-              wetWeightG: data.harvest_wet_weight_grams || 0,
-              dryWeightG: data.harvest_dry_weight_grams || 0,
-              potency: '',
-            },
-          ]);
+        // Set up flushes based on harvest_flushes data
+        if (data.harvest_flushes && data.harvest_flushes.length > 0) {
+          setFlushes(
+            data.harvest_flushes.map((flush: any) => ({
+              id: flush.id?.toString() || generateId(),
+              harvestDate: parseDate(flush.harvest_date),
+              wetWeightG: flush.wet_weight_grams?.toString() || '',
+              dryWeightG: flush.dry_weight_grams?.toString() || '',
+              potency: flush.concentration_mg_per_gram?.toString() || '',
+            }))
+          );
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load grow');
@@ -325,13 +286,20 @@ export default function GrowEditScreen() {
     setFlushes((prev) => prev.filter((flush) => flush.id !== id));
   };
 
-  // Calculate total cost
+  // Calculate total cost from stages data
   const calculateTotalCost = () => {
-    return (
-      (parseFloat(growData.syringe_cost || '0') || 0) +
-      (parseFloat(growData.spawn_cost || '0') || 0) +
-      (parseFloat(growData.bulk_cost || '0') || 0)
-    );
+    if (!growData.stages) return growData.cost || 0;
+
+    let totalCost = 0;
+    Object.values(growData.stages).forEach((stage: any) => {
+      if (stage?.items) {
+        stage.items.forEach((item: any) => {
+          totalCost += parseFloat(item.cost || '0') || 0;
+        });
+      }
+    });
+
+    return totalCost || growData.cost || 0;
   };
 
   // Delete grow
@@ -390,27 +358,10 @@ export default function GrowEditScreen() {
       );
       const firstHarvestDate = flushes.find((f) => f.harvestDate)?.harvestDate;
 
-      // Prepare data for API - convert string fields back to numbers
+      // Prepare data for API
       const apiData = {
         ...growData,
         cost: calculateTotalCost(),
-        harvest_dry_weight_grams: totalDryWeight,
-        harvest_wet_weight_grams: totalWetWeight,
-        harvest_date: formatDateForAPI(firstHarvestDate || null),
-
-        // Convert string fields back to numbers for API
-        syringe_volume_ml: growData.syringe_volume_ml
-          ? parseFloat(growData.syringe_volume_ml)
-          : undefined,
-        syringe_cost: growData.syringe_cost ? parseFloat(growData.syringe_cost) : undefined,
-        spawn_weight_lbs: growData.spawn_weight_lbs
-          ? parseFloat(growData.spawn_weight_lbs)
-          : undefined,
-        spawn_cost: growData.spawn_cost ? parseFloat(growData.spawn_cost) : undefined,
-        bulk_weight_lbs: growData.bulk_weight_lbs
-          ? parseFloat(growData.bulk_weight_lbs)
-          : undefined,
-        bulk_cost: growData.bulk_cost ? parseFloat(growData.bulk_cost) : undefined,
       };
 
       // Remove undefined values

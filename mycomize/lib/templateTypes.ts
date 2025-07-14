@@ -5,16 +5,16 @@ export interface Item {
   quantity: string; // Free-form text (e.g., "2 lbs", "500ml", "1 bag")
   url: string;
   cost?: string;
-  createdDate?: string; // ISO date string
-  expirationDate?: string; // ISO date string
+  created_date?: string; // ISO date string
+  expiration_date?: string; // ISO date string
 }
 
 export interface EnvironmentalCondition {
   id: string;
   name: string; // e.g., "Max incubator temperature", "Fruiting humidity"
   type: string; // "Temperature", "Humidity", "CO2", "pH", "Volatile Organic Compounds"
-  lowerBound: number; // Lower bound value
-  upperBound: number; // Upper bound value
+  lower_bound: number; // Lower bound value
+  upper_bound: number; // Upper bound value
   unit: string; // Unit based on type (e.g., "°F", "%", "ppm")
 }
 
@@ -22,12 +22,12 @@ export interface Task {
   id: string;
   action: string; // e.g., "Break and shake", "Mist substrate"
   frequency: string; // Free-form text (e.g., "Daily for 7 days", "Once", "Every 3 days")
-  daysAfterStageStart: number; // Number of days after the stage begins (e.g., 14 for break and shake on day 14)
+  days_after_stage_start: number; // Number of days after the stage begins (e.g., 14 for break and shake on day 14)
 }
 
 export interface StageData {
   items: Item[];
-  environmentalConditions: EnvironmentalCondition[];
+  environmental_conditions: EnvironmentalCondition[];
   tasks: Task[];
   notes: string;
 }
@@ -45,8 +45,8 @@ export interface BulkGrowTekTemplateData {
   // Stage-based data
   stages: {
     inoculation: StageData;
-    spawnColonization: StageData;
-    bulkColonization: StageData;
+    spawn_colonization: StageData;
+    bulk_colonization: StageData;
     fruiting: StageData;
     harvest: StageData;
   };
@@ -54,8 +54,8 @@ export interface BulkGrowTekTemplateData {
 
 export const BULK_GROW_TEK_STAGES = {
   inoculation: 'Inoculation',
-  spawnColonization: 'Spawn Colonization',
-  bulkColonization: 'Bulk Colonization',
+  spawn_colonization: 'Spawn Colonization',
+  bulk_colonization: 'Bulk Colonization',
   fruiting: 'Fruiting',
   harvest: 'Harvest',
 } as const;
@@ -89,7 +89,7 @@ export const CONDITION_UNITS = {
 // Helper function to create empty stage data
 export const createEmptyStageData = (): StageData => ({
   items: [],
-  environmentalConditions: [],
+  environmental_conditions: [],
   tasks: [],
   notes: '',
 });
@@ -105,8 +105,8 @@ export const createEmptyTemplateData = (): BulkGrowTekTemplateData => ({
   tags: [],
   stages: {
     inoculation: createEmptyStageData(),
-    spawnColonization: createEmptyStageData(),
-    bulkColonization: createEmptyStageData(),
+    spawn_colonization: createEmptyStageData(),
+    bulk_colonization: createEmptyStageData(),
     fruiting: createEmptyStageData(),
     harvest: createEmptyStageData(),
   },
@@ -130,8 +130,8 @@ export interface BulkGrowTekTemplate {
   creator_profile_image?: string;
   stages?: {
     inoculation: StageData;
-    spawnColonization: StageData;
-    bulkColonization: StageData;
+    spawn_colonization: StageData;
+    bulk_colonization: StageData;
     fruiting: StageData;
     harvest: StageData;
   };

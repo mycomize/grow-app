@@ -103,7 +103,7 @@ export const EnvironmentalConditionsList: React.FC<EnvironmentalConditionsListPr
                   )}
                   <HStack className="items-center" space="xs">
                     <Text className="text-sm text-typography-600">
-                      Range: {condition.lowerBound} - {condition.upperBound} {condition.unit}
+                      Range: {condition.lower_bound} - {condition.upper_bound} {condition.unit}
                     </Text>
                   </HStack>
                 </VStack>

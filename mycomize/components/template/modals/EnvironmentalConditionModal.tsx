@@ -39,8 +39,8 @@ export const EnvironmentalConditionModal: React.FC<EnvironmentalConditionModalPr
   const [formData, setFormData] = useState({
     name: '',
     type: '',
-    lowerBound: '',
-    upperBound: '',
+    lower_bound: '',
+    upper_bound: '',
     unit: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -57,16 +57,16 @@ export const EnvironmentalConditionModal: React.FC<EnvironmentalConditionModalPr
         setFormData({
           name: condition.name,
           type: condition.type,
-          lowerBound: condition.lowerBound.toString(),
-          upperBound: condition.upperBound.toString(),
+          lower_bound: condition.lower_bound.toString(),
+          upper_bound: condition.upper_bound.toString(),
           unit: condition.unit,
         });
       } else {
         setFormData({
           name: '',
           type: '',
-          lowerBound: '',
-          upperBound: '',
+          lower_bound: '',
+          upper_bound: '',
           unit: '',
         });
       }
@@ -85,16 +85,16 @@ export const EnvironmentalConditionModal: React.FC<EnvironmentalConditionModalPr
       newErrors.type = 'Type is required';
     }
 
-    if (!formData.lowerBound.trim()) {
-      newErrors.lowerBound = 'Lower bound is required';
-    } else if (isNaN(Number(formData.lowerBound))) {
-      newErrors.lowerBound = 'Lower bound must be a number';
+    if (!formData.lower_bound.trim()) {
+      newErrors.lower_bound = 'Lower bound is required';
+    } else if (isNaN(Number(formData.lower_bound))) {
+      newErrors.lower_bound = 'Lower bound must be a number';
     }
 
-    if (!formData.upperBound.trim()) {
-      newErrors.upperBound = 'Upper bound is required';
-    } else if (isNaN(Number(formData.upperBound))) {
-      newErrors.upperBound = 'Upper bound must be a number';
+    if (!formData.upper_bound.trim()) {
+      newErrors.upper_bound = 'Upper bound is required';
+    } else if (isNaN(Number(formData.upper_bound))) {
+      newErrors.upper_bound = 'Upper bound must be a number';
     }
 
     if (!formData.unit.trim()) {
@@ -103,13 +103,13 @@ export const EnvironmentalConditionModal: React.FC<EnvironmentalConditionModalPr
 
     // Check if lower bound is less than upper bound
     if (
-      formData.lowerBound &&
-      formData.upperBound &&
-      !isNaN(Number(formData.lowerBound)) &&
-      !isNaN(Number(formData.upperBound))
+      formData.lower_bound &&
+      formData.upper_bound &&
+      !isNaN(Number(formData.lower_bound)) &&
+      !isNaN(Number(formData.upper_bound))
     ) {
-      if (Number(formData.lowerBound) >= Number(formData.upperBound)) {
-        newErrors.upperBound = 'Upper bound must be greater than lower bound';
+      if (Number(formData.lower_bound) >= Number(formData.upper_bound)) {
+        newErrors.upper_bound = 'Upper bound must be greater than lower bound';
       }
     }
 
@@ -126,8 +126,8 @@ export const EnvironmentalConditionModal: React.FC<EnvironmentalConditionModalPr
       id: condition?.id || generateId(),
       name: formData.name.trim(),
       type: formData.type.trim(),
-      lowerBound: Number(formData.lowerBound),
-      upperBound: Number(formData.upperBound),
+      lower_bound: Number(formData.lower_bound),
+      upper_bound: Number(formData.upper_bound),
       unit: formData.unit.trim(),
     };
 
@@ -217,32 +217,32 @@ export const EnvironmentalConditionModal: React.FC<EnvironmentalConditionModalPr
             {/* Lower Bound */}
             <VStack space="xs">
               <Text className="font-medium">Lower Bound</Text>
-              <Input className={errors.lowerBound ? 'border-error-500' : ''}>
+              <Input className={errors.lower_bound ? 'border-error-500' : ''}>
                 <InputField
                   placeholder="e.g., 68, 85, 1000"
-                  value={formData.lowerBound}
-                  onChangeText={(value) => updateField('lowerBound', value)}
+                  value={formData.lower_bound}
+                  onChangeText={(value) => updateField('lower_bound', value)}
                   keyboardType="numeric"
                 />
               </Input>
-              {errors.lowerBound && (
-                <Text className="text-sm text-error-600">{errors.lowerBound}</Text>
+              {errors.lower_bound && (
+                <Text className="text-sm text-error-600">{errors.lower_bound}</Text>
               )}
             </VStack>
 
             {/* Upper Bound */}
             <VStack space="xs">
               <Text className="font-medium">Upper Bound</Text>
-              <Input className={errors.upperBound ? 'border-error-500' : ''}>
+              <Input className={errors.upper_bound ? 'border-error-500' : ''}>
                 <InputField
                   placeholder="e.g., 72, 90, 2000"
-                  value={formData.upperBound}
-                  onChangeText={(value) => updateField('upperBound', value)}
+                  value={formData.upper_bound}
+                  onChangeText={(value) => updateField('upper_bound', value)}
                   keyboardType="numeric"
                 />
               </Input>
-              {errors.upperBound && (
-                <Text className="text-sm text-error-600">{errors.upperBound}</Text>
+              {errors.upper_bound && (
+                <Text className="text-sm text-error-600">{errors.upper_bound}</Text>
               )}
             </VStack>
 

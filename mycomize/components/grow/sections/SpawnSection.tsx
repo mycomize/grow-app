@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
-import { Button } from '~/components/ui/button';
-import { Icon } from '~/components/ui/icon';
 import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
+import { Button, ButtonText } from '~/components/ui/button';
+import { Icon } from '~/components/ui/icon';
 import {
   Select,
   SelectTrigger,
@@ -16,18 +16,11 @@ import {
   SelectDragIndicator,
   SelectItem,
 } from '~/components/ui/select';
-import { Package, Thermometer, CheckSquare, FileText, ChevronDown } from 'lucide-react-native';
-
-// Import template components
-import { ItemsList } from '~/components/template/ItemsList';
-import { EnvironmentalConditionsList } from '~/components/template/EnvironmentalConditionsList';
-import { TasksList } from '~/components/template/TasksList';
-import { StageNotes } from '~/components/template/StageNotes';
+import { ChevronDown, ArrowDownToDot } from 'lucide-react-native';
 
 // Import template types
 import { StageData } from '~/lib/templateTypes';
-
-type TabType = 'items' | 'conditions' | 'tasks' | 'notes';
+import { StageTabs } from '~/components/ui/stage-tabs';
 
 interface GrowData {
   spawn_status?: string;
@@ -44,6 +37,12 @@ interface SpawnSectionProps {
   // Template stage data (if available from template)
   stageData?: any;
   onUpdateStageData?: (stageData: any) => void;
+
+  // Complete button props
+  status: string;
+  currentStageIndex: number;
+  stageIndex: number;
+  advanceToNextStage: () => void;
 }
 
 export const SpawnSection: React.FC<SpawnSectionProps> = ({
@@ -51,106 +50,17 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
   updateField,
   stageData,
   onUpdateStageData,
+  status,
+  currentStageIndex,
+  stageIndex,
+  advanceToNextStage,
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('items');
-
-  // Initialize empty stage data if not provided
-  const defaultStageData: StageData = {
-    items: [],
-    environmentalConditions: [],
-    tasks: [],
-    notes: '',
-  };
-
-  const currentStageData = stageData || defaultStageData;
-
-  const handleUpdateItems = (items: typeof currentStageData.items) => {
-    if (onUpdateStageData) {
-      onUpdateStageData({
-        ...currentStageData,
-        items,
-      });
-    }
-  };
-
-  const handleUpdateConditions = (
-    environmentalConditions: typeof currentStageData.environmentalConditions
-  ) => {
-    if (onUpdateStageData) {
-      onUpdateStageData({
-        ...currentStageData,
-        environmentalConditions,
-      });
-    }
-  };
-
-  const handleUpdateTasks = (tasks: typeof currentStageData.tasks) => {
-    if (onUpdateStageData) {
-      onUpdateStageData({
-        ...currentStageData,
-        tasks,
-      });
-    }
-  };
-
-  const handleUpdateNotes = (notes: string) => {
-    if (onUpdateStageData) {
-      onUpdateStageData({
-        ...currentStageData,
-        notes,
-      });
-    }
-  };
-
-  const tabs = [
-    { id: 'items' as TabType, icon: Package },
-    { id: 'conditions' as TabType, icon: Thermometer },
-    { id: 'tasks' as TabType, icon: CheckSquare },
-    { id: 'notes' as TabType, icon: FileText },
-  ];
+  const showCompleteButton = status === 'active';
 
   return (
     <VStack space="md" className="bg-background-0 p-4">
-      {/* Tab Buttons */}
-      <HStack space="xs" className="mb-2 justify-center">
-        {tabs.map((tab) => (
-          <Button
-            key={tab.id}
-            variant={activeTab === tab.id ? 'solid' : 'outline'}
-            size="sm"
-            onPress={() => setActiveTab(tab.id)}
-            className={`flex-1 ${
-              activeTab === tab.id
-                ? 'border border-success-400 bg-success-300'
-                : 'border-background-300 bg-transparent'
-            }`}>
-            <Icon
-              as={tab.icon}
-              size="lg"
-              className={activeTab === tab.id ? 'text-white' : 'text-typography-500'}
-            />
-          </Button>
-        ))}
-      </HStack>
-
-      {/* Tab Content */}
-      <VStack space="md">
-        {activeTab === 'items' && (
-          <ItemsList items={currentStageData.items} onUpdateItems={handleUpdateItems} />
-        )}
-        {activeTab === 'conditions' && (
-          <EnvironmentalConditionsList
-            conditions={currentStageData.environmentalConditions}
-            onUpdateConditions={handleUpdateConditions}
-          />
-        )}
-        {activeTab === 'tasks' && (
-          <TasksList tasks={currentStageData.tasks} onUpdateTasks={handleUpdateTasks} />
-        )}
-        {activeTab === 'notes' && (
-          <StageNotes notes={currentStageData.notes} onUpdateNotes={handleUpdateNotes} />
-        )}
-      </VStack>
+      {/* Stage Tabs */}
+      <StageTabs stageData={stageData} onUpdateStageData={onUpdateStageData} />
 
       {/* Spawn-specific fields */}
       <VStack space="md" className="mt-6 border-t border-background-200 pt-4">
@@ -182,6 +92,20 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
             </SelectPortal>
           </Select>
         </FormControl>
+
+        {/* Complete button */}
+        {showCompleteButton && (
+          <HStack className="mt-4 justify-end">
+            <Button
+              size="sm"
+              variant="solid"
+              onPress={advanceToNextStage}
+              className="bg-success-300">
+              <ButtonText className="text-white">Complete</ButtonText>
+              <Icon as={ArrowDownToDot} className="ml-1" size="sm" />
+            </Button>
+          </HStack>
+        )}
       </VStack>
     </VStack>
   );

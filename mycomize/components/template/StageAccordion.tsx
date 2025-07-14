@@ -50,7 +50,7 @@ export const StageAccordion: React.FC<StageAccordionProps> = ({
     const stageData = templateData.stages[stage];
     return {
       materials: stageData.items?.length || 0,
-      conditions: stageData.environmentalConditions?.length || 0,
+      conditions: stageData.environmental_conditions?.length || 0,
       tasks: stageData.tasks?.length || 0,
     };
   };
@@ -100,8 +100,8 @@ export const StageAccordion: React.FC<StageAccordionProps> = ({
 
   const stageOrder: BulkGrowCultivationStage[] = [
     'inoculation',
-    'spawnColonization',
-    'bulkColonization',
+    'spawn_colonization',
+    'bulk_colonization',
     'fruiting',
     'harvest',
   ];

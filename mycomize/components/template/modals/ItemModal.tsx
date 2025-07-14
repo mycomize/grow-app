@@ -32,8 +32,8 @@ export const ItemModal: React.FC<ItemModalProps> = ({ isOpen, onClose, onSave, i
     quantity: '',
     url: '',
     cost: '',
-    createdDate: '',
-    expirationDate: '',
+    created_date: '',
+    expiration_date: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeDatePicker, setActiveDatePicker] = useState<string | null>(null);
@@ -62,8 +62,8 @@ export const ItemModal: React.FC<ItemModalProps> = ({ isOpen, onClose, onSave, i
           quantity: item.quantity,
           url: item.url,
           cost: item.cost || '',
-          createdDate: item.createdDate || '',
-          expirationDate: item.expirationDate || '',
+          created_date: item.created_date || '',
+          expiration_date: item.expiration_date || '',
         });
       } else {
         setFormData({
@@ -72,8 +72,8 @@ export const ItemModal: React.FC<ItemModalProps> = ({ isOpen, onClose, onSave, i
           quantity: '',
           url: '',
           cost: '',
-          createdDate: '',
-          expirationDate: '',
+          created_date: '',
+          expiration_date: '',
         });
       }
       setErrors({});
@@ -108,8 +108,8 @@ export const ItemModal: React.FC<ItemModalProps> = ({ isOpen, onClose, onSave, i
       quantity: formData.quantity.trim(),
       url: formData.url.trim(),
       cost: formData.cost.trim() || undefined,
-      createdDate: formData.createdDate || undefined,
-      expirationDate: formData.expirationDate || undefined,
+      created_date: formData.created_date || undefined,
+      expiration_date: formData.expiration_date || undefined,
     };
 
     onSave(itemData);
@@ -215,19 +215,26 @@ export const ItemModal: React.FC<ItemModalProps> = ({ isOpen, onClose, onSave, i
               <Input isReadOnly>
                 <InputField
                   value={
-                    parseDate(formData.createdDate)?.toDateString() || 'Select date (if applicable)'
+                    parseDate(formData.created_date)?.toDateString() ||
+                    'Select date (if applicable)'
                   }
-                  className={!formData.createdDate ? 'text-typography-400' : ''}
+                  className={!formData.created_date ? 'text-typography-400' : ''}
                 />
-                <InputSlot onPress={() => setActiveDatePicker('createdDate')}>
-                  <InputIcon as={CalendarDays} className="mr-2" />
-                </InputSlot>
+                {formData.created_date ? (
+                  <InputSlot onPress={() => updateField('created_date', '')}>
+                    <InputIcon as={X} className="mr-2" />
+                  </InputSlot>
+                ) : (
+                  <InputSlot onPress={() => setActiveDatePicker('created_date')}>
+                    <InputIcon as={CalendarDays} className="mr-2" />
+                  </InputSlot>
+                )}
               </Input>
-              {activeDatePicker === 'createdDate' && (
+              {activeDatePicker === 'created_date' && (
                 <DateTimePicker
-                  value={parseDate(formData.createdDate) || new Date()}
+                  value={parseDate(formData.created_date) || new Date()}
                   mode="date"
-                  onChange={(event, date) => handleDateChange('createdDate', date)}
+                  onChange={(event, date) => handleDateChange('created_date', date)}
                 />
               )}
             </VStack>
@@ -238,20 +245,26 @@ export const ItemModal: React.FC<ItemModalProps> = ({ isOpen, onClose, onSave, i
               <Input isReadOnly>
                 <InputField
                   value={
-                    parseDate(formData.expirationDate)?.toDateString() ||
+                    parseDate(formData.expiration_date)?.toDateString() ||
                     'Select date (if applicable)'
                   }
-                  className={!formData.expirationDate ? 'text-typography-400' : ''}
+                  className={!formData.expiration_date ? 'text-typography-400' : ''}
                 />
-                <InputSlot onPress={() => setActiveDatePicker('expirationDate')}>
-                  <InputIcon as={CalendarDays} className="mr-2" />
-                </InputSlot>
+                {formData.expiration_date ? (
+                  <InputSlot onPress={() => updateField('expiration_date', '')}>
+                    <InputIcon as={X} className="mr-2" />
+                  </InputSlot>
+                ) : (
+                  <InputSlot onPress={() => setActiveDatePicker('expiration_date')}>
+                    <InputIcon as={CalendarDays} className="mr-2" />
+                  </InputSlot>
+                )}
               </Input>
-              {activeDatePicker === 'expirationDate' && (
+              {activeDatePicker === 'expiration_date' && (
                 <DateTimePicker
-                  value={parseDate(formData.expirationDate) || new Date()}
+                  value={parseDate(formData.expiration_date) || new Date()}
                   mode="date"
-                  onChange={(event, date) => handleDateChange('expirationDate', date)}
+                  onChange={(event, date) => handleDateChange('expiration_date', date)}
                 />
               )}
             </VStack>

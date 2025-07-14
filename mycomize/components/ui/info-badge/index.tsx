@@ -3,7 +3,7 @@ import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
 import { Icon } from '~/components/ui/icon';
 
-export type InfoBadgeVariant = 'default' | 'success' | 'warning' | 'error' | 'info';
+export type InfoBadgeVariant = 'default' | 'success' | 'warning' | 'error' | 'info' | 'healthy';
 export type InfoBadgeSize = 'sm' | 'md' | 'lg';
 
 interface InfoBadgeProps {
@@ -28,9 +28,11 @@ export const InfoBadge: React.FC<InfoBadgeProps> = ({
       case 'warning':
         return 'border border-warning-300 bg-warning-50';
       case 'error':
-        return 'border border-error-300 bg-error-50';
+        return 'border border-error-200 bg-error-0';
       case 'info':
         return 'border border-info-300 bg-info-50';
+      case 'healthy':
+        return 'border border-green-700 bg-green-900';
       case 'default':
       default:
         return 'border border-background-200 bg-background-50';
@@ -47,6 +49,8 @@ export const InfoBadge: React.FC<InfoBadgeProps> = ({
         return 'text-error-700';
       case 'info':
         return 'text-info-700';
+      case 'healthy':
+        return 'text-green-300';
       case 'default':
       default:
         return 'text-typography-700';
@@ -63,6 +67,8 @@ export const InfoBadge: React.FC<InfoBadgeProps> = ({
         return 'text-error-700';
       case 'info':
         return 'text-info-700';
+      case 'healthy':
+        return 'text-green-300';
       case 'default':
       default:
         return 'text-typography-700';

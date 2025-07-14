@@ -5,6 +5,7 @@ import { Text } from '~/components/ui/text';
 import { Button, ButtonText } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
+import { InfoBadge } from '~/components/ui/info-badge';
 import {
   CheckCircle,
   Circle,
@@ -16,6 +17,9 @@ import {
   Wheat,
   Box,
   ShoppingBasket,
+  Package,
+  Thermometer,
+  CheckSquare,
 } from 'lucide-react-native';
 
 import MushroomIcon from '~/components/icons/MushroomIcon';
@@ -64,7 +68,7 @@ const stages: Stage[] = [
     name: 'Inoculation',
     description: 'Initial spore or culture introduction',
     dateField: 'inoculation_date',
-    color: 'text-green-600',
+    color: 'text-typography-700',
     bgColor: 'bg-blue-100',
   },
   {
@@ -72,7 +76,7 @@ const stages: Stage[] = [
     name: 'Spawn Colonization',
     description: 'Mycelium colonizing spawn substrate',
     dateField: 'spawn_colonization_date',
-    color: 'text-green-600',
+    color: 'text-typography-700',
     bgColor: 'bg-blue-100',
   },
   {
@@ -80,7 +84,7 @@ const stages: Stage[] = [
     name: 'Bulk Colonization',
     description: 'Mycelium colonizing bulk substrate',
     dateField: 'bulk_colonization_date',
-    color: 'text-green-600',
+    color: 'text-typography-700',
     bgColor: 'bg-blue-100',
   },
   {
@@ -88,7 +92,7 @@ const stages: Stage[] = [
     name: 'Fruiting',
     description: 'Mushroom formation and growth',
     dateField: 'fruiting_start_date',
-    color: 'text-green-600',
+    color: 'text-typography-700',
     bgColor: 'bg-blue-100',
   },
   {
@@ -96,7 +100,7 @@ const stages: Stage[] = [
     name: 'Harvest',
     description: 'Mushroom harvesting period',
     dateField: 'harvest_date',
-    color: 'text-green-600',
+    color: 'text-typograpy-700',
     bgColor: 'bg-blue-100',
   },
 ];
@@ -121,6 +125,174 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
       prev.includes(stageId) ? prev.filter((id) => id !== stageId) : [...prev, stageId]
     );
   };
+
+  // Map stage IDs to stage data keys (backend expects snake_case)
+  const getStageDataKey = (stageId: string) => {
+    // All stage keys should remain in snake_case to match backend schema
+    return stageId;
+  };
+
+  // Get stage data for a specific stage
+  const getStageData = (stageId: string) => {
+    if (!growData.stages) return null;
+    return growData.stages[stageId] || null;
+  };
+
+  // Update stage data for a specific stage
+  const updateStageData = (stageId: string, stageData: any) => {
+    const currentStages = growData.stages || {};
+    const updatedStages = {
+      ...currentStages,
+      [stageId]: stageData,
+    };
+    updateField('stages', updatedStages);
+  };
+
+  // Get item counts for a stage
+  const getItemCounts = (stageId: string) => {
+    const stageData = getStageData(getStageDataKey(stageId));
+    if (!stageData) {
+      return {
+        items: 0,
+        conditions: 0,
+        tasks: 0,
+      };
+    }
+    return {
+      items: stageData.items?.length || 0,
+      conditions: stageData.environmental_conditions?.length || 0,
+      tasks: stageData.tasks?.length || 0,
+    };
+  };
+
+  // Render count badges for a stage
+  const renderCountBadges = (stageId: string) => {
+    const counts = getItemCounts(stageId);
+    const badges = [];
+
+    if (counts.items > 0) {
+      badges.push(
+        <InfoBadge
+          key="items"
+          icon={Package}
+          text={`x ${counts.items}`}
+          variant="default"
+          size="sm"
+        />
+      );
+    }
+
+    if (counts.conditions > 0) {
+      badges.push(
+        <InfoBadge
+          key="conditions"
+          icon={Thermometer}
+          text={`x ${counts.conditions}`}
+          variant="default"
+          size="sm"
+        />
+      );
+    }
+
+    if (counts.tasks > 0) {
+      badges.push(
+        <InfoBadge
+          key="tasks"
+          icon={CheckSquare}
+          text={`x ${counts.tasks}`}
+          variant="default"
+          size="sm"
+        />
+      );
+    }
+
+    return badges.length > 0 ? badges : null;
+  };
+
+  // Get status badge for a stage
+  const getStatusBadge = (stageId: string) => {
+    let status: string | undefined;
+    let variant: 'default' | 'success' | 'healthy' | 'warning' | 'error' = 'default';
+
+    switch (stageId) {
+      case 'inoculation':
+        status = growData.inoculation_status;
+        break;
+      case 'spawn_colonization':
+        status = growData.spawn_status;
+        break;
+      case 'bulk_colonization':
+        status = growData.bulk_status;
+        break;
+      case 'fruiting':
+        status = growData.fruiting_status;
+        break;
+      case 'harvest':
+        // For harvest, we could show completed status or number of flushes
+        // Only count flushes that have actual data (harvest_date or weight)
+        const validFlushes =
+          flushes?.filter(
+            (flush) => flush?.harvest_date || flush?.wet_weight_grams || flush?.dry_weight_grams
+          ) || [];
+        const actualFlushCount = validFlushes.length;
+        if (actualFlushCount > 0) {
+          return (
+            <InfoBadge
+              key="harvest-status"
+              text={`${actualFlushCount} flush${actualFlushCount !== 1 ? 'es' : ''}`}
+              variant="success"
+              size="sm"
+            />
+          );
+        }
+        return null;
+      default:
+        return null;
+    }
+
+    if (!status) return null;
+
+    // Set variant based on status
+    switch (status) {
+      case 'Healthy':
+        variant = 'healthy';
+        break;
+      case 'Suspect':
+        variant = 'warning';
+        break;
+      case 'Contaminated':
+        variant = 'error';
+        break;
+      default:
+        variant = 'default';
+        break;
+    }
+
+    return (
+      <InfoBadge
+        key="status"
+        text={status === 'Contaminated' ? 'Contam' : status}
+        variant={variant}
+        size="sm"
+      />
+    );
+  };
+
+  // Get cost badge for a stage
+  const getCostBadge = (stageId: string) => {
+    const stageData = getStageData(stageId);
+    if (!stageData?.items) return null;
+
+    const cost = stageData.items.reduce((total: number, item: any) => {
+      const itemCost = parseFloat(item.cost || '0') || 0;
+      return total + itemCost;
+    }, 0);
+
+    if (cost <= 0) return null;
+
+    return <InfoBadge key="cost" text={`$${cost.toFixed(2)}`} variant="info" size="sm" />;
+  };
+
   const getCurrentStageIndex = () => {
     // First check if current_stage is explicitly set
     if (growData.current_stage) {
@@ -149,8 +321,15 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
     if (growData.status === 'completed' || growData.current_stage === 'completed') {
       return 'completed';
     }
-    if (index < currentStageIndex) return 'completed';
-    if (index === currentStageIndex) return 'active';
+
+    if (index < currentStageIndex) {
+      return 'completed';
+    }
+
+    if (index === currentStageIndex) {
+      return 'active';
+    }
+
     return 'pending';
   };
 
@@ -213,18 +392,6 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
     }
   };
 
-  const totalDays = getTotalDays();
-
-  // Calculate total cost
-  const calculateTotalCost = () => {
-    const syringeCost = parseFloat(growData.syringe_cost || '0') || 0;
-    const spawnCost = parseFloat(growData.spawn_cost || '0') || 0;
-    const bulkCost = parseFloat(growData.bulk_cost || '0') || 0;
-    return syringeCost + spawnCost + bulkCost;
-  };
-
-  const totalCost = calculateTotalCost();
-
   return (
     <VStack space="lg" className="bg-background-0 p-2">
       {/* Timeline */}
@@ -241,19 +408,21 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                 {/* Timeline indicator */}
                 <VStack className="items-center" style={{ width: 8 }}>
                   {/* Stage circle/checkmark */}
-                  {status === 'completed' ? (
-                    <Icon as={CheckCircle} size="xl" className="my-0.5 text-green-600" />
-                  ) : status === 'active' ? (
-                    <Icon as={Disc2} size="xl" className="my-0.5 mt-2 text-success-400"></Icon>
-                  ) : (
-                    <Icon as={Circle} size="xl" className="my-0.5 text-typography-300" />
-                  )}
+                  <HStack>
+                    {status === 'completed' ? (
+                      <Icon as={CheckCircle} size="xl" className="my-0.5 text-green-500" />
+                    ) : status === 'active' ? (
+                      <Icon as={Disc2} size="xl" className="my-0.5 text-success-400"></Icon>
+                    ) : (
+                      <Icon as={Circle} size="xl" className="my-0.5 text-typography-300" />
+                    )}
+                  </HStack>
 
                   {/* Connecting line */}
                   {!isLast && (
                     <View
                       className={`mt-1 w-0.5 flex-1 ${
-                        status === 'completed' ? 'bg-green-600' : 'bg-typography-200'
+                        status === 'completed' ? 'bg-green-500' : 'bg-typography-200'
                       }`}
                       style={{ minHeight: 60 }}
                     />
@@ -263,80 +432,65 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                 {/* Stage content */}
                 <VStack className="flex-1 pb-4">
                   <VStack space="xs">
-                    {/* Stage name row with advance button */}
+                    {/* Stage name row */}
                     <HStack className="items-center justify-between">
                       <HStack className="flex-1 items-center gap-2">
                         {stage.name === 'Inoculation' && (
-                          <Icon as={Syringe} size="md" className="ml-1 mt-0 text-typography-400" />
+                          <>
+                            <View className="ml-0.5" />
+                            <Icon as={Syringe} size="md" className="text-typography-600" />
+                          </>
                         )}
                         {stage.name === 'Spawn Colonization' && (
-                          <Icon as={Wheat} size="md" className="ml-1 mt-1 text-typography-400" />
+                          <>
+                            <View className="ml-0.5" />
+                            <Icon as={Wheat} size="md" className="text-typography-600" />
+                          </>
                         )}
                         {stage.name === 'Bulk Colonization' && (
-                          <Icon as={Box} size="md" className="ml-1 mt-1 text-typography-400" />
+                          <>
+                            <View className="ml-0.5" />
+                            <Icon as={Box} size="md" className="text-typography-600" />
+                          </>
                         )}
                         {stage.name === 'Fruiting' && (
-                          <MushroomIcon
-                            height={18}
-                            width={18}
-                            strokeWidth={2}
-                            color="#9ca3af"
-                            className="mt-1"
-                          />
+                          <>
+                            <View className="ml-0.5" />
+                            <MushroomIcon height={18} width={18} strokeWidth={2} color="#9ca3af" />
+                          </>
                         )}
                         {stage.name === 'Harvest' && (
-                          <Icon
-                            as={ShoppingBasket}
-                            size="md"
-                            className="ml-1 mt-1 text-typography-400"
-                          />
+                          <>
+                            <View className="ml-0.5" />
+                            <Icon as={ShoppingBasket} size="md" className="text-typography-600" />
+                          </>
                         )}
                         {status === 'active' && (
-                          <Text className="text-lg font-semibold text-typography-900">
-                            {stage.name}
-                          </Text>
+                          <>
+                            <Text className="text-lg font-semibold text-typography-700">
+                              {stage.name}
+                            </Text>
+                          </>
                         )}
                         {status !== 'active' && (
                           <Text
-                            className={`text-lg font-bold ${status === 'pending' ? 'text-typography-400' : stage.color}`}>
+                            className={`text-lg ${status === 'pending' ? 'text-typography-700' : stage.color}`}>
                             {stage.name}
                           </Text>
                         )}
+                        <View className="ml-auto">{getCostBadge(getStageDataKey(stage.id))}</View>
+                        {getStatusBadge(stage.id)}
                       </HStack>
+                    </HStack>
 
-                      {/* Advance button aligned to the right */}
-                      {status === 'active' && (
-                        <Button
-                          size="sm"
-                          variant="solid"
-                          onPress={advanceToNextStage}
-                          className="mt-1 bg-success-300">
-                          <ButtonText className="text-white">Complete</ButtonText>
-                          <Icon as={ArrowDownToDot} className="ml-1" size="sm" />
-                        </Button>
-                      )}
-
-                      {/* Inoculate button for first stage */}
-                      {currentStageIndex === -1 && index === 0 && (
-                        <Button
-                          size="sm"
-                          variant="solid"
-                          onPress={advanceToNextStage}
-                          className="bg-success-300">
-                          <ButtonText className="text-white">Complete</ButtonText>
-                          <Icon as={ArrowDownToDot} className="ml-1" size="sm" />
-                        </Button>
-                      )}
+                    {/* Count badges */}
+                    <HStack space="xs" className="my-1 ml-3">
+                      {renderCountBadges(stage.id)}
                     </HStack>
 
                     {/* Stage date and duration */}
                     {stageDate && (
                       <HStack space="sm" className="items-center">
-                        {stage.id === 'inoculation' && (
-                          <Text className="text-sm font-medium text-typography-600">
-                            Inoculated: {new Date(stageDate).toLocaleDateString()}
-                          </Text>
-                        )}
                         {stage.id !== 'inoculation' && (
                           <Text className="text-sm font-medium text-typography-600">
                             Started: {new Date(stageDate).toLocaleDateString()}
@@ -354,11 +508,31 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                     )}
 
                     {/* Flush count for harvest stage */}
-                    {stage.id === 'harvest' && status !== 'pending' && flushCount > 0 && (
-                      <Text className="text-sm font-medium text-orange-600">
-                        {flushCount} {flushCount === 1 ? 'Flush' : 'Flushes'} completed
-                      </Text>
-                    )}
+                    {stage.id === 'harvest' &&
+                      status !== 'pending' &&
+                      (() => {
+                        const validFlushes =
+                          flushes?.filter(
+                            (flush) =>
+                              flush?.harvest_date ||
+                              flush?.wet_weight_grams ||
+                              flush?.dry_weight_grams
+                          ) || [];
+                        return validFlushes.length > 0;
+                      })() && (
+                        <Text className="text-sm font-medium text-orange-600">
+                          {(() => {
+                            const validFlushes =
+                              flushes?.filter(
+                                (flush) =>
+                                  flush?.harvest_date ||
+                                  flush?.wet_weight_grams ||
+                                  flush?.dry_weight_grams
+                              ) || [];
+                            return `${validFlushes.length} ${validFlushes.length === 1 ? 'Flush' : 'Flushes'} completed`;
+                          })()}
+                        </Text>
+                      )}
                   </VStack>
 
                   {/* Expand/Collapse button and sub-section */}
@@ -368,7 +542,7 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                       <Pressable
                         onPress={() => toggleStageExpansion(stage.id)}
                         className="flex-row items-center">
-                        <Text className="text-md font-medium text-primary-600">
+                        <Text className="text-md ml-3 font-medium text-typography-700">
                           {expandedStages.includes(stage.id) ? 'Hide' : 'Show'} Details
                         </Text>
                         <Icon
@@ -389,6 +563,14 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                               setActiveDatePicker={setActiveDatePicker}
                               handleDateChange={handleDateChange}
                               parseDate={parseDate}
+                              stageData={getStageData(getStageDataKey(stage.id))}
+                              onUpdateStageData={(data) =>
+                                updateStageData(getStageDataKey(stage.id), data)
+                              }
+                              status={status}
+                              currentStageIndex={currentStageIndex}
+                              stageIndex={index}
+                              advanceToNextStage={advanceToNextStage}
                             />
                           )}
                           {stage.id === 'spawn_colonization' && (
@@ -399,6 +581,14 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                               setActiveDatePicker={setActiveDatePicker}
                               handleDateChange={handleDateChange}
                               parseDate={parseDate}
+                              stageData={getStageData(getStageDataKey(stage.id))}
+                              onUpdateStageData={(data) =>
+                                updateStageData(getStageDataKey(stage.id), data)
+                              }
+                              status={status}
+                              currentStageIndex={currentStageIndex}
+                              stageIndex={index}
+                              advanceToNextStage={advanceToNextStage}
                             />
                           )}
                           {stage.id === 'bulk_colonization' && (
@@ -409,6 +599,14 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                               setActiveDatePicker={setActiveDatePicker}
                               handleDateChange={handleDateChange}
                               parseDate={parseDate}
+                              stageData={getStageData(getStageDataKey(stage.id))}
+                              onUpdateStageData={(data) =>
+                                updateStageData(getStageDataKey(stage.id), data)
+                              }
+                              status={status}
+                              currentStageIndex={currentStageIndex}
+                              stageIndex={index}
+                              advanceToNextStage={advanceToNextStage}
                             />
                           )}
                           {stage.id === 'fruiting' && (
@@ -419,6 +617,14 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                               setActiveDatePicker={setActiveDatePicker}
                               handleDateChange={handleDateChange}
                               parseDate={parseDate}
+                              stageData={getStageData(getStageDataKey(stage.id))}
+                              onUpdateStageData={(data) =>
+                                updateStageData(getStageDataKey(stage.id), data)
+                              }
+                              status={status}
+                              currentStageIndex={currentStageIndex}
+                              stageIndex={index}
+                              advanceToNextStage={advanceToNextStage}
                             />
                           )}
                           {stage.id === 'harvest' && (
@@ -429,6 +635,14 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                                 // For now, we'll need to update the parent interface
                                 // The parent should pass an onUpdateFlushes callback
                               }}
+                              status={status}
+                              currentStageIndex={currentStageIndex}
+                              stageIndex={index}
+                              advanceToNextStage={advanceToNextStage}
+                              stageData={getStageData(getStageDataKey(stage.id))}
+                              onUpdateStageData={(data) =>
+                                updateStageData(getStageDataKey(stage.id), data)
+                              }
                             />
                           )}
                         </View>

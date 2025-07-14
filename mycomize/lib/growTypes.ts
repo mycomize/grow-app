@@ -1,3 +1,16 @@
+// Import shared template structures for reuse between teks and grows
+import type { Item, EnvironmentalCondition, Task, StageData } from './templateTypes';
+
+// Stage structure specific to bulk grows and bulk grow tek templates
+// This matches the same structure used in bulk grow tek templates
+export interface BulkGrowStages {
+  inoculation: StageData;
+  spawn_colonization: StageData;
+  bulk_colonization: StageData;
+  fruiting: StageData;
+  harvest: StageData;
+}
+
 // Grow interface for the unified system
 export interface Grow {
   id: number;
@@ -10,10 +23,6 @@ export interface Grow {
   stage: string;
   status: string;
   cost: number;
-  inoculationDate: Date | null;
-  harvestDate: Date | null;
-  harvestDryWeight: number;
-  harvestWetWeight: number;
   age: number;
   iot_gateways?: Array<{
     id: number;
@@ -28,8 +37,6 @@ export interface Grow {
   inoculation_date?: string;
   spawn_colonization_date?: string;
   bulk_colonization_date?: string;
-  fruiting_start_date?: string;
-  harvest_date?: string;
 
   // Updated fields after simplification
   inoculation_status?: string;
@@ -38,12 +45,23 @@ export interface Grow {
   fruiting_pin_date?: string;
   fruiting_status?: string;
 
-  harvest_flushes?: any[];
+  // Stage-based data structure - reuses shared template structures
+  // For bulk grows, this follows the BulkGrowStages interface
+  stages?: BulkGrowStages;
+
+  harvest_flushes?: Array<{
+    id: number;
+    grow_id: number;
+    harvest_date?: string;
+    wet_weight_grams?: number;
+    dry_weight_grams?: number;
+    concentration_mg_per_gram?: number;
+  }>;
 }
 
 // Grow tek options - must match backend enum values
 export const growTeks = {
-  BULK_GROW: 'Bulk Grow',
+  BULK_GROW: 'BulkGrow',
 };
 
 // Human-readable tek names

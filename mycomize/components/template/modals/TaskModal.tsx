@@ -28,7 +28,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
   const [formData, setFormData] = useState({
     action: '',
     frequency: '',
-    daysAfterStageStart: '',
+    days_after_stage_start: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -40,14 +40,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
         setFormData({
           action: task.action,
           frequency: task.frequency,
-          daysAfterStageStart: task.daysAfterStageStart.toString(),
+          days_after_stage_start: task.days_after_stage_start.toString(),
         });
       } else {
         // Default to 0 days for new tasks
         setFormData({
           action: '',
           frequency: '',
-          daysAfterStageStart: '0',
+          days_after_stage_start: '0',
         });
       }
       setErrors({});
@@ -65,12 +65,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
       newErrors.frequency = 'Frequency is required';
     }
 
-    if (!formData.daysAfterStageStart.trim()) {
-      newErrors.daysAfterStageStart = 'Days after stage start is required';
+    if (!formData.days_after_stage_start.trim()) {
+      newErrors.days_after_stage_start = 'Days after stage start is required';
     } else {
-      const days = parseInt(formData.daysAfterStageStart, 10);
+      const days = parseInt(formData.days_after_stage_start, 10);
       if (isNaN(days) || days < 0) {
-        newErrors.daysAfterStageStart = 'Must be a valid number of days (0 or greater)';
+        newErrors.days_after_stage_start = 'Must be a valid number of days (0 or greater)';
       }
     }
 
@@ -87,7 +87,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
       id: task?.id || generateId(),
       action: formData.action.trim(),
       frequency: formData.frequency.trim(),
-      daysAfterStageStart: parseInt(formData.daysAfterStageStart, 10),
+      days_after_stage_start: parseInt(formData.days_after_stage_start, 10),
     };
 
     onSave(taskData);
@@ -145,16 +145,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
             {/* Days After Stage Start */}
             <VStack space="xs">
               <Text className="font-medium">Start Day</Text>
-              <Input className={errors.daysAfterStageStart ? 'border-error-500' : ''}>
+              <Input className={errors.days_after_stage_start ? 'border-error-500' : ''}>
                 <InputField
                   placeholder="e.g., 0, 14, 30"
-                  value={formData.daysAfterStageStart}
-                  onChangeText={(value) => updateField('daysAfterStageStart', value)}
+                  value={formData.days_after_stage_start}
+                  onChangeText={(value) => updateField('days_after_stage_start', value)}
                   keyboardType="numeric"
                 />
               </Input>
-              {errors.daysAfterStageStart && (
-                <Text className="text-sm text-error-600">{errors.daysAfterStageStart}</Text>
+              {errors.days_after_stage_start && (
+                <Text className="text-sm text-error-600">{errors.days_after_stage_start}</Text>
               )}
               <Text className="text-xs text-typography-500">
                 Days after beginning of stage on which to being the task

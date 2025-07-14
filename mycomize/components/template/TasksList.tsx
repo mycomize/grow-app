@@ -105,7 +105,7 @@ export const TasksList: React.FC<TasksListProps> = ({ tasks, onUpdateTasks }) =>
                   <Text className="text-sm text-typography-600">Frequency: {task.frequency}</Text>
                   <HStack className="items-center" space="xs">
                     <Text className="text-sm text-typography-600">
-                      Day {task.daysAfterStageStart} of stage
+                      Day {task.days_after_stage_start} of stage
                     </Text>
                   </HStack>
                 </VStack>
