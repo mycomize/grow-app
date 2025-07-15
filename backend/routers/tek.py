@@ -20,7 +20,7 @@ from backend.models.tek import Base
 Base.metadata.create_all(bind=engine)
 
 def sanitize_stages_datetime_fields(stages_data):
-    """Convert datetime objects to ISO strings in stages data for JSON serialization"""
+    """Convert datetime objects to ISO strings and floats to strings in stages data for JSON serialization"""
     if not isinstance(stages_data, dict):
         return stages_data
     
@@ -33,7 +33,7 @@ def sanitize_stages_datetime_fields(stages_data):
         if not isinstance(stage_data, dict):
             continue
             
-        # Handle items list - convert datetime fields
+        # Handle items list - convert datetime and cost fields
         if 'items' in stage_data and isinstance(stage_data['items'], list):
             for item in stage_data['items']:
                 if isinstance(item, dict):
@@ -43,6 +43,9 @@ def sanitize_stages_datetime_fields(stages_data):
                     # Convert expiration_date if it's a datetime
                     if 'expiration_date' in item and isinstance(item['expiration_date'], datetime):
                         item['expiration_date'] = item['expiration_date'].isoformat()
+                    # Convert cost if it's a float (for backward compatibility)
+                    if 'cost' in item and isinstance(item['cost'], (int, float)):
+                        item['cost'] = str(item['cost'])
     
     return stages_data
 
@@ -184,6 +187,11 @@ async def get_tek(
     if not tek.is_public and tek.created_by != current_user.id:
         raise HTTPException(status_code=403, detail="Access denied")
 
+    # Sanitize stages data
+    stages_data = tek.stages
+    if stages_data:
+        stages_data = sanitize_stages_datetime_fields(stages_data)
+
     result_dict = {
         "id": tek.id,
         "name": tek.name,
@@ -191,7 +199,7 @@ async def get_tek(
         "species": tek.species,
         "variant": tek.variant,
         "is_public": tek.is_public,
-        "stages": tek.stages,
+        "stages": stages_data,
         "created_by": tek.created_by,
         "created_at": tek.created_at,
         "updated_at": tek.updated_at,

@@ -7,8 +7,8 @@ from backend.schemas.bulk_stage import BulkGrowStages
 # BulkGrowFlush schemas
 class BulkGrowFlushBase(BaseModel):
     harvest_date: Optional[date] = None
-    wet_weight_grams: Optional[float] = None
-    dry_weight_grams: Optional[float] = None
+    wet_yield_grams: Optional[float] = None
+    dry_yield_grams: Optional[float] = None
     concentration_mg_per_gram: Optional[float] = None
 
 class BulkGrowFlushCreate(BulkGrowFlushBase):

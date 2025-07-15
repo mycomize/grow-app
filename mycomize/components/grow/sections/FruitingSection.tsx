@@ -67,10 +67,10 @@ export const FruitingSection: React.FC<FruitingSectionProps> = ({
       <StageTabs stageData={stageData} onUpdateBulkStageData={onUpdateBulkStageData} />
 
       {/* Fruiting-specific fields */}
-      <VStack space="md" className="mt-6 border-t border-background-200 pt-4">
+      <VStack space="md" className="mt-4 border-t border-background-200 pt-4">
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Pin Date</FormControlLabelText>
+            <FormControlLabelText>First Pin Date</FormControlLabelText>
           </FormControlLabel>
           <Input isReadOnly>
             <InputField

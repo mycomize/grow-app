@@ -43,7 +43,7 @@ export const HarvestSection: React.FC<HarvestSectionProps> = ({
       <StageTabs stageData={stageData} onUpdateBulkStageData={onUpdateBulkStageData} />
 
       {/* Harvest Flushes */}
-      <VStack space="md" className="mt-6 border-t border-background-200 pt-4">
+      <VStack space="md" className="mt-4 border-t border-background-200 pt-4">
         <FlushList flushes={flushes} onUpdateFlushes={onUpdateFlushes} />
 
         {/* Complete button */}

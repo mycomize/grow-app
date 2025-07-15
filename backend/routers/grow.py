@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import date, datetime, timedelta
 from pydantic import BaseModel, Field
 
-from backend.models.grow import BulkGrow
+from backend.models.grow import BulkGrow, BulkGrowFlush
 from backend.models.iot import IoTGateway
 from backend.models.user import User
 from backend.schemas.grow import (
@@ -12,7 +12,8 @@ from backend.schemas.grow import (
     BulkGrow as BulkGrowSchema,
     BulkGrowUpdate,
     BulkGrowWithIoTGateways,
-    BulkGrowComplete
+    BulkGrowComplete,
+    BulkGrowFlushCreate
 )
 from backend.database import get_mycomize_db, engine
 from backend.security import get_current_active_user, load_config
@@ -22,7 +23,7 @@ from backend.models.grow import Base
 Base.metadata.create_all(bind=engine)
 
 def sanitize_stages_datetime_fields(stages_data):
-    """Convert datetime objects to ISO strings in stages data for JSON serialization"""
+    """Convert datetime objects to ISO strings and floats to strings in stages data for JSON serialization"""
     if not isinstance(stages_data, dict):
         return stages_data
     
@@ -35,7 +36,7 @@ def sanitize_stages_datetime_fields(stages_data):
         if not isinstance(stage_data, dict):
             continue
             
-        # Handle items list - convert datetime fields
+        # Handle items list - convert datetime and cost fields
         if 'items' in stage_data and isinstance(stage_data['items'], list):
             for item in stage_data['items']:
                 if isinstance(item, dict):
@@ -45,8 +46,22 @@ def sanitize_stages_datetime_fields(stages_data):
                     # Convert expiration_date if it's a datetime
                     if 'expiration_date' in item and isinstance(item['expiration_date'], datetime):
                         item['expiration_date'] = item['expiration_date'].isoformat()
+                    # Convert cost if it's a float (for backward compatibility)
+                    if 'cost' in item and isinstance(item['cost'], (int, float)):
+                        item['cost'] = str(item['cost'])
     
     return stages_data
+
+def parse_date_string(date_string):
+    """Convert a date string to Python date object"""
+    if not date_string:
+        return None
+    if isinstance(date_string, str):
+        try:
+            return datetime.strptime(date_string, '%Y-%m-%d').date()
+        except ValueError:
+            return None
+    return date_string
 
 router = APIRouter(
     prefix="/grows",
@@ -54,9 +69,13 @@ router = APIRouter(
     responses={401: {"detail": "Not authenticated"}},
 )
 
+# Extended create schema to include flushes
+class BulkGrowCreateWithFlushes(BulkGrowCreate):
+    flushes: Optional[List[dict]] = []
+
 @router.post("/", response_model=BulkGrowSchema, status_code=status.HTTP_201_CREATED)
 async def create_grow(
-    grow: BulkGrowCreate,
+    grow: BulkGrowCreateWithFlushes,
     db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -97,6 +116,19 @@ async def create_grow(
     db.commit()
     db.refresh(db_grow)
 
+    # Handle flushes if provided
+    if grow.flushes:
+        for flush_data in grow.flushes:
+            db_flush = BulkGrowFlush(
+                bulk_grow_id=db_grow.id,
+                harvest_date=parse_date_string(flush_data.get('harvest_date')),
+                wet_yield_grams=flush_data.get('wet_yield_grams'),
+                dry_yield_grams=flush_data.get('dry_yield_grams'),
+                concentration_mg_per_gram=flush_data.get('concentration_mg_per_gram')
+            )
+            db.add(db_flush)
+        db.commit()
+
     return db_grow
 
 
@@ -109,6 +141,12 @@ async def read_grows(
 ):
     """Get all grows for the current user"""
     grows = db.query(BulkGrow).filter(BulkGrow.user_id == current_user.id).offset(skip).limit(limit).all()
+    
+    # Sanitize stages data for each grow
+    for grow in grows:
+        if grow.stages:
+            grow.stages = sanitize_stages_datetime_fields(grow.stages)
+    
     return grows
 
 @router.get("/all", response_model=List[BulkGrowComplete])
@@ -117,28 +155,48 @@ async def read_all_grows(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all grows with complete data for the current user"""
-    # Query all grows for the current user with their IoT gateway relationships loaded
-    grows = db.query(BulkGrow).options(joinedload(BulkGrow.iot_gateways)).filter(BulkGrow.user_id == current_user.id).all()
+    # Query all grows for the current user with their IoT gateway and flushes relationships loaded
+    grows = db.query(BulkGrow).options(
+        joinedload(BulkGrow.iot_gateways),
+        joinedload(BulkGrow.flushes)
+    ).filter(BulkGrow.user_id == current_user.id).all()
+
+    # Sanitize stages data for each grow
+    for grow in grows:
+        if grow.stages:
+            grow.stages = sanitize_stages_datetime_fields(grow.stages)
 
     return grows
 
-@router.get("/{grow_id}", response_model=BulkGrowWithIoTGateways)
+@router.get("/{grow_id}", response_model=BulkGrowComplete)
 async def read_grow(
     grow_id: int,
     db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get a specific grow by ID with its IoT gateways"""
-    grow = db.query(BulkGrow).filter(BulkGrow.id == grow_id, BulkGrow.user_id == current_user.id).first()
+    """Get a specific grow by ID with its IoT gateways and flushes"""
+    grow = db.query(BulkGrow).options(
+        joinedload(BulkGrow.iot_gateways),
+        joinedload(BulkGrow.flushes)
+    ).filter(BulkGrow.id == grow_id, BulkGrow.user_id == current_user.id).first()
     if grow is None:
         raise HTTPException(status_code=404, detail="Grow not found")
+    
+    # Sanitize stages data
+    if grow.stages:
+        grow.stages = sanitize_stages_datetime_fields(grow.stages)
+    
     return grow
 
+
+# Extended update schema to include flushes
+class BulkGrowUpdateWithFlushes(BulkGrowUpdate):
+    flushes: Optional[List[dict]] = None
 
 @router.put("/{grow_id}", response_model=BulkGrowSchema)
 async def update_grow(
     grow_id: int,
-    grow: BulkGrowUpdate,
+    grow: BulkGrowUpdateWithFlushes,
     db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -149,6 +207,9 @@ async def update_grow(
 
     # Update grow attributes
     grow_data = grow.dict(exclude_unset=True)
+    
+    # Handle flushes separately
+    flushes_data = grow_data.pop('flushes', None)
     
     # Convert stages Pydantic model to dict if present and it's not already a dict
     if 'stages' in grow_data and grow_data['stages'] is not None:
@@ -163,6 +224,22 @@ async def update_grow(
     # If harvest_date is set, update status to harvested
     if grow_data.get('harvest_date') and not db_grow.status == 'harvested':
         db_grow.status = 'harvested'
+
+    # Handle flushes if provided
+    if flushes_data is not None:
+        # Delete existing flushes
+        db.query(BulkGrowFlush).filter(BulkGrowFlush.bulk_grow_id == grow_id).delete()
+        
+        # Add new flushes
+        for flush_data in flushes_data:
+            db_flush = BulkGrowFlush(
+                bulk_grow_id=grow_id,
+                harvest_date=parse_date_string(flush_data.get('harvest_date')),
+                wet_yield_grams=flush_data.get('wet_yield_grams'),
+                dry_yield_grams=flush_data.get('dry_yield_grams'),
+                concentration_mg_per_gram=flush_data.get('concentration_mg_per_gram')
+            )
+            db.add(db_flush)
 
     db.commit()
     db.refresh(db_grow)

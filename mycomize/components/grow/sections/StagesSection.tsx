@@ -109,7 +109,6 @@ const stages: Stage[] = [
 export const StagesSection: React.FC<StagesSectionProps> = ({
   growData,
   updateField,
-  flushCount,
   flushes,
   addFlush,
   updateFlush,
@@ -220,10 +219,10 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
         status = growData.inoculation_status;
         break;
       case 'spawn_colonization':
-        status = growData.spawn_status;
+        status = growData.spawn_colonization_status;
         break;
       case 'bulk_colonization':
-        status = growData.bulk_status;
+        status = growData.bulk_colonization_status;
         break;
       case 'fruiting':
         status = growData.fruiting_status;
@@ -233,7 +232,7 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
         // Only count flushes that have actual data (harvest_date or weight)
         const validFlushes =
           flushes?.filter(
-            (flush) => flush?.harvest_date || flush?.wet_weight_grams || flush?.dry_weight_grams
+            (flush) => flush?.harvest_date || flush?.wet_yield_grams || flush?.dry_yield_grams
           ) || [];
         const actualFlushCount = validFlushes.length;
         if (actualFlushCount > 0) {
@@ -291,7 +290,7 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
 
     if (cost <= 0) return null;
 
-    return <InfoBadge key="cost" text={`$${cost.toFixed(2)}`} variant="info" size="sm" />;
+    return <InfoBadge key="cost" text={`$${cost.toFixed(2)}`} variant="default" size="sm" />;
   };
 
   const getCurrentStageIndex = () => {
@@ -334,39 +333,6 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
     return 'pending';
   };
 
-  const getDaysSinceStageStart = (stageIndex: number) => {
-    if (stageIndex === 0) return null; // No duration for inoculation
-
-    const stage = stages[stageIndex];
-    const stageDate = growData[stage.dateField];
-    if (!stageDate) return null;
-
-    const startDate = new Date(stageDate);
-    const today = new Date();
-    const diffTime = Math.abs(today.getTime() - startDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    return diffDays;
-  };
-
-  const getTotalDays = () => {
-    // Use the same logic as backend: prefer spawn_colonization_date, fallback to inoculation_date
-    const spawnDate = growData.spawn_colonization_date;
-    const inoculationDate = growData.inoculation_date;
-    const startDate = spawnDate || inoculationDate;
-
-    if (!startDate) return null;
-
-    const start = new Date(startDate);
-    const today = new Date();
-    const diffTime = today.getTime() - start.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-    // Add 1 so that grows started today show as "Day 1" instead of "Day 0"
-    // Return 1 if negative or 0 (future date or today), otherwise return days + 1
-    return Math.max(1, diffDays + 1);
-  };
-
   const advanceToNextStage = () => {
     const today = new Date().toISOString().split('T')[0];
 
@@ -393,54 +359,6 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
     }
   };
 
-  // Calculate total cost across all stages
-  const getTotalCost = () => {
-    if (!growData.stages) return 0;
-
-    let totalCost = 0;
-    Object.values(growData.stages).forEach((stageData: any) => {
-      if (stageData?.items) {
-        stageData.items.forEach((item: any) => {
-          const itemCost = parseFloat(item.cost || '0') || 0;
-          totalCost += itemCost;
-        });
-      }
-    });
-
-    return totalCost;
-  };
-
-  // Determine overall health status
-  const getOverallHealthStatus = () => {
-    const statuses = [
-      growData.inoculation_status,
-      growData.spawn_status,
-      growData.bulk_status,
-      growData.fruiting_status,
-    ].filter(Boolean); // Remove undefined/null values
-
-    // If no statuses are set, return null
-    if (statuses.length === 0) return null;
-
-    // Contam takes precedence
-    if (statuses.includes('Contaminated')) {
-      return { status: 'Contam', variant: 'error' as const };
-    }
-
-    // Suspect takes precedence over healthy
-    if (statuses.includes('Suspect')) {
-      return { status: 'Suspect', variant: 'warning' as const };
-    }
-
-    // If all statuses are healthy
-    if (statuses.every((status) => status === 'Healthy')) {
-      return { status: 'Healthy', variant: 'healthy' as const };
-    }
-
-    // Mixed statuses with no contam or suspect (shouldn't happen, but fallback)
-    return { status: 'Mixed', variant: 'default' as const };
-  };
-
   // Calculate days since inoculation
   const getDaysSinceInoculation = () => {
     if (!growData.inoculation_date) return null;
@@ -448,56 +366,23 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
     const inoculationDate = new Date(growData.inoculation_date);
     const today = new Date();
     const diffTime = today.getTime() - inoculationDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-    // Add 1 so that grows started today show as "Day 1" instead of "Day 0"
-    return Math.max(1, diffDays + 1);
+    if (diffTime > 0) {
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+      // Add 1 so that grows started today show as "Day 1" instead of "Day 0"
+      return Math.max(1, diffDays + 1);
+    }
+
+    return null;
   };
 
   return (
     <VStack space="lg" className="bg-background-0 p-2">
-      {/* Summary badges */}
-      <HStack space="md" className="items-center">
-        {(() => {
-          const totalCost = getTotalCost();
-          if (totalCost > 0) {
-            return <InfoBadge text={`$${totalCost.toFixed(2)}`} variant="info" size="md" />;
-          }
-          return null;
-        })()}
-
-        {(() => {
-          const healthStatus = getOverallHealthStatus();
-          if (healthStatus) {
-            return (
-              <InfoBadge text={healthStatus.status} variant={healthStatus.variant} size="md" />
-            );
-          }
-          return null;
-        })()}
-
-        {(() => {
-          const daysSinceInoculation = getDaysSinceInoculation();
-          if (daysSinceInoculation !== null) {
-            return (
-              <InfoBadge
-                icon={Clock}
-                text={`${daysSinceInoculation} ${daysSinceInoculation === 1 ? 'day' : 'days'}`}
-                variant="default"
-                size="md"
-              />
-            );
-          }
-          return null;
-        })()}
-      </HStack>
-
       {/* Timeline */}
       <VStack space="xs">
         {stages.map((stage, index) => {
           const status = getStageStatus(index);
-          const stageDate = growData[stage.dateField];
-          const daysSince = getDaysSinceStageStart(index);
           const isLast = index === stages.length - 1;
 
           return (
@@ -536,19 +421,19 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                         {stage.name === 'Inoculation' && (
                           <>
                             <View className="ml-0.5" />
-                            <Icon as={Syringe} size="md" className="text-typography-600" />
+                            <Icon as={Syringe} size="md" className="text-typography-500" />
                           </>
                         )}
                         {stage.name === 'Spawn Colonization' && (
                           <>
                             <View className="ml-0.5" />
-                            <Icon as={Wheat} size="md" className="text-typography-600" />
+                            <Icon as={Wheat} size="md" className="text-typography-500" />
                           </>
                         )}
                         {stage.name === 'Bulk Colonization' && (
                           <>
                             <View className="ml-0.5" />
-                            <Icon as={Box} size="md" className="text-typography-600" />
+                            <Icon as={Box} size="md" className="text-typography-500" />
                           </>
                         )}
                         {stage.name === 'Fruiting' && (
@@ -560,7 +445,7 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                         {stage.name === 'Harvest' && (
                           <>
                             <View className="ml-0.5" />
-                            <Icon as={ShoppingBasket} size="md" className="text-typography-600" />
+                            <Icon as={ShoppingBasket} size="md" className="text-typography-500" />
                           </>
                         )}
                         {status === 'active' && (
@@ -587,52 +472,6 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                     <HStack space="xs" className="my-1 ml-3">
                       {renderCountBadges(stage.id)}
                     </HStack>
-
-                    {/* Stage date and duration */}
-                    {stageDate && (
-                      <HStack space="sm" className="items-center">
-                        {stage.id !== 'inoculation' && (
-                          <Text className="text-sm font-medium text-typography-600">
-                            Started: {new Date(stageDate).toLocaleDateString()}
-                          </Text>
-                        )}
-                        {daysSince !== null && (
-                          <>
-                            <Text className="text-typography-400">•</Text>
-                            <Text className="text-sm font-medium text-typography-600">
-                              {daysSince} days
-                            </Text>
-                          </>
-                        )}
-                      </HStack>
-                    )}
-
-                    {/* Flush count for harvest stage */}
-                    {stage.id === 'harvest' &&
-                      status !== 'pending' &&
-                      (() => {
-                        const validFlushes =
-                          flushes?.filter(
-                            (flush) =>
-                              flush?.harvest_date ||
-                              flush?.wet_weight_grams ||
-                              flush?.dry_weight_grams
-                          ) || [];
-                        return validFlushes.length > 0;
-                      })() && (
-                        <Text className="text-sm font-medium text-orange-600">
-                          {(() => {
-                            const validFlushes =
-                              flushes?.filter(
-                                (flush) =>
-                                  flush?.harvest_date ||
-                                  flush?.wet_weight_grams ||
-                                  flush?.dry_weight_grams
-                              ) || [];
-                            return `${validFlushes.length} ${validFlushes.length === 1 ? 'Flush' : 'Flushes'} completed`;
-                          })()}
-                        </Text>
-                      )}
                   </VStack>
 
                   {/* Expand/Collapse button and sub-section */}
@@ -642,7 +481,7 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                       <Pressable
                         onPress={() => toggleStageExpansion(stage.id)}
                         className="flex-row items-center">
-                        <Text className="text-md ml-3 font-medium text-typography-700">
+                        <Text className="text-md ml-3 text-typography-600">
                           {expandedStages.includes(stage.id) ? 'Hide' : 'Show'} Details
                         </Text>
                         <Icon
@@ -731,9 +570,8 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                             <HarvestSection
                               flushes={flushes}
                               onUpdateFlushes={(updatedFlushes) => {
-                                // This should be handled by the parent component
-                                // For now, we'll need to update the parent interface
-                                // The parent should pass an onUpdateFlushes callback
+                                // Update the flushes directly via the updateField function
+                                updateField('flushes', updatedFlushes);
                               }}
                               status={status}
                               currentStageIndex={currentStageIndex}

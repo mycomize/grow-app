@@ -4,6 +4,7 @@ import { HStack } from '~/components/ui/hstack';
 import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
 import { Button, ButtonText } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
+import { Input, InputField, InputSlot } from '~/components/ui/input';
 import {
   Select,
   SelectTrigger,
@@ -16,18 +17,16 @@ import {
   SelectDragIndicator,
   SelectItem,
 } from '~/components/ui/select';
-import { ChevronDown, ArrowDownToDot } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { ChevronDown, ArrowDownToDot, CalendarDays, X } from 'lucide-react-native';
 
 // Import tek types
 import { BulkStageData } from '~/lib/tekTypes';
+import { BulkGrow } from '~/lib/growTypes';
 import { StageTabs } from '~/components/ui/stage-tabs';
 
-interface GrowData {
-  spawn_status?: string;
-}
-
 interface SpawnSectionProps {
-  growData: GrowData;
+  growData: BulkGrow;
   updateField: (field: string, value: any) => void;
   activeDatePicker: string | null;
   setActiveDatePicker: (field: string | null) => void;
@@ -48,6 +47,10 @@ interface SpawnSectionProps {
 export const SpawnSection: React.FC<SpawnSectionProps> = ({
   growData,
   updateField,
+  activeDatePicker,
+  setActiveDatePicker,
+  handleDateChange,
+  parseDate,
   stageData,
   onUpdateBulkStageData,
   status,
@@ -63,17 +66,51 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
       <StageTabs stageData={stageData} onUpdateBulkStageData={onUpdateBulkStageData} />
 
       {/* Spawn-specific fields */}
-      <VStack space="md" className="mt-6 border-t border-background-200 pt-4">
+      <VStack space="md" className="mt-4 border-t border-background-200 pt-4">
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText className="text-typography-700">
+              Full Spawn Colonization Date
+            </FormControlLabelText>
+          </FormControlLabel>
+          <Input isReadOnly>
+            <InputField
+              value={
+                parseDate(growData.full_spawn_colonization_date)?.toDateString() || 'Select date'
+              }
+              className={!growData.full_spawn_colonization_date ? 'text-typography-400' : ''}
+            />
+            {growData.full_spawn_colonization_date ? (
+              <InputSlot onPress={() => updateField('full_spawn_colonization_date', null)}>
+                <Icon as={X} className="mr-3 text-typography-400" />
+              </InputSlot>
+            ) : (
+              <InputSlot onPress={() => setActiveDatePicker('full_spawn_colonization_date')}>
+                <Icon as={CalendarDays} className="mr-3 text-typography-400" />
+              </InputSlot>
+            )}
+          </Input>
+          {activeDatePicker === 'full_spawn_colonization_date' && (
+            <DateTimePicker
+              value={parseDate(growData.full_spawn_colonization_date) || new Date()}
+              mode="date"
+              onChange={(event, date) =>
+                handleDateChange('full_spawn_colonization_date', date, event)
+              }
+            />
+          )}
+        </FormControl>
+
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText>Status</FormControlLabelText>
           </FormControlLabel>
           <Select
-            selectedValue={growData.spawn_status}
-            onValueChange={(value) => updateField('spawn_status', value)}>
+            selectedValue={growData.spawn_colonization_status}
+            onValueChange={(value) => updateField('spawn_colonization_status', value)}>
             <SelectTrigger variant="outline" size="md">
               <SelectInput
-                value={growData.spawn_status}
+                value={growData.spawn_colonization_status}
                 placeholder="Select status"
                 className="mt-1 placeholder:text-sm"
               />

@@ -28,8 +28,8 @@ interface FlushModalProps {
 export const FlushModal: React.FC<FlushModalProps> = ({ isOpen, onClose, onSave, flush }) => {
   const [formData, setFormData] = useState({
     harvest_date: null as Date | null,
-    wet_weight_grams: '',
-    dry_weight_grams: '',
+    wet_yield_grams: '',
+    dry_yield_grams: '',
     concentration_mg_per_gram: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -42,15 +42,15 @@ export const FlushModal: React.FC<FlushModalProps> = ({ isOpen, onClose, onSave,
       if (flush) {
         setFormData({
           harvest_date: flush.harvest_date ? new Date(flush.harvest_date) : null,
-          wet_weight_grams: flush.wet_weight_grams?.toString() || '',
-          dry_weight_grams: flush.dry_weight_grams?.toString() || '',
+          wet_yield_grams: flush.wet_yield_grams?.toString() || '',
+          dry_yield_grams: flush.dry_yield_grams?.toString() || '',
           concentration_mg_per_gram: flush.concentration_mg_per_gram?.toString() || '',
         });
       } else {
         setFormData({
           harvest_date: null,
-          wet_weight_grams: '',
-          dry_weight_grams: '',
+          wet_yield_grams: '',
+          dry_yield_grams: '',
           concentration_mg_per_gram: '',
         });
       }
@@ -65,20 +65,20 @@ export const FlushModal: React.FC<FlushModalProps> = ({ isOpen, onClose, onSave,
     // Basic validation - at least one field should be filled
     if (
       !formData.harvest_date &&
-      !formData.wet_weight_grams.trim() &&
-      !formData.dry_weight_grams.trim() &&
+      !formData.wet_yield_grams.trim() &&
+      !formData.dry_yield_grams.trim() &&
       !formData.concentration_mg_per_gram.trim()
     ) {
       newErrors.general = 'Please fill in at least one field';
     }
 
     // Validate numeric fields
-    if (formData.wet_weight_grams && isNaN(parseFloat(formData.wet_weight_grams))) {
-      newErrors.wet_weight_grams = 'Must be a valid number';
+    if (formData.wet_yield_grams && isNaN(parseFloat(formData.wet_yield_grams))) {
+      newErrors.wet_yield_grams = 'Must be a valid number';
     }
 
-    if (formData.dry_weight_grams && isNaN(parseFloat(formData.dry_weight_grams))) {
-      newErrors.dry_weight_grams = 'Must be a valid number';
+    if (formData.dry_yield_grams && isNaN(parseFloat(formData.dry_yield_grams))) {
+      newErrors.dry_yield_grams = 'Must be a valid number';
     }
 
     if (
@@ -101,11 +101,11 @@ export const FlushModal: React.FC<FlushModalProps> = ({ isOpen, onClose, onSave,
       id: flush?.id || Date.now(),
       bulk_grow_id: flush?.bulk_grow_id || 0, // This will be set by the parent component
       harvest_date: formData.harvest_date?.toISOString().split('T')[0],
-      wet_weight_grams: formData.wet_weight_grams.trim()
-        ? parseFloat(formData.wet_weight_grams.trim())
+      wet_yield_grams: formData.wet_yield_grams.trim()
+        ? parseFloat(formData.wet_yield_grams.trim())
         : undefined,
-      dry_weight_grams: formData.dry_weight_grams.trim()
-        ? parseFloat(formData.dry_weight_grams.trim())
+      dry_yield_grams: formData.dry_yield_grams.trim()
+        ? parseFloat(formData.dry_yield_grams.trim())
         : undefined,
       concentration_mg_per_gram: formData.concentration_mg_per_gram.trim()
         ? parseFloat(formData.concentration_mg_per_gram.trim())
@@ -173,37 +173,37 @@ export const FlushModal: React.FC<FlushModalProps> = ({ isOpen, onClose, onSave,
               )}
             </VStack>
 
-            {/* Wet Weight */}
+            {/* Wet Yield */}
             <VStack space="xs">
-              <Text className="font-medium">Wet Weight (grams)</Text>
-              <Input className={errors.wet_weight_grams ? 'border-error-500' : ''}>
+              <Text className="font-medium">Wet Yield (grams)</Text>
+              <Input className={errors.wet_yield_grams ? 'border-error-500' : ''}>
                 <InputField
                   placeholder="Enter wet weight in grams"
-                  value={formData.wet_weight_grams}
-                  onChangeText={(value) => updateField('wet_weight_grams', value)}
+                  value={formData.wet_yield_grams}
+                  onChangeText={(value) => updateField('wet_yield_grams', value)}
                   keyboardType="decimal-pad"
                 />
                 <InputIcon as={Weight} className="mr-2" />
               </Input>
-              {errors.wet_weight_grams && (
-                <Text className="text-sm text-error-600">{errors.wet_weight_grams}</Text>
+              {errors.wet_yield_grams && (
+                <Text className="text-sm text-error-600">{errors.wet_yield_grams}</Text>
               )}
             </VStack>
 
-            {/* Dry Weight */}
+            {/* Dry Yield */}
             <VStack space="xs">
-              <Text className="font-medium">Dry Weight (grams)</Text>
-              <Input className={errors.dry_weight_grams ? 'border-error-500' : ''}>
+              <Text className="font-medium">Dry Yield (grams)</Text>
+              <Input className={errors.dry_yield_grams ? 'border-error-500' : ''}>
                 <InputField
                   placeholder="Enter dry weight in grams"
-                  value={formData.dry_weight_grams}
-                  onChangeText={(value) => updateField('dry_weight_grams', value)}
+                  value={formData.dry_yield_grams}
+                  onChangeText={(value) => updateField('dry_yield_grams', value)}
                   keyboardType="decimal-pad"
                 />
                 <InputIcon as={Weight} className="mr-2" />
               </Input>
-              {errors.dry_weight_grams && (
-                <Text className="text-sm text-error-600">{errors.dry_weight_grams}</Text>
+              {errors.dry_yield_grams && (
+                <Text className="text-sm text-error-600">{errors.dry_yield_grams}</Text>
               )}
             </VStack>
 

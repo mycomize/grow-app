@@ -118,18 +118,47 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
     });
   };
 
+  // Calculate total yields
+  const calculateTotalYields = () => {
+    const totalWetYield =
+      grow.flushes?.reduce((sum, flush) => sum + (flush.wet_yield_grams || 0), 0) || 0;
+    const totalDryYield =
+      grow.flushes?.reduce((sum, flush) => sum + (flush.dry_yield_grams || 0), 0) || 0;
+    return { totalWetYield, totalDryYield };
+  };
+
+  const { totalWetYield, totalDryYield } = calculateTotalYields();
+
   return (
     <Card className="w-11/12 rounded-xl bg-background-0">
       <VStack className="p-2">
         <View>
-          {/* Header with strain and species */}
-          <HStack className="mb-5 items-center justify-between">
-            <Heading size="lg">{grow.variant}</Heading>
-            <Text className="text-lg italic text-typography-500">{grow.species}</Text>
+          {/* First row: Grow name and strain */}
+          <HStack className="mb-3 items-center justify-between">
+            <Heading size="lg">{grow.name}</Heading>
+            {grow.variant && (
+              <Text className="text-lg italic text-typography-500">{grow.variant}</Text>
+            )}
+            {/* If no variant but has species, show species on first row */}
+            {!grow.variant && grow.species && (
+              <Text className="text-lg italic text-typography-500">{grow.species}</Text>
+            )}
           </HStack>
 
-          {/* Horizontal Timeline */}
-          <VStack className="mb-5">
+          {/* Second row: Location and species (if variant exists) */}
+          {(grow.location || (grow.variant && grow.species)) && (
+            <HStack className="mb-3 items-center justify-between">
+              {grow.location && (
+                <Text className="text-md text-typography-600">{grow.location}</Text>
+              )}
+              {grow.variant && grow.species && (
+                <Text className="text-md italic text-typography-500">{grow.species}</Text>
+              )}
+            </HStack>
+          )}
+
+          {/* Third row: Stage timeline */}
+          <VStack className="mb-4">
             {/* Timeline with icons and connecting lines */}
             <HStack className="items-center">
               {stages.map((stage, index) => {
@@ -190,20 +219,42 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
                 );
               })}
             </HStack>
-            {/* Info badge row */}
-            <HStack className="mt-4" space="md">
-              <InfoBadge text={`${growAge} days`} icon={Clock} variant="default" size="md" />
+          </VStack>
+
+          {/* Fourth row: Badge row with total cost, wet yield, dry yield, and duration */}
+          <HStack className="mb-4 flex-wrap" space="sm">
+            <InfoBadge
+              text={`$${grow.total_cost?.toFixed(2) || '0.00'}`}
+              icon={DollarSign}
+              variant="default"
+              size="md"
+            />
+            {totalWetYield > 0 && (
               <InfoBadge
-                text={`$${grow.total_cost?.toFixed(2) || '0.00'}`}
-                icon={DollarSign}
+                text={`${totalWetYield.toFixed(1)}g wet`}
+                icon={Scale}
                 variant="default"
                 size="md"
               />
-            </HStack>
-          </VStack>
+            )}
+            {totalDryYield > 0 && (
+              <InfoBadge
+                text={`${totalDryYield.toFixed(1)}g dry`}
+                icon={Scale}
+                variant="success"
+                size="md"
+              />
+            )}
+            <InfoBadge
+              text={growAge === 1 ? `${growAge} day` : `${growAge} days`}
+              icon={Clock}
+              variant="default"
+              size="md"
+            />
+          </HStack>
 
-          {/* IoT Gateways Section */}
-          <VStack className="mb-3" space="xs">
+          {/* Fifth row: IoT Gateways */}
+          <VStack className="mb-4" space="xs">
             <Text className="mb-1 text-lg font-medium text-typography-600">IoT Gateways</Text>
             {(() => {
               // Get IoT gateways from the grow
@@ -220,8 +271,24 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
             })()}
           </VStack>
 
+          {/* Last row: Grow tags */}
+          {grow.tags && grow.tags.length > 0 && (
+            <VStack className="mb-4" space="xs">
+              <HStack space="xs" className="flex-wrap">
+                {grow.tags.slice(0, 3).map((tag, index) => (
+                  <Text key={index} className="text-md text-blue-400">
+                    #{tag}
+                  </Text>
+                ))}
+                {grow.tags.length > 3 && (
+                  <Text className="text-xs text-typography-400">+{grow.tags.length - 3} more</Text>
+                )}
+              </HStack>
+            </VStack>
+          )}
+
           {/* Individual grow controls */}
-          <HStack className=" mt-2 justify-around" space="md">
+          <HStack className="mt-2 justify-around" space="md">
             {canCreateTek() && (
               <Pressable onPress={handleCreateTek}>
                 <Icon as={Layers} size="md" className="text-typography-300" />
@@ -242,42 +309,6 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
               </Pressable>
             )}
           </HStack>
-
-          {/* Harvest info if applicable */}
-          {grow.flushes && grow.flushes.length > 0 && (
-            <VStack className="mt-2 space-y-1">
-              {grow.flushes.map((flush, index) => {
-                const hasWeight =
-                  (flush.dry_weight_grams && flush.dry_weight_grams > 0) ||
-                  (flush.wet_weight_grams && flush.wet_weight_grams > 0);
-
-                if (!hasWeight) return null;
-
-                return (
-                  <HStack
-                    key={flush.id}
-                    className="items-center justify-center rounded-lg bg-success-50 p-2">
-                    <Icon as={Scale} size="sm" className="mr-2 text-success-700" />
-                    <Text className="text-sm font-medium text-success-700">
-                      Flush {index + 1}:{' '}
-                      {flush.dry_weight_grams && flush.dry_weight_grams > 0
-                        ? `${flush.dry_weight_grams}g dry`
-                        : ''}
-                      {flush.dry_weight_grams &&
-                      flush.dry_weight_grams > 0 &&
-                      flush.wet_weight_grams &&
-                      flush.wet_weight_grams > 0
-                        ? ' / '
-                        : ''}
-                      {flush.wet_weight_grams && flush.wet_weight_grams > 0
-                        ? `${flush.wet_weight_grams}g wet`
-                        : ''}
-                    </Text>
-                  </HStack>
-                );
-              })}
-            </VStack>
-          )}
         </View>
       </VStack>
 
@@ -292,7 +323,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
           }
         }}
         title="Delete Grow"
-        itemName={grow.variant}
+        itemName={grow.name || grow.variant || 'grow'}
       />
     </Card>
   );

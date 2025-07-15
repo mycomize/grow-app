@@ -4,6 +4,7 @@ import { HStack } from '~/components/ui/hstack';
 import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
 import { Button, ButtonText } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
+import { Input, InputField, InputSlot } from '~/components/ui/input';
 import {
   Select,
   SelectTrigger,
@@ -16,17 +17,15 @@ import {
   SelectDragIndicator,
   SelectItem,
 } from '~/components/ui/select';
-import { ChevronDown, ArrowDownToDot } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { ChevronDown, ArrowDownToDot, CalendarDays, X } from 'lucide-react-native';
 
 // Import tek types
+import { BulkGrow } from '~/lib/growTypes';
 import { StageTabs } from '~/components/ui/stage-tabs';
 
-interface GrowData {
-  bulk_status?: string;
-}
-
 interface BulkSectionProps {
-  growData: GrowData;
+  growData: BulkGrow;
   updateField: (field: string, value: any) => void;
   activeDatePicker: string | null;
   setActiveDatePicker: (field: string | null) => void;
@@ -47,6 +46,10 @@ interface BulkSectionProps {
 export const BulkSection: React.FC<BulkSectionProps> = ({
   growData,
   updateField,
+  activeDatePicker,
+  setActiveDatePicker,
+  handleDateChange,
+  parseDate,
   stageData,
   onUpdateBulkStageData,
   status,
@@ -60,17 +63,51 @@ export const BulkSection: React.FC<BulkSectionProps> = ({
       <StageTabs stageData={stageData} onUpdateBulkStageData={onUpdateBulkStageData} />
 
       {/* Bulk-specific fields */}
-      <VStack space="md" className="mt-6 border-t border-background-200 pt-4">
+      <VStack space="md" className="mt-4 border-t border-background-200 pt-4">
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText className="text-typography-700">
+              Full Bulk Colonization Date
+            </FormControlLabelText>
+          </FormControlLabel>
+          <Input isReadOnly>
+            <InputField
+              value={
+                parseDate(growData.full_bulk_colonization_date)?.toDateString() || 'Select date'
+              }
+              className={!growData.full_bulk_colonization_date ? 'text-typography-400' : ''}
+            />
+            {growData.full_bulk_colonization_date ? (
+              <InputSlot onPress={() => updateField('full_bulk_colonization_date', null)}>
+                <Icon as={X} className="mr-3 text-typography-400" />
+              </InputSlot>
+            ) : (
+              <InputSlot onPress={() => setActiveDatePicker('full_bulk_colonization_date')}>
+                <Icon as={CalendarDays} className="mr-3 text-typography-400" />
+              </InputSlot>
+            )}
+          </Input>
+          {activeDatePicker === 'full_bulk_colonization_date' && (
+            <DateTimePicker
+              value={parseDate(growData.full_bulk_colonization_date) || new Date()}
+              mode="date"
+              onChange={(event, date) =>
+                handleDateChange('full_bulk_colonization_date', date, event)
+              }
+            />
+          )}
+        </FormControl>
+
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText>Status</FormControlLabelText>
           </FormControlLabel>
           <Select
-            selectedValue={growData.bulk_status}
-            onValueChange={(value) => updateField('bulk_status', value)}>
+            selectedValue={growData.bulk_colonization_status}
+            onValueChange={(value) => updateField('bulk_colonization_status', value)}>
             <SelectTrigger variant="outline" size="md">
               <SelectInput
-                value={growData.bulk_status}
+                value={growData.bulk_colonization_status}
                 placeholder="Select status"
                 className="mt-1 placeholder:text-sm"
               />

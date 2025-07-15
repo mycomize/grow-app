@@ -72,7 +72,7 @@ export const InoculationSection: React.FC<InoculationSectionProps> = ({
       <StageTabs stageData={stageData} onUpdateBulkStageData={onUpdateBulkStageData} />
 
       {/* Inoculation-specific fields */}
-      <VStack space="md" className="mt-6 border-t border-background-200 pt-4">
+      <VStack space="md" className="mt-4 border-t border-background-200 pt-4">
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText className="text-typography-700">

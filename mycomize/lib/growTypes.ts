@@ -25,8 +25,8 @@ export interface BulkGrowFlush {
   id: number;
   bulk_grow_id: number;
   harvest_date?: string;
-  wet_weight_grams?: number;
-  dry_weight_grams?: number;
+  wet_yield_grams?: number;
+  dry_yield_grams?: number;
   concentration_mg_per_gram?: number;
 }
 
@@ -122,15 +122,15 @@ export interface BulkGrowUpdate {
 export interface BulkGrowFlushCreate {
   bulk_grow_id: number;
   harvest_date?: string;
-  wet_weight_grams?: number;
-  dry_weight_grams?: number;
+  wet_yield_grams?: number;
+  dry_yield_grams?: number;
   concentration_mg_per_gram?: number;
 }
 
 export interface BulkGrowFlushUpdate {
   harvest_date?: string;
-  wet_weight_grams?: number;
-  dry_weight_grams?: number;
+  wet_yield_grams?: number;
+  dry_yield_grams?: number;
   concentration_mg_per_gram?: number;
 }
 

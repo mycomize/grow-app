@@ -79,8 +79,8 @@ class BulkGrowFlush(Base):
     id = Column(Integer, primary_key=True, index=True)
     bulk_grow_id = Column(Integer, ForeignKey("bulk_grows.id"), nullable=False)
     harvest_date = Column(Date, nullable=True)
-    wet_weight_grams = Column(Float, nullable=True)
-    dry_weight_grams = Column(Float, nullable=True)
+    wet_yield_grams = Column(Float, nullable=True)
+    dry_yield_grams = Column(Float, nullable=True)
     concentration_mg_per_gram = Column(Float, nullable=True)
 
     # Relationship back to grow

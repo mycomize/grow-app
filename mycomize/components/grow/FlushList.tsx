@@ -86,7 +86,7 @@ export const FlushList: React.FC<FlushListProps> = ({ flushes, onUpdateFlushes }
     <VStack space="sm">
       {/* Header */}
       <HStack className="mb-2 items-center justify-between">
-        <Text className="font-medium text-typography-700">Harvest Flushes</Text>
+        <Text className="font-medium text-typography-700">Flushes</Text>
         <Button variant="outline" size="sm" onPress={handleAddFlush}>
           <ButtonIcon as={Plus} size="sm" />
           <ButtonText>Add</ButtonText>
@@ -124,7 +124,7 @@ export const FlushList: React.FC<FlushListProps> = ({ flushes, onUpdateFlushes }
                   <HStack className="items-center" space="xs">
                     <Icon as={Weight} className="text-typography-500" size="sm" />
                     <Text className="text-sm text-typography-600">
-                      Wet: {flush.wet_weight_grams || 0}g, Dry: {flush.dry_weight_grams || 0}g
+                      Wet: {flush.wet_yield_grams || 0}g, Dry: {flush.dry_yield_grams || 0}g
                     </Text>
                   </HStack>
 
@@ -154,19 +154,19 @@ export const FlushList: React.FC<FlushListProps> = ({ flushes, onUpdateFlushes }
           {flushes.length > 0 && (
             <VStack className="mt-4 gap-2 rounded-md border border-success-200 bg-success-50 p-4">
               <HStack className="justify-between">
-                <Text className="font-bold text-success-800">Total Wet Weight:</Text>
+                <Text className="font-bold text-success-800">Total Wet Yield:</Text>
                 <Text className="text-success-800">
                   {flushes
-                    .reduce((sum, flush) => sum + (flush.wet_weight_grams || 0), 0)
+                    .reduce((sum, flush) => sum + (flush.wet_yield_grams || 0), 0)
                     .toFixed(2)}
                   g
                 </Text>
               </HStack>
               <HStack className="justify-between">
-                <Text className="font-bold text-success-800">Total Dry Weight:</Text>
+                <Text className="font-bold text-success-800">Total Dry Yield:</Text>
                 <Text className="text-success-800">
                   {flushes
-                    .reduce((sum, flush) => sum + (flush.dry_weight_grams || 0), 0)
+                    .reduce((sum, flush) => sum + (flush.dry_yield_grams || 0), 0)
                     .toFixed(2)}
                   g
                 </Text>

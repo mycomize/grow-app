@@ -21,8 +21,8 @@ const defaultBulkGrowFlush: Partial<BulkGrowFlush> = {
   id: generateId(),
   bulk_grow_id: 0, // Will be set when saving
   harvest_date: undefined,
-  wet_weight_grams: undefined,
-  dry_weight_grams: undefined,
+  wet_yield_grams: undefined,
+  dry_yield_grams: undefined,
   concentration_mg_per_gram: undefined,
 };
 
@@ -68,7 +68,7 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
   const { theme } = useTheme();
 
   const [growData, setGrowData] = useState<GrowData>(initialData || createEmptyBulkGrow());
-  const [flushes, setFlushes] = useState<BulkGrowFlush[]>([defaultBulkGrowFlush as BulkGrowFlush]);
+  const [flushes, setFlushes] = useState<BulkGrowFlush[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -189,7 +189,10 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
   // Utility functions for date handling
   const parseDate = (dateString?: string): Date | null => {
     if (!dateString) return null;
-    return new Date(dateString);
+    // Parse the date string in local timezone to avoid timezone issues
+    // where dates appear one day earlier than selected
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day); // month is 0-indexed
   };
 
   const formatDateForAPI = (date: Date | null): string | undefined => {
@@ -198,7 +201,12 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
   };
 
   // Update grow data field
-  const updateField = (field: keyof GrowData, value: any) => {
+  const updateField = (field: string, value: any) => {
+    // Handle flushes specially - update the flushes state
+    if (field === 'flushes') {
+      setFlushes(value);
+      return;
+    }
     setGrowData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -360,14 +368,15 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
 
     try {
       // Calculate total harvest weights from flushes
-      const totalWetWeight = flushes.reduce((sum, flush) => sum + (flush.wet_weight_grams || 0), 0);
-      const totalDryWeight = flushes.reduce((sum, flush) => sum + (flush.dry_weight_grams || 0), 0);
+      const totalWetYield = flushes.reduce((sum, flush) => sum + (flush.wet_yield_grams || 0), 0);
+      const totalDryYield = flushes.reduce((sum, flush) => sum + (flush.dry_yield_grams || 0), 0);
       const firstHarvestDate = flushes.find((f) => f.harvest_date)?.harvest_date;
 
       // Prepare data for API
       const apiData = {
         ...growData,
         total_cost: calculateTotalCost(),
+        flushes: flushes, // Include flushes in the API data
       };
 
       // Remove undefined, null, and empty string values for optional fields
