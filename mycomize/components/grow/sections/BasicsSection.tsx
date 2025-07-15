@@ -3,21 +3,13 @@ import { VStack } from '~/components/ui/vstack';
 import { Input, InputField } from '~/components/ui/input';
 import { Textarea, TextareaInput } from '~/components/ui/textarea';
 import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
-import { TagManager } from '~/components/template/TagManager';
+import { TagManager } from '~/components/tek/TagManager';
 
-interface GrowData {
-  name?: string;
-  description?: string;
-  species?: string;
-  variant?: string;
-  tags?: string[];
-  space?: string;
-  tek?: string;
-}
+import { BulkGrow } from '~/lib/growTypes';
 
 interface BasicsSectionProps {
-  growData: GrowData;
-  updateField: (field: keyof GrowData, value: any) => void;
+  growData: BulkGrow;
+  updateField: (field: keyof BulkGrow, value: any) => void;
 }
 
 export const BasicsSection: React.FC<BasicsSectionProps> = ({ growData, updateField }) => {
@@ -94,8 +86,8 @@ export const BasicsSection: React.FC<BasicsSectionProps> = ({ growData, updateFi
         </FormControlLabel>
         <Input>
           <InputField
-            value={growData.space || ''}
-            onChangeText={(value) => updateField('space', value)}
+            value={growData.location || ''}
+            onChangeText={(value) => updateField('location', value)}
           />
         </Input>
       </FormControl>

@@ -1,4 +1,3 @@
-import React from 'react';
 import { ScrollView } from '~/components/ui/scroll-view';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
@@ -7,7 +6,6 @@ import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { Input, InputField } from '~/components/ui/input';
 import { Textarea, TextareaInput } from '~/components/ui/textarea';
 import { Icon } from '~/components/ui/icon';
-import { Pressable } from '~/components/ui/pressable';
 import { Switch } from '~/components/ui/switch';
 import {
   Accordion,
@@ -19,48 +17,39 @@ import {
 import { Save, ChevronDown, ChevronRight, FileText, Layers } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
-import { BulkGrowTekTemplateData } from '~/lib/templateTypes';
-import { StageAccordion } from '~/components/template/StageAccordion';
-import { TypeSelectionModal } from '~/components/template/TypeSelectionModal';
-import { TagManager } from '~/components/template/TagManager';
+import { BulkGrowTekData } from '~/lib/tekTypes';
+import { StageAccordion } from '~/components/tek/StageAccordion';
+import { TagManager } from '~/components/tek/TagManager';
 
-interface TemplateFormProps {
-  templateData: BulkGrowTekTemplateData;
+interface TekFormProps {
+  tekData: BulkGrowTekData;
   isSaving: boolean;
   tagInput: string;
   showTypeModal: boolean;
   tempSelectedType: string;
-  onUpdateField: (field: keyof BulkGrowTekTemplateData, value: any) => void;
-  onSetTemplateData: (data: BulkGrowTekTemplateData) => void;
+  onUpdateField: (field: keyof BulkGrowTekData, value: any) => void;
+  onSetTekData: (data: BulkGrowTekData) => void;
   onTagInputChange: (value: string) => void;
   onAddTag: () => void;
   onRemoveTag: (tag: string) => void;
   onShowTypeModal: (show: boolean) => void;
   onTempSelectedTypeChange: (type: string) => void;
-  onHandleTypeModalOpen: () => void;
-  onHandleTypeConfirm: () => void;
-  onSaveTemplate: () => void;
+  onSaveTek: () => void;
   saveButtonText?: string;
 }
 
-export function TemplateForm({
-  templateData,
+export function TekForm({
+  tekData,
   isSaving,
   tagInput,
-  showTypeModal,
-  tempSelectedType,
   onUpdateField,
-  onSetTemplateData,
+  onSetTekData,
   onTagInputChange,
   onAddTag,
   onRemoveTag,
-  onShowTypeModal,
-  onTempSelectedTypeChange,
-  onHandleTypeModalOpen,
-  onHandleTypeConfirm,
-  onSaveTemplate,
-  saveButtonText = 'Save Template',
-}: TemplateFormProps) {
+  onSaveTek,
+  saveButtonText = 'Save Tek',
+}: TekFormProps) {
   const router = useRouter();
 
   return (
@@ -90,28 +79,17 @@ export function TemplateForm({
               </AccordionHeader>
               <AccordionContent>
                 <VStack className="gap-5 p-2" space="md">
-                  {/* Template Name */}
+                  {/* Tek name */}
                   <VStack space="sm">
                     <Text className="font-medium">Name</Text>
                     <Input>
                       <InputField
                         placeholder="e.g., Super Awesome High Yield Monotub 3000"
-                        value={templateData.name}
+                        value={tekData.name}
                         onChangeText={(value) => onUpdateField('name', value)}
                         maxLength={120}
                       />
                     </Input>
-                  </VStack>
-
-                  {/* Type Selection */}
-                  <VStack space="sm">
-                    <Text className="font-medium">Type</Text>
-                    <Pressable
-                      onPress={onHandleTypeModalOpen}
-                      className="flex-row items-center justify-between rounded-md border border-outline-300 px-3 py-2">
-                      <Text className="text-typography-900">{templateData.type}</Text>
-                      <Icon as={ChevronDown} size="sm" className="text-typography-500" />
-                    </Pressable>
                   </VStack>
 
                   {/* Description */}
@@ -120,7 +98,7 @@ export function TemplateForm({
                     <Textarea>
                       <TextareaInput
                         placeholder="Describe your tek..."
-                        value={templateData.description}
+                        value={tekData.description}
                         onChangeText={(value) => onUpdateField('description', value)}
                         style={{ textAlignVertical: 'top' }}
                         maxLength={500}
@@ -134,7 +112,7 @@ export function TemplateForm({
                       <Text className="font-medium">Species</Text>
                       <Input>
                         <InputField
-                          value={templateData.species}
+                          value={tekData.species}
                           onChangeText={(value) => onUpdateField('species', value)}
                           maxLength={50}
                         />
@@ -144,7 +122,7 @@ export function TemplateForm({
                       <Text className="font-medium">Strain</Text>
                       <Input>
                         <InputField
-                          value={templateData.variant}
+                          value={tekData.variant}
                           onChangeText={(value) => onUpdateField('variant', value)}
                           maxLength={50}
                         />
@@ -157,18 +135,18 @@ export function TemplateForm({
                     <VStack className="flex-1" space="xs">
                       <Text className="font-medium">Make Public</Text>
                       <Text className="text-sm text-typography-500">
-                        Allow other mycomize users to view and use this template
+                        Allow other mycomize users to view and use this tek
                       </Text>
                     </VStack>
                     <Switch
-                      value={templateData.is_public}
+                      value={tekData.is_public}
                       onValueChange={(value) => onUpdateField('is_public', value)}
                     />
                   </HStack>
 
                   {/* Tags */}
                   <TagManager
-                    tags={templateData.tags}
+                    tags={tekData.tags}
                     tagInput={tagInput}
                     onTagInputChange={onTagInputChange}
                     onAddTag={onAddTag}
@@ -199,10 +177,7 @@ export function TemplateForm({
               </AccordionHeader>
               <AccordionContent>
                 <VStack space="md">
-                  <StageAccordion
-                    templateData={templateData}
-                    onUpdateTemplateData={onSetTemplateData}
-                  />
+                  <StageAccordion tekData={tekData} onUpdateTekData={onSetTekData} />
                 </VStack>
               </AccordionContent>
             </AccordionItem>
@@ -222,22 +197,13 @@ export function TemplateForm({
         <Button
           variant="solid"
           action="positive"
-          onPress={onSaveTemplate}
+          onPress={onSaveTek}
           isDisabled={isSaving}
           className="h-12 flex-1">
           <ButtonIcon as={Save} className="text-white" />
           <ButtonText className="text-white">{isSaving ? 'Saving...' : saveButtonText}</ButtonText>
         </Button>
       </HStack>
-
-      {/* Type Selection Modal */}
-      <TypeSelectionModal
-        isOpen={showTypeModal}
-        onClose={() => onShowTypeModal(false)}
-        selectedType={tempSelectedType}
-        onTypeChange={onTempSelectedTypeChange}
-        onConfirm={onHandleTypeConfirm}
-      />
     </VStack>
   );
 }

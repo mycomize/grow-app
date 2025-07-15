@@ -16,13 +16,13 @@ import { Icon } from '~/components/ui/icon';
 import { Input, InputField, InputIcon, InputSlot } from '~/components/ui/input';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { X, ShoppingBasket, CalendarDays, Weight } from 'lucide-react-native';
-import { HarvestFlush } from '../FlushList';
+import { BulkGrowFlush } from '~/lib/growTypes';
 
 interface FlushModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (flush: HarvestFlush) => void;
-  flush?: HarvestFlush | null;
+  onSave: (flush: BulkGrowFlush) => void;
+  flush?: BulkGrowFlush | null;
 }
 
 export const FlushModal: React.FC<FlushModalProps> = ({ isOpen, onClose, onSave, flush }) => {
@@ -41,10 +41,10 @@ export const FlushModal: React.FC<FlushModalProps> = ({ isOpen, onClose, onSave,
     if (isOpen) {
       if (flush) {
         setFormData({
-          harvest_date: flush.harvest_date,
-          wet_weight_grams: flush.wet_weight_grams,
-          dry_weight_grams: flush.dry_weight_grams,
-          concentration_mg_per_gram: flush.concentration_mg_per_gram,
+          harvest_date: flush.harvest_date ? new Date(flush.harvest_date) : null,
+          wet_weight_grams: flush.wet_weight_grams?.toString() || '',
+          dry_weight_grams: flush.dry_weight_grams?.toString() || '',
+          concentration_mg_per_gram: flush.concentration_mg_per_gram?.toString() || '',
         });
       } else {
         setFormData({
@@ -97,12 +97,19 @@ export const FlushModal: React.FC<FlushModalProps> = ({ isOpen, onClose, onSave,
       return;
     }
 
-    const flushData: HarvestFlush = {
-      id: flush?.id || Date.now().toString(),
-      harvest_date: formData.harvest_date,
-      wet_weight_grams: formData.wet_weight_grams.trim(),
-      dry_weight_grams: formData.dry_weight_grams.trim(),
-      concentration_mg_per_gram: formData.concentration_mg_per_gram.trim(),
+    const flushData: BulkGrowFlush = {
+      id: flush?.id || Date.now(),
+      bulk_grow_id: flush?.bulk_grow_id || 0, // This will be set by the parent component
+      harvest_date: formData.harvest_date?.toISOString().split('T')[0],
+      wet_weight_grams: formData.wet_weight_grams.trim()
+        ? parseFloat(formData.wet_weight_grams.trim())
+        : undefined,
+      dry_weight_grams: formData.dry_weight_grams.trim()
+        ? parseFloat(formData.dry_weight_grams.trim())
+        : undefined,
+      concentration_mg_per_gram: formData.concentration_mg_per_gram.trim()
+        ? parseFloat(formData.concentration_mg_per_gram.trim())
+        : undefined,
     };
 
     onSave(flushData);

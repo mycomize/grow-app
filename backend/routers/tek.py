@@ -19,6 +19,33 @@ from backend.security import get_current_user
 from backend.models.tek import Base
 Base.metadata.create_all(bind=engine)
 
+def sanitize_stages_datetime_fields(stages_data):
+    """Convert datetime objects to ISO strings in stages data for JSON serialization"""
+    if not isinstance(stages_data, dict):
+        return stages_data
+    
+    expected_stages = ['inoculation', 'spawn_colonization', 'bulk_colonization', 'fruiting', 'harvest']
+    
+    for stage_name, stage_data in stages_data.items():
+        if stage_name not in expected_stages:
+            continue
+            
+        if not isinstance(stage_data, dict):
+            continue
+            
+        # Handle items list - convert datetime fields
+        if 'items' in stage_data and isinstance(stage_data['items'], list):
+            for item in stage_data['items']:
+                if isinstance(item, dict):
+                    # Convert created_date if it's a datetime
+                    if 'created_date' in item and isinstance(item['created_date'], datetime):
+                        item['created_date'] = item['created_date'].isoformat()
+                    # Convert expiration_date if it's a datetime
+                    if 'expiration_date' in item and isinstance(item['expiration_date'], datetime):
+                        item['expiration_date'] = item['expiration_date'].isoformat()
+    
+    return stages_data
+
 router = APIRouter(prefix="/bulk-grow-tek", tags=["bulk-grow-teks"])
 
 @router.get("/public", response_model=List[BulkGrowTekListItem])
@@ -117,6 +144,10 @@ async def create_tek(
     """Create a new bulk_grow tek"""
     tek_dict = tek_data.dict()
     tek_dict["created_by"] = current_user.id
+    
+    # Sanitize datetime fields in stages data
+    if 'stages' in tek_dict and tek_dict['stages'] is not None:
+        tek_dict['stages'] = sanitize_stages_datetime_fields(tek_dict['stages'])
 
     tek = BulkGrowTek(**tek_dict)
     db.add(tek)
@@ -159,7 +190,6 @@ async def get_tek(
         "description": tek.description,
         "species": tek.species,
         "variant": tek.variant,
-        "type": tek.type,
         "is_public": tek.is_public,
         "stages": tek.stages,
         "created_by": tek.created_by,
@@ -189,6 +219,11 @@ async def update_tek(
 
     # Update fields
     update_data = tek_data.dict(exclude_unset=True)
+    
+    # Sanitize datetime fields in stages data if present
+    if 'stages' in update_data and update_data['stages'] is not None:
+        update_data['stages'] = sanitize_stages_datetime_fields(update_data['stages'])
+    
     for field, value in update_data.items():
         setattr(tek, field, value)
 

@@ -503,7 +503,7 @@ export default function IoTIntegrationDetailScreen() {
         duration: 3000,
         render: ({ id }) => {
           return (
-            <Toast variant="outline" className="mx-auto mt-28 w-full p-4">
+            <Toast variant="outline" className="mx-auto mt-36 w-full p-4">
               <VStack space="xs" className="w-full">
                 <HStack className="flex-row gap-2">
                   <Icon as={AlertCircle} className="mt-0.5 stroke-error-500" />
@@ -529,7 +529,7 @@ export default function IoTIntegrationDetailScreen() {
         duration: 3000,
         render: ({ id }) => {
           return (
-            <Toast className="mx-auto mt-28 w-full p-4">
+            <Toast className="mx-auto mt-36 w-full p-4">
               <VStack space="xs" className="w-full">
                 <HStack className="flex-row gap-2">
                   <Icon as={CheckCircle} className="mt-0.5 stroke-green-600" />

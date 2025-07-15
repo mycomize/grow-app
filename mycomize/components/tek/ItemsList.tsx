@@ -7,9 +7,9 @@ import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { Plus, Edit2, Trash2, Package, ExternalLink, Copy } from 'lucide-react-native';
-import { Item } from '~/lib/templateTypes';
-import { ItemModal } from './modals/ItemModal';
-import { DeleteConfirmationModal } from './modals/DeleteConfirmationModal';
+import { Item } from '~/lib/tekTypes';
+import { ItemModal } from '~/components/modals/ItemModal';
+import { DeleteConfirmationModal } from '~/components/modals/DeleteConfirmationModal';
 
 interface ItemsListProps {
   items: Item[];
@@ -108,7 +108,8 @@ export const ItemsList: React.FC<ItemsListProps> = ({ items, onUpdateItems }) =>
                   <Text className="text-sm text-typography-600">Quantity: {item.quantity}</Text>
                   {item.cost && (
                     <Text className="text-sm text-typography-600">
-                      Cost: ${parseFloat(item.cost).toFixed(2)}
+                      Cost: $
+                      {isNaN(parseFloat(item.cost)) ? item.cost : parseFloat(item.cost).toFixed(2)}
                     </Text>
                   )}
                   {item.url && (

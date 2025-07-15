@@ -20,6 +20,7 @@ import {
   Package,
   Thermometer,
   CheckSquare,
+  Clock,
 } from 'lucide-react-native';
 
 import MushroomIcon from '~/components/icons/MushroomIcon';
@@ -30,7 +31,7 @@ import { BulkSection } from './BulkSection';
 import { FruitingSection } from './FruitingSection';
 import { HarvestSection } from './HarvestSection';
 
-interface StageData {
+interface BulkStageData {
   inoculation_date?: string;
   spawn_colonization_date?: string;
   bulk_colonization_date?: string;
@@ -57,7 +58,7 @@ interface Stage {
   id: string;
   name: string;
   description: string;
-  dateField: keyof StageData;
+  dateField: keyof BulkStageData;
   color: string;
   bgColor: string;
 }
@@ -127,19 +128,19 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
   };
 
   // Map stage IDs to stage data keys (backend expects snake_case)
-  const getStageDataKey = (stageId: string) => {
+  const getBulkStageDataKey = (stageId: string) => {
     // All stage keys should remain in snake_case to match backend schema
     return stageId;
   };
 
   // Get stage data for a specific stage
-  const getStageData = (stageId: string) => {
+  const getBulkStageData = (stageId: string) => {
     if (!growData.stages) return null;
     return growData.stages[stageId] || null;
   };
 
   // Update stage data for a specific stage
-  const updateStageData = (stageId: string, stageData: any) => {
+  const updateBulkStageData = (stageId: string, stageData: any) => {
     const currentStages = growData.stages || {};
     const updatedStages = {
       ...currentStages,
@@ -150,7 +151,7 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
 
   // Get item counts for a stage
   const getItemCounts = (stageId: string) => {
-    const stageData = getStageData(getStageDataKey(stageId));
+    const stageData = getBulkStageData(getBulkStageDataKey(stageId));
     if (!stageData) {
       return {
         items: 0,
@@ -280,7 +281,7 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
 
   // Get cost badge for a stage
   const getCostBadge = (stageId: string) => {
-    const stageData = getStageData(stageId);
+    const stageData = getBulkStageData(stageId);
     if (!stageData?.items) return null;
 
     const cost = stageData.items.reduce((total: number, item: any) => {
@@ -392,8 +393,105 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
     }
   };
 
+  // Calculate total cost across all stages
+  const getTotalCost = () => {
+    if (!growData.stages) return 0;
+
+    let totalCost = 0;
+    Object.values(growData.stages).forEach((stageData: any) => {
+      if (stageData?.items) {
+        stageData.items.forEach((item: any) => {
+          const itemCost = parseFloat(item.cost || '0') || 0;
+          totalCost += itemCost;
+        });
+      }
+    });
+
+    return totalCost;
+  };
+
+  // Determine overall health status
+  const getOverallHealthStatus = () => {
+    const statuses = [
+      growData.inoculation_status,
+      growData.spawn_status,
+      growData.bulk_status,
+      growData.fruiting_status,
+    ].filter(Boolean); // Remove undefined/null values
+
+    // If no statuses are set, return null
+    if (statuses.length === 0) return null;
+
+    // Contam takes precedence
+    if (statuses.includes('Contaminated')) {
+      return { status: 'Contam', variant: 'error' as const };
+    }
+
+    // Suspect takes precedence over healthy
+    if (statuses.includes('Suspect')) {
+      return { status: 'Suspect', variant: 'warning' as const };
+    }
+
+    // If all statuses are healthy
+    if (statuses.every((status) => status === 'Healthy')) {
+      return { status: 'Healthy', variant: 'healthy' as const };
+    }
+
+    // Mixed statuses with no contam or suspect (shouldn't happen, but fallback)
+    return { status: 'Mixed', variant: 'default' as const };
+  };
+
+  // Calculate days since inoculation
+  const getDaysSinceInoculation = () => {
+    if (!growData.inoculation_date) return null;
+
+    const inoculationDate = new Date(growData.inoculation_date);
+    const today = new Date();
+    const diffTime = today.getTime() - inoculationDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    // Add 1 so that grows started today show as "Day 1" instead of "Day 0"
+    return Math.max(1, diffDays + 1);
+  };
+
   return (
     <VStack space="lg" className="bg-background-0 p-2">
+      {/* Summary badges */}
+      <HStack space="md" className="items-center">
+        {(() => {
+          const totalCost = getTotalCost();
+          if (totalCost > 0) {
+            return <InfoBadge text={`$${totalCost.toFixed(2)}`} variant="info" size="md" />;
+          }
+          return null;
+        })()}
+
+        {(() => {
+          const healthStatus = getOverallHealthStatus();
+          if (healthStatus) {
+            return (
+              <InfoBadge text={healthStatus.status} variant={healthStatus.variant} size="md" />
+            );
+          }
+          return null;
+        })()}
+
+        {(() => {
+          const daysSinceInoculation = getDaysSinceInoculation();
+          if (daysSinceInoculation !== null) {
+            return (
+              <InfoBadge
+                icon={Clock}
+                text={`${daysSinceInoculation} ${daysSinceInoculation === 1 ? 'day' : 'days'}`}
+                variant="default"
+                size="md"
+              />
+            );
+          }
+          return null;
+        })()}
+      </HStack>
+
       {/* Timeline */}
       <VStack space="xs">
         {stages.map((stage, index) => {
@@ -478,7 +576,9 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                             {stage.name}
                           </Text>
                         )}
-                        <View className="ml-auto">{getCostBadge(getStageDataKey(stage.id))}</View>
+                        <View className="ml-auto">
+                          {getCostBadge(getBulkStageDataKey(stage.id))}
+                        </View>
                         {getStatusBadge(stage.id)}
                       </HStack>
                     </HStack>
@@ -563,9 +663,9 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                               setActiveDatePicker={setActiveDatePicker}
                               handleDateChange={handleDateChange}
                               parseDate={parseDate}
-                              stageData={getStageData(getStageDataKey(stage.id))}
-                              onUpdateStageData={(data) =>
-                                updateStageData(getStageDataKey(stage.id), data)
+                              stageData={getBulkStageData(getBulkStageDataKey(stage.id))}
+                              onUpdateBulkStageData={(data) =>
+                                updateBulkStageData(getBulkStageDataKey(stage.id), data)
                               }
                               status={status}
                               currentStageIndex={currentStageIndex}
@@ -581,9 +681,9 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                               setActiveDatePicker={setActiveDatePicker}
                               handleDateChange={handleDateChange}
                               parseDate={parseDate}
-                              stageData={getStageData(getStageDataKey(stage.id))}
-                              onUpdateStageData={(data) =>
-                                updateStageData(getStageDataKey(stage.id), data)
+                              stageData={getBulkStageData(getBulkStageDataKey(stage.id))}
+                              onUpdateBulkStageData={(data) =>
+                                updateBulkStageData(getBulkStageDataKey(stage.id), data)
                               }
                               status={status}
                               currentStageIndex={currentStageIndex}
@@ -599,9 +699,9 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                               setActiveDatePicker={setActiveDatePicker}
                               handleDateChange={handleDateChange}
                               parseDate={parseDate}
-                              stageData={getStageData(getStageDataKey(stage.id))}
-                              onUpdateStageData={(data) =>
-                                updateStageData(getStageDataKey(stage.id), data)
+                              stageData={getBulkStageData(getBulkStageDataKey(stage.id))}
+                              onUpdateBulkStageData={(data) =>
+                                updateBulkStageData(getBulkStageDataKey(stage.id), data)
                               }
                               status={status}
                               currentStageIndex={currentStageIndex}
@@ -617,9 +717,9 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                               setActiveDatePicker={setActiveDatePicker}
                               handleDateChange={handleDateChange}
                               parseDate={parseDate}
-                              stageData={getStageData(getStageDataKey(stage.id))}
-                              onUpdateStageData={(data) =>
-                                updateStageData(getStageDataKey(stage.id), data)
+                              stageData={getBulkStageData(getBulkStageDataKey(stage.id))}
+                              onUpdateBulkStageData={(data) =>
+                                updateBulkStageData(getBulkStageDataKey(stage.id), data)
                               }
                               status={status}
                               currentStageIndex={currentStageIndex}
@@ -639,9 +739,9 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                               currentStageIndex={currentStageIndex}
                               stageIndex={index}
                               advanceToNextStage={advanceToNextStage}
-                              stageData={getStageData(getStageDataKey(stage.id))}
-                              onUpdateStageData={(data) =>
-                                updateStageData(getStageDataKey(stage.id), data)
+                              stageData={getBulkStageData(getBulkStageDataKey(stage.id))}
+                              onUpdateBulkStageData={(data) =>
+                                updateBulkStageData(getBulkStageDataKey(stage.id), data)
                               }
                             />
                           )}

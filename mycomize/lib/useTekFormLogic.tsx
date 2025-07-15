@@ -10,22 +10,21 @@ import { AlertCircle, CheckCircle } from 'lucide-react-native';
 
 import { AuthContext } from '~/lib/AuthContext';
 import { getBackendUrl } from '~/lib/backendUrl';
-import { BulkGrowTekTemplateData, createEmptyTemplateData } from '~/lib/templateTypes';
+import { BulkGrowTekData, createEmptyTekData } from '~/lib/tekTypes';
 
-interface UseTemplateFormLogicProps {
-  initialData?: BulkGrowTekTemplateData;
-  templateId?: string;
+interface UseTekFormLogicProps {
+  initialData?: BulkGrowTekData;
+  tekId?: string;
 }
 
-export function useTemplateFormLogic({ initialData, templateId }: UseTemplateFormLogicProps = {}) {
+export function useTekFormLogic({ initialData, tekId }: UseTekFormLogicProps = {}) {
   const { token } = useContext(AuthContext);
   const router = useRouter();
   const toast = useToast();
   const { theme } = useTheme();
 
-  const [templateData, setTemplateData] = useState<BulkGrowTekTemplateData>(
-    initialData || createEmptyTemplateData()
-  );
+  const [tekData, setTekData] = useState<BulkGrowTekData>(initialData || createEmptyTekData());
+
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -33,22 +32,22 @@ export function useTemplateFormLogic({ initialData, templateId }: UseTemplateFor
   const [showTypeModal, setShowTypeModal] = useState(false);
   const [tempSelectedType, setTempSelectedType] = useState('Bulk Grow');
 
-  // Update template data when initialData changes
+  // Update tek data when initialData changes
   useEffect(() => {
     if (initialData) {
-      setTemplateData(initialData);
+      setTekData(initialData);
     }
   }, [initialData]);
 
-  // Update template data field
-  const updateField = (field: keyof BulkGrowTekTemplateData, value: any) => {
-    setTemplateData((prev: BulkGrowTekTemplateData) => ({ ...prev, [field]: value }));
+  // Update tek data field
+  const updateField = (field: keyof BulkGrowTekData, value: any) => {
+    setTekData((prev: BulkGrowTekData) => ({ ...prev, [field]: value }));
   };
 
   // Add tag
   const addTag = () => {
-    if (tagInput.trim() && !templateData.tags.includes(tagInput.trim())) {
-      updateField('tags', [...templateData.tags, tagInput.trim()]);
+    if (tagInput.trim() && !tekData.tags.includes(tagInput.trim())) {
+      updateField('tags', [...tekData.tags, tagInput.trim()]);
       setTagInput('');
     }
   };
@@ -57,19 +56,8 @@ export function useTemplateFormLogic({ initialData, templateId }: UseTemplateFor
   const removeTag = (tagToRemove: string) => {
     updateField(
       'tags',
-      templateData.tags.filter((tag: string) => tag !== tagToRemove)
+      tekData.tags.filter((tag: string) => tag !== tagToRemove)
     );
-  };
-
-  // Type modal handlers
-  const handleTypeModalOpen = () => {
-    setTempSelectedType(templateData.type);
-    setShowTypeModal(true);
-  };
-
-  const handleTypeConfirm = () => {
-    updateField('type', tempSelectedType);
-    setShowTypeModal(false);
   };
 
   // Toast functions
@@ -91,7 +79,7 @@ export function useTemplateFormLogic({ initialData, templateId }: UseTemplateFor
       placement: 'top',
       duration: 3000,
       render: () => (
-        <Toast variant="outline" className={`mx-auto mt-28 w-full p-4 ${bgColor}`}>
+        <Toast variant="outline" className={`mx-auto mt-36 w-full p-4 ${bgColor}`}>
           <VStack space="xs" className="w-full">
             <HStack className="flex-row gap-2">
               <Icon
@@ -109,14 +97,14 @@ export function useTemplateFormLogic({ initialData, templateId }: UseTemplateFor
     });
   };
 
-  // Save template
-  const saveTemplate = async () => {
+  // Save tek
+  const saveTek = async () => {
     // Basic validation
-    if (!templateData.name.trim()) {
-      setError('Template name is required');
+    if (!tekData.name.trim()) {
+      setError('Tek name is required');
       return;
     }
-    if (!templateData.species.trim()) {
+    if (!tekData.species.trim()) {
       setError('Species is required');
       return;
     }
@@ -125,15 +113,15 @@ export function useTemplateFormLogic({ initialData, templateId }: UseTemplateFor
     setError(null);
 
     try {
-      const isEdit = !!templateId;
+      const isEdit = !!tekId;
       const url = isEdit
-        ? `${getBackendUrl()}/bulk-grow-tek-templates/${templateId}`
-        : `${getBackendUrl()}/bulk-grow-tek-templates/`;
+        ? `${getBackendUrl()}/bulk-grow-tek/${tekId}`
+        : `${getBackendUrl()}/bulk-grow-tek/`;
       const method = isEdit ? 'PUT' : 'POST';
 
       // Debug logging
-      console.log('Saving template data:', templateData);
-      console.log('is_public value:', templateData.is_public);
+      console.log('Saving tek data:', tekData);
+      console.log('is_public value:', tekData.is_public);
       console.log('URL:', url);
       console.log('Method:', method);
 
@@ -143,7 +131,7 @@ export function useTemplateFormLogic({ initialData, templateId }: UseTemplateFor
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(templateData),
+        body: JSON.stringify(tekData),
       });
 
       console.log('Response status:', response.status);
@@ -155,31 +143,25 @@ export function useTemplateFormLogic({ initialData, templateId }: UseTemplateFor
           return;
         }
         const errorData = await response.json();
-        console.log('Error response:', errorData);
-        throw new Error(errorData.detail || `Failed to ${isEdit ? 'update' : 'save'} template`);
+        throw new Error(errorData.detail || `Failed to ${isEdit ? 'update' : 'save'} tek`);
       }
 
       const responseData = await response.json();
-      console.log('Success response:', responseData);
 
-      const successMessage = isEdit
-        ? 'Template updated successfully!'
-        : 'Template saved successfully!';
+      const successMessage = isEdit ? 'Tek updated successfully!' : 'Tek saved successfully!';
       setSuccess(successMessage);
 
       // Navigate after save
       setTimeout(() => {
         if (isEdit) {
-          router.replace(`/templates/${templateId}`);
+          router.replace(`/teks/${tekId}`);
         } else {
-          router.replace('/templates');
+          router.replace('/teks');
         }
       }, 1500);
     } catch (err) {
-      console.log('Save template error:', err);
-      setError(
-        err instanceof Error ? err.message : `Failed to ${templateId ? 'update' : 'save'} template`
-      );
+      console.log('Save tek error:', err);
+      setError(err instanceof Error ? err.message : `Failed to ${tekId ? 'update' : 'save'} tek`);
     } finally {
       setIsSaving(false);
     }
@@ -201,8 +183,8 @@ export function useTemplateFormLogic({ initialData, templateId }: UseTemplateFor
   }, [success, theme]);
 
   return {
-    templateData,
-    setTemplateData,
+    tekData,
+    setTekData,
     isSaving,
     tagInput,
     setTagInput,
@@ -213,8 +195,6 @@ export function useTemplateFormLogic({ initialData, templateId }: UseTemplateFor
     updateField,
     addTag,
     removeTag,
-    handleTypeModalOpen,
-    handleTypeConfirm,
-    saveTemplate,
+    saveTek,
   };
 }

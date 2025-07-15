@@ -16,7 +16,7 @@ import { Icon } from '~/components/ui/icon';
 import { Input, InputField, InputIcon, InputSlot } from '~/components/ui/input';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { X, Package, CalendarDays, DollarSign } from 'lucide-react-native';
-import { Item, generateId } from '~/lib/templateTypes';
+import { Item, generateId } from '~/lib/tekTypes';
 
 interface ItemModalProps {
   isOpen: boolean;

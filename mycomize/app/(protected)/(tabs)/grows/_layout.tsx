@@ -70,16 +70,17 @@ export default function GrowsLayout() {
       <Drawer.Screen
         name="new"
         options={{
-          title: 'Add Grow',
+          title: 'New Grow',
           drawerItemStyle: { display: 'none' }, // Hide from drawer menu
           headerShown: true,
+          headerLeft: () => <BackButton />, // Custom back button instead of hamburger
         }}
       />
       <Drawer.Screen
-        name="[id]"
+        name="[id]/index"
         options={{
           drawerItemStyle: { display: 'none' }, // Hide from drawer menu
-          title: 'Manage Grow',
+          title: 'Edit Grow',
           headerShown: true,
           headerLeft: () => <BackButton />, // Custom back button instead of hamburger
           swipeEnabled: false, // Disable drawer swipe for this screen

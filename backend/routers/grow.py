@@ -21,6 +21,33 @@ from backend.security import get_current_active_user, load_config
 from backend.models.grow import Base
 Base.metadata.create_all(bind=engine)
 
+def sanitize_stages_datetime_fields(stages_data):
+    """Convert datetime objects to ISO strings in stages data for JSON serialization"""
+    if not isinstance(stages_data, dict):
+        return stages_data
+    
+    expected_stages = ['inoculation', 'spawn_colonization', 'bulk_colonization', 'fruiting', 'harvest']
+    
+    for stage_name, stage_data in stages_data.items():
+        if stage_name not in expected_stages:
+            continue
+            
+        if not isinstance(stage_data, dict):
+            continue
+            
+        # Handle items list - convert datetime fields
+        if 'items' in stage_data and isinstance(stage_data['items'], list):
+            for item in stage_data['items']:
+                if isinstance(item, dict):
+                    # Convert created_date if it's a datetime
+                    if 'created_date' in item and isinstance(item['created_date'], datetime):
+                        item['created_date'] = item['created_date'].isoformat()
+                    # Convert expiration_date if it's a datetime
+                    if 'expiration_date' in item and isinstance(item['expiration_date'], datetime):
+                        item['expiration_date'] = item['expiration_date'].isoformat()
+    
+    return stages_data
+
 router = APIRouter(
     prefix="/grows",
     tags=["grows"],
@@ -34,6 +61,13 @@ async def create_grow(
     current_user: User = Depends(get_current_active_user)
 ):
     """Create a new grow for the current user"""
+    # Convert stages Pydantic model to dict for JSON storage
+    stages_dict = grow.stages.dict() if grow.stages else None
+    
+    # Sanitize datetime fields in stages data
+    if stages_dict:
+        stages_dict = sanitize_stages_datetime_fields(stages_dict)
+    
     # Create the grow
     db_grow = BulkGrow(
         name=grow.name,
@@ -55,7 +89,7 @@ async def create_grow(
         current_stage=grow.current_stage,
         status=grow.status,
         total_cost=grow.total_cost,
-        stages=grow.stages,
+        stages=stages_dict,
         user_id=current_user.id
     )
 
@@ -115,6 +149,14 @@ async def update_grow(
 
     # Update grow attributes
     grow_data = grow.dict(exclude_unset=True)
+    
+    # Convert stages Pydantic model to dict if present and it's not already a dict
+    if 'stages' in grow_data and grow_data['stages'] is not None:
+        if not isinstance(grow_data['stages'], dict):
+            grow_data['stages'] = grow_data['stages'].dict()
+        # Sanitize datetime fields in stages data
+        grow_data['stages'] = sanitize_stages_datetime_fields(grow_data['stages'])
+    
     for key, value in grow_data.items():
         setattr(db_grow, key, value)
 

@@ -25,30 +25,29 @@ export interface Task {
   days_after_stage_start: number; // Number of days after the stage begins (e.g., 14 for break and shake on day 14)
 }
 
-export interface StageData {
+export interface BulkStageData {
   items: Item[];
   environmental_conditions: EnvironmentalCondition[];
   tasks: Task[];
   notes: string;
 }
 
-export interface BulkGrowTekTemplateData {
+export interface BulkGrowTekData {
   // Basic info
   name: string;
   description: string;
   species: string;
   variant: string;
-  type: string; // e.g., "BulkGrow", "Shoebox", "Martha Tent"
   is_public: boolean;
   tags: string[];
 
   // Stage-based data
   stages: {
-    inoculation: StageData;
-    spawn_colonization: StageData;
-    bulk_colonization: StageData;
-    fruiting: StageData;
-    harvest: StageData;
+    inoculation: BulkStageData;
+    spawn_colonization: BulkStageData;
+    bulk_colonization: BulkStageData;
+    fruiting: BulkStageData;
+    harvest: BulkStageData;
   };
 }
 
@@ -87,39 +86,37 @@ export const CONDITION_UNITS = {
 } as const;
 
 // Helper function to create empty stage data
-export const createEmptyStageData = (): StageData => ({
+export const createEmptyBulkStageData = (): BulkStageData => ({
   items: [],
   environmental_conditions: [],
   tasks: [],
   notes: '',
 });
 
-// Helper function to create empty template data
-export const createEmptyTemplateData = (): BulkGrowTekTemplateData => ({
+// Helper function to create empty tek data
+export const createEmptyTekData = (): BulkGrowTekData => ({
   name: '',
   description: '',
   species: '',
   variant: '',
-  type: 'Bulk Grow', // Default to BulkGrow
   is_public: false,
   tags: [],
   stages: {
-    inoculation: createEmptyStageData(),
-    spawn_colonization: createEmptyStageData(),
-    bulk_colonization: createEmptyStageData(),
-    fruiting: createEmptyStageData(),
-    harvest: createEmptyStageData(),
+    inoculation: createEmptyBulkStageData(),
+    spawn_colonization: createEmptyBulkStageData(),
+    bulk_colonization: createEmptyBulkStageData(),
+    fruiting: createEmptyBulkStageData(),
+    harvest: createEmptyBulkStageData(),
   },
 });
 
-// Template interface for API responses
-export interface BulkGrowTekTemplate {
+// Tek interface for API responses
+export interface BulkGrowTek {
   id: number;
   name: string;
   description?: string;
   species: string;
   variant?: string;
-  type: string;
   tags?: string[];
   is_public: boolean;
   created_by: number;
@@ -129,11 +126,11 @@ export interface BulkGrowTekTemplate {
   creator_name?: string;
   creator_profile_image?: string;
   stages?: {
-    inoculation: StageData;
-    spawn_colonization: StageData;
-    bulk_colonization: StageData;
-    fruiting: StageData;
-    harvest: StageData;
+    inoculation: BulkStageData;
+    spawn_colonization: BulkStageData;
+    bulk_colonization: BulkStageData;
+    fruiting: BulkStageData;
+    harvest: BulkStageData;
   };
 }
 

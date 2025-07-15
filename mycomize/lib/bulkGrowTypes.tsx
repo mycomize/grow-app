@@ -11,9 +11,9 @@ export const BulkGrowTekIcon: React.FC<{ stage: string }> = ({ stage }) => {
   switch (stage) {
     case 'inoculation':
       return <Icon className="mb-1 text-typography-400" as={Syringe} />;
-    case 'spawnColonization':
+    case 'spawn_colonization':
       return <Icon className="mb-1 text-typography-400" as={Wheat} />;
-    case 'bulkColonization':
+    case 'bulk_colonization':
       return <Icon className="mb-1 text-typography-400" as={Box} />;
     case 'fruiting':
       return (

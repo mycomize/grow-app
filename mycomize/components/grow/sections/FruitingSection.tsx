@@ -20,8 +20,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { CalendarDays, ChevronDown, X, ArrowDownToDot } from 'lucide-react-native';
 
-// Import template types
-import { StageData } from '~/lib/templateTypes';
+// Import tek types
 import { StageTabs } from '~/components/ui/stage-tabs';
 
 interface GrowData {
@@ -37,9 +36,9 @@ interface FruitingSectionProps {
   handleDateChange: (field: string, date?: Date, event?: any) => void;
   parseDate: (dateString?: string) => Date | null;
 
-  // Template stage data (if available from template)
+  // Tek stage data (if available from tek)
   stageData?: any;
-  onUpdateStageData?: (stageData: any) => void;
+  onUpdateBulkStageData?: (stageData: any) => void;
 
   // Complete button props
   status: string;
@@ -47,15 +46,6 @@ interface FruitingSectionProps {
   stageIndex: number;
   advanceToNextStage: () => void;
 }
-
-const frequencyOptions = [
-  'Once daily',
-  'Twice daily',
-  'Three times daily',
-  'Every other day',
-  'As needed',
-  'Never',
-];
 
 export const FruitingSection: React.FC<FruitingSectionProps> = ({
   growData,
@@ -65,10 +55,8 @@ export const FruitingSection: React.FC<FruitingSectionProps> = ({
   handleDateChange,
   parseDate,
   stageData,
-  onUpdateStageData,
+  onUpdateBulkStageData,
   status,
-  currentStageIndex,
-  stageIndex,
   advanceToNextStage,
 }) => {
   const showCompleteButton = status === 'active';
@@ -76,7 +64,7 @@ export const FruitingSection: React.FC<FruitingSectionProps> = ({
   return (
     <VStack space="md" className="bg-background-0 p-4">
       {/* Stage Tabs */}
-      <StageTabs stageData={stageData} onUpdateStageData={onUpdateStageData} />
+      <StageTabs stageData={stageData} onUpdateBulkStageData={onUpdateBulkStageData} />
 
       {/* Fruiting-specific fields */}
       <VStack space="md" className="mt-6 border-t border-background-200 pt-4">

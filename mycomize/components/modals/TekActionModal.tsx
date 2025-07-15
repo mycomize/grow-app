@@ -15,20 +15,20 @@ import { Text } from '~/components/ui/text';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { X, Import, Copy, Check } from 'lucide-react-native';
-import { BulkGrowTekTemplate } from '~/lib/templateTypes';
+import { BulkGrowTek } from '~/lib/tekTypes';
 
-interface TemplateActionModalProps {
+interface TekActionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  template: BulkGrowTekTemplate;
+  tek: BulkGrowTek;
   onUseForNewGrow: () => void;
   onCopyToNewTek: () => void;
 }
 
-export const TemplateActionModal: React.FC<TemplateActionModalProps> = ({
+export const TekActionModal: React.FC<TekActionModalProps> = ({
   isOpen,
   onClose,
-  template,
+  tek,
   onUseForNewGrow,
   onCopyToNewTek,
 }) => {
@@ -42,9 +42,6 @@ export const TemplateActionModal: React.FC<TemplateActionModalProps> = ({
     }
     onClose();
   };
-
-  // Only show options if template is a bulk grow
-  const isBulkGrow = template.type.toLowerCase() === 'bulk grow';
 
   const actions = [
     {
@@ -72,34 +69,24 @@ export const TemplateActionModal: React.FC<TemplateActionModalProps> = ({
         <ModalBody>
           <VStack space="lg">
             <Text className="text-typography-600">
-              What would you like to do with "{template.name}"?
+              What would you like to do with "{tek.name}"?
             </Text>
-
-            {isBulkGrow && (
-              <VStack space="md">
-                {actions.map((action) => (
-                  <Pressable
-                    key={action.id}
-                    onPress={() => setSelectedAction(action.id)}
-                    className="flex-row items-center justify-between rounded-lg border border-outline-200 p-4">
-                    <HStack className="items-center" space="sm">
-                      <Icon as={action.icon} className="text-typography-600" size="sm" />
-                      <Text className="text-typography-900">{action.label}</Text>
-                    </HStack>
-                    {selectedAction === action.id && (
-                      <Icon as={Check} className="text-success-600" size="sm" />
-                    )}
-                  </Pressable>
-                ))}
-              </VStack>
-            )}
-
-            {!isBulkGrow && (
-              <Text className="text-center text-typography-500">
-                This template is not a bulk grow template. Actions are only available for bulk grow
-                templates.
-              </Text>
-            )}
+            <VStack space="md">
+              {actions.map((action) => (
+                <Pressable
+                  key={action.id}
+                  onPress={() => setSelectedAction(action.id)}
+                  className="flex-row items-center justify-between rounded-lg border border-outline-200 p-4">
+                  <HStack className="items-center" space="sm">
+                    <Icon as={action.icon} className="text-typography-600" size="sm" />
+                    <Text className="text-typography-900">{action.label}</Text>
+                  </HStack>
+                  {selectedAction === action.id && (
+                    <Icon as={Check} className="text-success-600" size="sm" />
+                  )}
+                </Pressable>
+              ))}
+            </VStack>
           </VStack>
         </ModalBody>
         <ModalFooter>

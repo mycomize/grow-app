@@ -5,68 +5,68 @@ import { Button } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Package, Thermometer, CheckSquare, FileText } from 'lucide-react-native';
 
-// Import template components
-import { ItemsList } from '~/components/template/ItemsList';
-import { EnvironmentalConditionsList } from '~/components/template/EnvironmentalConditionsList';
-import { TasksList } from '~/components/template/TasksList';
-import { StageNotes } from '~/components/template/StageNotes';
+// Import tek components
+import { ItemsList } from '~/components/tek/ItemsList';
+import { EnvironmentalConditionsList } from '~/components/tek/EnvironmentalConditionsList';
+import { TasksList } from '~/components/tek/TasksList';
+import { StageNotes } from '~/components/tek/StageNotes';
 
-// Import template types
-import { StageData } from '~/lib/templateTypes';
+// Import tek types
+import { BulkStageData } from '~/lib/tekTypes';
 
 type TabType = 'items' | 'conditions' | 'tasks' | 'notes';
 
 interface StageTabsProps {
-  stageData?: StageData;
-  onUpdateStageData?: (stageData: StageData) => void;
+  stageData?: BulkStageData;
+  onUpdateBulkStageData?: (stageData: BulkStageData) => void;
 }
 
-export const StageTabs: React.FC<StageTabsProps> = ({ stageData, onUpdateStageData }) => {
+export const StageTabs: React.FC<StageTabsProps> = ({ stageData, onUpdateBulkStageData }) => {
   const [activeTab, setActiveTab] = useState<TabType>('items');
 
   // Initialize empty stage data if not provided
-  const defaultStageData: StageData = {
+  const defaultBulkStageData: BulkStageData = {
     items: [],
-    environmentalConditions: [],
+    environmental_conditions: [],
     tasks: [],
     notes: '',
   };
 
-  const currentStageData = stageData || defaultStageData;
+  const currentBulkStageData = stageData || defaultBulkStageData;
 
-  const handleUpdateItems = (items: typeof currentStageData.items) => {
-    if (onUpdateStageData) {
-      onUpdateStageData({
-        ...currentStageData,
+  const handleUpdateItems = (items: typeof currentBulkStageData.items) => {
+    if (onUpdateBulkStageData) {
+      onUpdateBulkStageData({
+        ...currentBulkStageData,
         items,
       });
     }
   };
 
   const handleUpdateConditions = (
-    environmentalConditions: typeof currentStageData.environmentalConditions
+    environmental_conditions: typeof currentBulkStageData.environmental_conditions
   ) => {
-    if (onUpdateStageData) {
-      onUpdateStageData({
-        ...currentStageData,
-        environmentalConditions,
+    if (onUpdateBulkStageData) {
+      onUpdateBulkStageData({
+        ...currentBulkStageData,
+        environmental_conditions,
       });
     }
   };
 
-  const handleUpdateTasks = (tasks: typeof currentStageData.tasks) => {
-    if (onUpdateStageData) {
-      onUpdateStageData({
-        ...currentStageData,
+  const handleUpdateTasks = (tasks: typeof currentBulkStageData.tasks) => {
+    if (onUpdateBulkStageData) {
+      onUpdateBulkStageData({
+        ...currentBulkStageData,
         tasks,
       });
     }
   };
 
   const handleUpdateNotes = (notes: string) => {
-    if (onUpdateStageData) {
-      onUpdateStageData({
-        ...currentStageData,
+    if (onUpdateBulkStageData) {
+      onUpdateBulkStageData({
+        ...currentBulkStageData,
         notes,
       });
     }
@@ -106,19 +106,19 @@ export const StageTabs: React.FC<StageTabsProps> = ({ stageData, onUpdateStageDa
       {/* Tab Content */}
       <VStack space="md">
         {activeTab === 'items' && (
-          <ItemsList items={currentStageData.items} onUpdateItems={handleUpdateItems} />
+          <ItemsList items={currentBulkStageData.items} onUpdateItems={handleUpdateItems} />
         )}
         {activeTab === 'conditions' && (
           <EnvironmentalConditionsList
-            conditions={currentStageData.environmentalConditions}
+            conditions={currentBulkStageData.environmental_conditions}
             onUpdateConditions={handleUpdateConditions}
           />
         )}
         {activeTab === 'tasks' && (
-          <TasksList tasks={currentStageData.tasks} onUpdateTasks={handleUpdateTasks} />
+          <TasksList tasks={currentBulkStageData.tasks} onUpdateTasks={handleUpdateTasks} />
         )}
         {activeTab === 'notes' && (
-          <StageNotes notes={currentStageData.notes} onUpdateNotes={handleUpdateNotes} />
+          <StageNotes notes={currentBulkStageData.notes} onUpdateNotes={handleUpdateNotes} />
         )}
       </VStack>
     </VStack>

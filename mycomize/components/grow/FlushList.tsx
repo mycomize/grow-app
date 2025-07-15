@@ -14,44 +14,37 @@ import {
   CalendarDays,
   Weight,
 } from 'lucide-react-native';
-import { FlushModal } from './modals/FlushModal';
-import { DeleteConfirmationModal } from '~/components/template/modals/DeleteConfirmationModal';
-
-export interface HarvestFlush {
-  id: string;
-  harvest_date: Date | null;
-  wet_weight_grams: string;
-  dry_weight_grams: string;
-  concentration_mg_per_gram: string;
-}
+import { FlushModal } from '~/components/modals/FlushModal';
+import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
+import { BulkGrowFlush } from '~/lib/growTypes';
 
 interface FlushListProps {
-  flushes: HarvestFlush[];
-  onUpdateFlushes: (flushes: HarvestFlush[]) => void;
+  flushes: BulkGrowFlush[];
+  onUpdateFlushes: (flushes: BulkGrowFlush[]) => void;
 }
 
 export const FlushList: React.FC<FlushListProps> = ({ flushes, onUpdateFlushes }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingFlush, setEditingFlush] = useState<HarvestFlush | null>(null);
+  const [editingFlush, setEditingFlush] = useState<BulkGrowFlush | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [flushToDelete, setFlushToDelete] = useState<HarvestFlush | null>(null);
+  const [flushToDelete, setFlushToDelete] = useState<BulkGrowFlush | null>(null);
 
   const handleAddFlush = () => {
     setEditingFlush(null);
     setIsModalOpen(true);
   };
 
-  const handleEditFlush = (flush: HarvestFlush) => {
+  const handleEditFlush = (flush: BulkGrowFlush) => {
     setEditingFlush(flush);
     setIsModalOpen(true);
   };
 
-  const handleDeleteFlush = (flush: HarvestFlush) => {
+  const handleDeleteFlush = (flush: BulkGrowFlush) => {
     setFlushToDelete(flush);
     setIsDeleteModalOpen(true);
   };
 
-  const handleSaveFlush = (flush: HarvestFlush) => {
+  const handleSaveFlush = (flush: BulkGrowFlush) => {
     if (editingFlush) {
       // Update existing flush
       const updatedFlushes = flushes.map((f) => (f.id === flush.id ? flush : f));
@@ -62,11 +55,11 @@ export const FlushList: React.FC<FlushListProps> = ({ flushes, onUpdateFlushes }
     }
   };
 
-  const handleCopyFlush = (flush: HarvestFlush) => {
-    const newFlush: HarvestFlush = {
+  const handleCopyFlush = (flush: BulkGrowFlush) => {
+    const newFlush: BulkGrowFlush = {
       ...flush,
-      id: Date.now().toString(), // Generate a new ID
-      harvest_date: null, // Reset date for copy
+      id: Date.now(), // Generate a new ID
+      harvest_date: undefined, // Reset date for copy
     };
     onUpdateFlushes([...flushes, newFlush]);
   };
@@ -79,12 +72,12 @@ export const FlushList: React.FC<FlushListProps> = ({ flushes, onUpdateFlushes }
     }
   };
 
-  const formatDate = (date: Date | null) => {
+  const formatDate = (date?: string) => {
     if (!date) return 'Not set';
-    return date.toLocaleDateString();
+    return new Date(date).toLocaleDateString();
   };
 
-  const getFlushNumber = (flushId: string) => {
+  const getFlushNumber = (flushId: number) => {
     const index = flushes.findIndex((f) => f.id === flushId);
     return index + 1;
   };
@@ -131,7 +124,7 @@ export const FlushList: React.FC<FlushListProps> = ({ flushes, onUpdateFlushes }
                   <HStack className="items-center" space="xs">
                     <Icon as={Weight} className="text-typography-500" size="sm" />
                     <Text className="text-sm text-typography-600">
-                      Wet: {flush.wet_weight_grams || '0'}g, Dry: {flush.dry_weight_grams || '0'}g
+                      Wet: {flush.wet_weight_grams || 0}g, Dry: {flush.dry_weight_grams || 0}g
                     </Text>
                   </HStack>
 
@@ -164,7 +157,7 @@ export const FlushList: React.FC<FlushListProps> = ({ flushes, onUpdateFlushes }
                 <Text className="font-bold text-success-800">Total Wet Weight:</Text>
                 <Text className="text-success-800">
                   {flushes
-                    .reduce((sum, flush) => sum + (parseFloat(flush.wet_weight_grams) || 0), 0)
+                    .reduce((sum, flush) => sum + (flush.wet_weight_grams || 0), 0)
                     .toFixed(2)}
                   g
                 </Text>
@@ -173,7 +166,7 @@ export const FlushList: React.FC<FlushListProps> = ({ flushes, onUpdateFlushes }
                 <Text className="font-bold text-success-800">Total Dry Weight:</Text>
                 <Text className="text-success-800">
                   {flushes
-                    .reduce((sum, flush) => sum + (parseFloat(flush.dry_weight_grams) || 0), 0)
+                    .reduce((sum, flush) => sum + (flush.dry_weight_grams || 0), 0)
                     .toFixed(2)}
                   g
                 </Text>

@@ -15,7 +15,7 @@ import { Button, ButtonText } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Input, InputField } from '~/components/ui/input';
 import { X, CheckSquare } from 'lucide-react-native';
-import { Task, generateId } from '~/lib/templateTypes';
+import { Task, generateId } from '~/lib/tekTypes';
 
 interface TaskModalProps {
   isOpen: boolean;

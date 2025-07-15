@@ -107,7 +107,7 @@ export default function ProfileScreen() {
       placement: 'top',
       duration: 3000,
       render: () => (
-        <Toast variant="outline" className={`mx-auto mt-28 w-full p-4 ${bgColor}`}>
+        <Toast variant="outline" className={`mx-auto mt-36 w-full p-4 ${bgColor}`}>
           <VStack space="xs" className="w-full">
             <HStack className="flex-row gap-2">
               <Icon

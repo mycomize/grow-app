@@ -70,7 +70,7 @@ export const AIAssistantSection: React.FC<AIAssistantSectionProps> = ({ growData
       duration: 3000,
       render: ({ id }) => {
         return (
-          <Toast variant="outline" className="mx-auto mt-28 w-full bg-background-0 p-4">
+          <Toast variant="outline" className="mx-auto mt-36 w-full bg-background-0 p-4">
             <VStack space="xs" className="w-full">
               <HStack className="flex-row gap-2">
                 <Icon as={CheckCircle} className="mt-0.5 stroke-green-600" />

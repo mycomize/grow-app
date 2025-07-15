@@ -7,7 +7,6 @@ import { Heading } from '~/components/ui/heading';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { View } from '~/components/ui/view';
-import { Button, ButtonText } from '~/components/ui/button';
 import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
 import { useRouter } from 'expo-router';
 import {
@@ -19,15 +18,14 @@ import {
   Scale,
   SquarePen,
   Trash2,
-  X,
   Layers,
 } from 'lucide-react-native';
-import { Grow, stageLabels, statusLabels, growStatuses } from '~/lib/growTypes';
+import { BulkGrowComplete, bulkGrowStatuses } from '~/lib/growTypes';
 import { GatewayStatus } from './GatewayStatus';
 import { InfoBadge } from '~/components/ui/info-badge';
 
 interface GrowCardProps {
-  grow: Grow;
+  grow: BulkGrowComplete;
   onDelete?: (growId: number) => Promise<void>;
 }
 
@@ -35,9 +33,9 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
   const router = useRouter();
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
 
-  const getStatusColor = (status: string) => {
-    if (status === growStatuses.CONTAMINATED) return 'text-error-500';
-    if (status === growStatuses.HARVESTED) return 'text-amber-600';
+  const getStatusColor = (status?: string) => {
+    if (status === bulkGrowStatuses.CONTAMINATED) return 'text-error-500';
+    if (status === bulkGrowStatuses.HARVESTED) return 'text-amber-600';
     return 'text-green-700';
   };
 
@@ -46,11 +44,23 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
   // Define stages for timeline
   const stages = [
     { id: 'inoculation', name: 'Inoculation', dateField: 'inoculation_date' },
-    { id: 'spawn_colonization', name: 'Spawn', dateField: 'spawn_colonization_date' },
-    { id: 'bulk_colonization', name: 'Bulk', dateField: 'bulk_colonization_date' },
-    { id: 'fruiting', name: 'Fruiting', dateField: 'fruiting_start_date' },
-    { id: 'harvest', name: 'Harvest', dateField: 'harvest_date' },
+    { id: 'spawn_colonization', name: 'Spawn', dateField: 'full_spawn_colonization_date' },
+    { id: 'bulk_colonization', name: 'Bulk', dateField: 'full_bulk_colonization_date' },
+    { id: 'fruiting', name: 'Fruiting', dateField: 'fruiting_pin_date' },
+    { id: 'harvest', name: 'Harvest', dateField: 'flushes' },
   ];
+
+  // Calculate age from inoculation date
+  const calculateAge = () => {
+    if (!grow.inoculation_date) return 0;
+    const inoculationDate = new Date(grow.inoculation_date);
+    const today = new Date();
+    const diffTime = Math.abs(today.getTime() - inoculationDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const growAge = calculateAge();
 
   // Determine current stage index
   const getCurrentStageIndex = () => {
@@ -58,7 +68,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
       if (
         grow.current_stage === 'completed' ||
         grow.status === 'completed' ||
-        grow.status === growStatuses.HARVESTED
+        grow.status === bulkGrowStatuses.HARVESTED
       ) {
         return 4;
       }
@@ -66,12 +76,12 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
       if (index !== -1) return index;
     }
 
-    // Infer from dates
-    if (grow.harvest_date) return 4;
-    if (grow.fruiting_start_date) return 3;
-    if (grow.bulk_colonization_date) return 2;
-    if (grow.spawn_colonization_date) return 1;
-    if (grow.inoculation_date || grow.inoculationDate) return 0;
+    // Infer from dates and flushes
+    if (grow.flushes && grow.flushes.length > 0) return 4;
+    if (grow.fruiting_pin_date) return 3;
+    if (grow.full_bulk_colonization_date) return 2;
+    if (grow.full_spawn_colonization_date) return 1;
+    if (grow.inoculation_date) return 0;
 
     return -1;
   };
@@ -81,7 +91,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
   const getStageStatus = (index: number) => {
     if (
       grow.status === 'completed' ||
-      grow.status === growStatuses.HARVESTED ||
+      grow.status === bulkGrowStatuses.HARVESTED ||
       grow.current_stage === 'completed'
     ) {
       return 'completed';
@@ -91,19 +101,19 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
     return 'pending';
   };
 
-  // Check if grow is completed and can be turned into a template
-  const canCreateTemplate = () => {
+  // Check if grow is completed and can be turned into a tek
+  const canCreateTek = () => {
     return (
       grow.status === 'completed' ||
-      grow.status === growStatuses.HARVESTED ||
+      grow.status === bulkGrowStatuses.HARVESTED ||
       grow.current_stage === 'completed'
     );
   };
 
-  const handleCreateTemplate = () => {
-    // Navigate to template creation from grow using router.push with query params
+  const handleCreateTek = () => {
+    // Navigate to tek creation from grow using router.push with query params
     router.push({
-      pathname: '/templates/new',
+      pathname: '/teks/new',
       params: { fromGrow: grow.id.toString() },
     });
   };
@@ -182,9 +192,9 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
             </HStack>
             {/* Info badge row */}
             <HStack className="mt-4" space="md">
-              <InfoBadge text={`${grow.age || 0} days`} icon={Clock} variant="default" size="md" />
+              <InfoBadge text={`${growAge} days`} icon={Clock} variant="default" size="md" />
               <InfoBadge
-                text={`${grow.cost?.toFixed(2) || '0.00'}`}
+                text={`$${grow.total_cost?.toFixed(2) || '0.00'}`}
                 icon={DollarSign}
                 variant="default"
                 size="md"
@@ -212,37 +222,61 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
 
           {/* Individual grow controls */}
           <HStack className=" mt-2 justify-around" space="md">
-            {canCreateTemplate() && (
-              <Pressable onPress={handleCreateTemplate}>
-                <Icon as={Layers} size="xl" className="text-primary-600" />
+            {canCreateTek() && (
+              <Pressable onPress={handleCreateTek}>
+                <Icon as={Layers} size="md" className="text-typography-300" />
               </Pressable>
             )}
             <Pressable
               onPress={() => {
                 router.push({
-                  pathname: `/grows/[id]/edit`,
+                  pathname: `/grows/[id]`,
                   params: { id: grow.id },
                 });
               }}>
-              <Icon as={SquarePen} size="xl" />
+              <Icon as={SquarePen} size="md" className="text-typography-300" />
             </Pressable>
             {onDelete && (
               <Pressable onPress={() => setShowDeleteAlert(true)}>
-                <Icon as={Trash2} size="xl" className="text-error-500" />
+                <Icon as={Trash2} size="md" className="text-typography-300" />
               </Pressable>
             )}
           </HStack>
 
           {/* Harvest info if applicable */}
-          {grow.harvestDate && (grow.harvestDryWeight > 0 || grow.harvestWetWeight > 0) && (
-            <HStack className="mt-2 items-center justify-center rounded-lg bg-success-50 p-2">
-              <Icon as={Scale} size="sm" className="mr-2 text-success-700" />
-              <Text className="text-sm font-medium text-success-700">
-                {grow.harvestDryWeight > 0 ? `${grow.harvestDryWeight}g dry` : ''}
-                {grow.harvestDryWeight > 0 && grow.harvestWetWeight > 0 ? ' / ' : ''}
-                {grow.harvestWetWeight > 0 ? `${grow.harvestWetWeight}g wet` : ''}
-              </Text>
-            </HStack>
+          {grow.flushes && grow.flushes.length > 0 && (
+            <VStack className="mt-2 space-y-1">
+              {grow.flushes.map((flush, index) => {
+                const hasWeight =
+                  (flush.dry_weight_grams && flush.dry_weight_grams > 0) ||
+                  (flush.wet_weight_grams && flush.wet_weight_grams > 0);
+
+                if (!hasWeight) return null;
+
+                return (
+                  <HStack
+                    key={flush.id}
+                    className="items-center justify-center rounded-lg bg-success-50 p-2">
+                    <Icon as={Scale} size="sm" className="mr-2 text-success-700" />
+                    <Text className="text-sm font-medium text-success-700">
+                      Flush {index + 1}:{' '}
+                      {flush.dry_weight_grams && flush.dry_weight_grams > 0
+                        ? `${flush.dry_weight_grams}g dry`
+                        : ''}
+                      {flush.dry_weight_grams &&
+                      flush.dry_weight_grams > 0 &&
+                      flush.wet_weight_grams &&
+                      flush.wet_weight_grams > 0
+                        ? ' / '
+                        : ''}
+                      {flush.wet_weight_grams && flush.wet_weight_grams > 0
+                        ? `${flush.wet_weight_grams}g wet`
+                        : ''}
+                    </Text>
+                  </HStack>
+                );
+              })}
+            </VStack>
           )}
         </View>
       </VStack>

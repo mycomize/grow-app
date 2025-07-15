@@ -1,31 +1,67 @@
-import { useEffect } from 'react';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Text } from '~/components/ui/text';
-import { Center } from '~/components/ui/center';
-import { Spinner } from '~/components/ui/spinner';
+import { useLocalSearchParams } from 'expo-router';
+import { useGrowFormLogic } from '~/lib/useGrowFormLogic';
+import { GrowForm } from '~/components/grow/GrowForm';
+import { BulkGrow } from '~/lib/growTypes';
 
 export default function NewGrowScreen() {
-  const router = useRouter();
-  const { fromTemplate } = useLocalSearchParams();
+  const { fromTek } = useLocalSearchParams();
 
-  useEffect(() => {
-    // Redirect to the unified edit screen for new grow
-    // Preserve the fromTemplate parameter if it exists
-    const params: any = { id: 'new' };
-    if (fromTemplate) {
-      params.fromTemplate = fromTemplate;
-    }
+  const formLogic = useGrowFormLogic({
+    growId: 'new',
+    fromTek: fromTek as string,
+  });
 
-    router.replace({
-      pathname: './[id]/edit',
-      params,
-    });
-  }, [router, fromTemplate]);
+  if (formLogic.isLoading) {
+    return (
+      <GrowForm
+        growData={{} as BulkGrow}
+        flushes={[]}
+        isSaving={false}
+        keyboardVisible={false}
+        showDeleteModal={false}
+        isDeleting={false}
+        activeDatePicker={null}
+        growId="new"
+        onUpdateField={() => {}}
+        onGatewayLinked={() => {}}
+        onGatewayUnlinked={() => {}}
+        onAddFlush={() => {}}
+        onUpdateFlush={() => {}}
+        onRemoveFlush={() => {}}
+        onSetActiveDatePicker={() => {}}
+        onHandleDateChange={() => {}}
+        onParseDate={() => null}
+        onShowDeleteModal={() => {}}
+        onDeleteGrow={() => {}}
+        onSaveGrow={() => {}}
+        saveButtonText="Creating..."
+      />
+    );
+  }
 
   return (
-    <Center className="h-full w-full">
-      <Spinner size="large" />
-      <Text className="mt-4">Creating new grow...</Text>
-    </Center>
+    <GrowForm
+      growData={formLogic.growData}
+      flushes={formLogic.flushes}
+      isSaving={formLogic.isSaving}
+      keyboardVisible={formLogic.keyboardVisible}
+      showDeleteModal={formLogic.showDeleteModal}
+      isDeleting={formLogic.isDeleting}
+      activeDatePicker={formLogic.activeDatePicker}
+      growId="new"
+      onUpdateField={formLogic.updateField}
+      onGatewayLinked={formLogic.handleGatewayLinked}
+      onGatewayUnlinked={formLogic.handleGatewayUnlinked}
+      onAddFlush={formLogic.addFlush}
+      onUpdateFlush={formLogic.updateFlush}
+      onRemoveFlush={formLogic.removeFlush}
+      onSetActiveDatePicker={formLogic.setActiveDatePicker}
+      onHandleDateChange={formLogic.handleDateChange}
+      onParseDate={formLogic.parseDate}
+      onShowDeleteModal={formLogic.setShowDeleteModal}
+      onDeleteGrow={formLogic.deleteGrow}
+      onSaveGrow={formLogic.saveGrow}
+      saveButtonText="Save Grow"
+    />
   );
 }

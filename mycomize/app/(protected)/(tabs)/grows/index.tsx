@@ -35,7 +35,7 @@ import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '~/lib/AuthContext';
-import { Grow } from '~/lib/growTypes';
+import { BulkGrowComplete, bulkGrowStatuses, bulkGrowStages } from '~/lib/growTypes';
 import { GrowCard } from '~/components/grow/GrowCard';
 import { GrowCardSkeleton } from '~/components/grow/GrowCardSkeleton';
 import { CountBadge } from '~/components/ui/count-badge';
@@ -45,9 +45,7 @@ import { getSwitchColors } from '~/lib/switchUtils';
 export default function GrowScreen() {
   const { token } = useContext(AuthContext);
   const router = useRouter();
-  const { theme } = useTheme();
-  const { trackFalse, trackTrue, thumbColor } = getSwitchColors(theme);
-  const [grows, setGrows] = useState<Grow[]>([]);
+  const [grows, setGrows] = useState<BulkGrowComplete[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<string>('name');
@@ -83,14 +81,8 @@ export default function GrowScreen() {
         return;
       }
 
-      const data: Grow[] = await response.json();
-      const formattedGrows = data.map((grow) => ({
-        ...grow,
-        inoculationDate: grow.inoculationDate ? new Date(grow.inoculationDate) : null,
-        harvestDate: grow.harvestDate ? new Date(grow.harvestDate) : null,
-      }));
-
-      setGrows(formattedGrows);
+      const data: BulkGrowComplete[] = await response.json();
+      setGrows(data);
       setLoading(false);
     } catch (error) {
       console.error('Exception fetching grows:', error);
@@ -175,13 +167,13 @@ export default function GrowScreen() {
     return filterActiveOnly ? 'Active Only' : 'All Grows';
   };
 
-  // Calculate in-progress grows (have inoculation date but are still growing)
+  // Calculate in-progress grows (have inoculation date but not harvested)
   const inProgressGrows = grows.filter((grow) => {
-    return (grow.inoculation_date || grow.inoculationDate) && grow.status === 'growing';
+    return grow.inoculation_date && grow.status !== bulkGrowStatuses.HARVESTED;
   });
 
   // Sort grows function
-  const sortGrows = (growsToSort: Grow[]) => {
+  const sortGrows = (growsToSort: BulkGrowComplete[]) => {
     return [...growsToSort].sort((a, b) => {
       switch (sortBy) {
         case 'name':
@@ -189,22 +181,22 @@ export default function GrowScreen() {
         case 'species':
           return (a.species || '').localeCompare(b.species || '');
         case 'inoculationDate':
-          const dateA = a.inoculation_date || a.inoculationDate;
-          const dateB = b.inoculation_date || b.inoculationDate;
+          const dateA = a.inoculation_date;
+          const dateB = b.inoculation_date;
           if (!dateA && !dateB) return 0;
           if (!dateA) return 1;
           if (!dateB) return -1;
           return new Date(dateB).getTime() - new Date(dateA).getTime(); // Most recent first
         case 'stage':
           const stageOrder = [
-            'inoculation',
-            'spawn_colonization',
-            'bulk_colonization',
-            'fruiting',
-            'harvest',
+            bulkGrowStages.INOCULATION,
+            bulkGrowStages.SPAWN_COLONIZATION,
+            bulkGrowStages.BULK_COLONIZATION,
+            bulkGrowStages.FRUITING,
+            bulkGrowStages.HARVEST,
           ];
-          const stageA = stageOrder.indexOf(a.stage || a.current_stage || '');
-          const stageB = stageOrder.indexOf(b.stage || b.current_stage || '');
+          const stageA = stageOrder.indexOf(a.current_stage as any);
+          const stageB = stageOrder.indexOf(b.current_stage as any);
           return stageA - stageB;
         default:
           return 0;
@@ -216,7 +208,7 @@ export default function GrowScreen() {
   const filteredAndSortedGrows = sortGrows(
     grows.filter((grow) => {
       // Active filter
-      const isActive = (grow.inoculation_date || grow.inoculationDate) && grow.status === 'growing';
+      const isActive = grow.inoculation_date && grow.status !== bulkGrowStatuses.HARVESTED;
       const matchesActiveFilter = !filterActiveOnly || isActive;
 
       // Search filter
@@ -229,9 +221,9 @@ export default function GrowScreen() {
         (grow.name?.toLowerCase()?.includes(searchLower) ?? false) ||
         (grow.species?.toLowerCase()?.includes(searchLower) ?? false) ||
         (grow.variant?.toLowerCase()?.includes(searchLower) ?? false) ||
-        (grow.tek?.toLowerCase()?.includes(searchLower) ?? false) ||
-        (grow.stage?.toLowerCase()?.includes(searchLower) ?? false) ||
-        (grow.status?.toLowerCase()?.includes(searchLower) ?? false);
+        (grow.current_stage?.toLowerCase()?.includes(searchLower) ?? false) ||
+        (grow.status?.toLowerCase()?.includes(searchLower) ?? false) ||
+        (grow.location?.toLowerCase()?.includes(searchLower) ?? false);
 
       return matchesActiveFilter && matchesSearch;
     })
@@ -311,16 +303,16 @@ export default function GrowScreen() {
             {/* Current Filter/Sort Status */}
             <HStack className="mt-2 items-center justify-around gap-2">
               <Pressable onPress={handleSortModalOpen}>
-                <Icon as={ArrowUpDown} size="lg" />
+                <Icon as={ArrowUpDown} size="md" className="text-typography-300" />
               </Pressable>
               <Pressable onPress={handleFilterModalOpen}>
-                <Icon as={Filter} size="lg" />
+                <Icon as={Filter} size="md" className="text-typography-300" />
               </Pressable>
               <Pressable
                 onPress={() => {
                   router.push('/grows/new');
                 }}>
-                <Icon className="text-white" as={PlusIcon} size="lg" />
+                <Icon className="text-typography-300" as={PlusIcon} size="md" />
               </Pressable>
             </HStack>
           </VStack>

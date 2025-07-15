@@ -6,9 +6,9 @@ import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { Plus, Edit2, Trash2, Thermometer, Copy } from 'lucide-react-native';
-import { EnvironmentalCondition } from '~/lib/templateTypes';
-import { EnvironmentalConditionModal } from './modals/EnvironmentalConditionModal';
-import { DeleteConfirmationModal } from './modals/DeleteConfirmationModal';
+import { EnvironmentalCondition } from '~/lib/tekTypes';
+import { EnvironmentalConditionModal } from '~/components/modals/EnvironmentalConditionModal';
+import { DeleteConfirmationModal } from '~/components/modals/DeleteConfirmationModal';
 
 interface EnvironmentalConditionsListProps {
   conditions: EnvironmentalCondition[];
@@ -103,7 +103,8 @@ export const EnvironmentalConditionsList: React.FC<EnvironmentalConditionsListPr
                   )}
                   <HStack className="items-center" space="xs">
                     <Text className="text-sm text-typography-600">
-                      Range: {condition.lower_bound} - {condition.upper_bound} {condition.unit}
+                      Range: {String(condition.lower_bound)} - {String(condition.upper_bound)}{' '}
+                      {condition.unit}
                     </Text>
                   </HStack>
                 </VStack>

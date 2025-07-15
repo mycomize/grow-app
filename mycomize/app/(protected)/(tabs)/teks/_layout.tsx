@@ -1,7 +1,8 @@
 import { Stack } from 'expo-router';
-import { useTheme } from '@/components/ui/themeprovider/themeprovider';
+import { BackButton } from '~/components/ui/back-button';
+import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 
-export default function GrowDetailsLayout() {
+export default function TekLayout() {
   const { theme } = useTheme();
 
   // Set header styles based on theme
@@ -21,15 +22,24 @@ export default function GrowDetailsLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: 'Grow Details',
-          headerShown: false, // This will be redirected anyway
+          title: 'Tek Library',
+          headerShown: true,
         }}
       />
       <Stack.Screen
-        name="edit"
+        name="new"
         options={{
-          title: 'Manage Grow',
-          headerShown: false,
+          title: 'New Tek',
+          headerShown: true,
+          headerLeft: () => <BackButton />,
+        }}
+      />
+      <Stack.Screen
+        name="[id]/index"
+        options={{
+          title: 'Edit Tek',
+          headerShown: true,
+          headerLeft: () => <BackButton />,
         }}
       />
     </Stack>

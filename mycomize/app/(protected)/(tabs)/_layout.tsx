@@ -52,7 +52,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="templates"
+        name="teks"
         options={{
           title: 'Tek',
           tabBarLabel: 'Tek',

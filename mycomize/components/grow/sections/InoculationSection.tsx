@@ -20,8 +20,8 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { CalendarDays, ChevronDown, X, ArrowDownToDot } from 'lucide-react-native';
 
-// Import template types
-import { StageData } from '~/lib/templateTypes';
+// Import tek types
+import { BulkStageData } from '~/lib/tekTypes';
 import { StageTabs } from '~/components/ui/stage-tabs';
 
 interface GrowData {
@@ -37,9 +37,9 @@ interface InoculationSectionProps {
   handleDateChange: (field: string, date?: Date, event?: any) => void;
   parseDate: (dateString?: string) => Date | null;
 
-  // Template stage data (if available from template)
+  // Tek stage data (if available from tek)
   stageData?: any;
-  onUpdateStageData?: (stageData: any) => void;
+  onUpdateBulkStageData?: (stageData: any) => void;
 
   // Complete button props
   status: string;
@@ -56,7 +56,7 @@ export const InoculationSection: React.FC<InoculationSectionProps> = ({
   handleDateChange,
   parseDate,
   stageData,
-  onUpdateStageData,
+  onUpdateBulkStageData,
   status,
   currentStageIndex,
   stageIndex,
@@ -69,7 +69,7 @@ export const InoculationSection: React.FC<InoculationSectionProps> = ({
   return (
     <VStack space="md" className="bg-background-0 p-4">
       {/* Stage Tabs */}
-      <StageTabs stageData={stageData} onUpdateStageData={onUpdateStageData} />
+      <StageTabs stageData={stageData} onUpdateBulkStageData={onUpdateBulkStageData} />
 
       {/* Inoculation-specific fields */}
       <VStack space="md" className="mt-6 border-t border-background-200 pt-4">

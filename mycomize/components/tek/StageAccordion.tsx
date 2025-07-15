@@ -20,36 +20,29 @@ import {
   CheckSquare,
   FileText,
 } from 'lucide-react-native';
-import {
-  BulkGrowTekTemplateData,
-  BulkGrowCultivationStage,
-  BULK_GROW_TEK_STAGES,
-} from '~/lib/templateTypes';
+import { BulkGrowTekData, BulkGrowCultivationStage, BULK_GROW_TEK_STAGES } from '~/lib/tekTypes';
 import { StageSection } from './StageSection';
 
 interface StageAccordionProps {
-  templateData: BulkGrowTekTemplateData;
-  onUpdateTemplateData: (templateData: BulkGrowTekTemplateData) => void;
+  tekData: BulkGrowTekData;
+  onUpdateTekData: (tekData: BulkGrowTekData) => void;
 }
 
-export const StageAccordion: React.FC<StageAccordionProps> = ({
-  templateData,
-  onUpdateTemplateData,
-}) => {
-  const handleUpdateStageData = (stage: BulkGrowCultivationStage, stageData: any) => {
-    onUpdateTemplateData({
-      ...templateData,
+export const StageAccordion: React.FC<StageAccordionProps> = ({ tekData, onUpdateTekData }) => {
+  const handleUpdateBulkStageData = (stage: BulkGrowCultivationStage, stageData: any) => {
+    onUpdateTekData({
+      ...tekData,
       stages: {
-        ...templateData.stages,
+        ...tekData.stages,
         [stage]: stageData,
       },
     });
   };
 
   const getItemCounts = (stage: BulkGrowCultivationStage) => {
-    const stageData = templateData.stages[stage];
+    const stageData = tekData.stages[stage];
     return {
-      materials: stageData.items?.length || 0,
+      items: stageData.items?.length || 0,
       conditions: stageData.environmental_conditions?.length || 0,
       tasks: stageData.tasks?.length || 0,
     };
@@ -59,12 +52,12 @@ export const StageAccordion: React.FC<StageAccordionProps> = ({
     const counts = getItemCounts(stage);
     const badges = [];
 
-    if (counts.materials > 0) {
+    if (counts.items > 0) {
       badges.push(
         <InfoBadge
           key="materials"
           icon={Package}
-          text={`x ${counts.materials}`}
+          text={`x ${counts.items}`}
           variant="default"
           size="sm"
         />
@@ -108,7 +101,6 @@ export const StageAccordion: React.FC<StageAccordionProps> = ({
 
   return (
     <VStack space="sm">
-      <Text className="text-lg font-semibold">{templateData.type} Tek</Text>
       <Accordion
         type="multiple"
         variant="unfilled"
@@ -140,8 +132,8 @@ export const StageAccordion: React.FC<StageAccordionProps> = ({
             </AccordionHeader>
             <AccordionContent>
               <StageSection
-                stageData={templateData.stages[stage]}
-                onUpdateStageData={(stageData) => handleUpdateStageData(stage, stageData)}
+                stageData={tekData.stages[stage]}
+                onUpdateBulkStageData={(stageData) => handleUpdateBulkStageData(stage, stageData)}
               />
             </AccordionContent>
           </AccordionItem>

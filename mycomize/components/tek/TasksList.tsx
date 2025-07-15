@@ -6,9 +6,9 @@ import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { Plus, Edit2, Trash2, CheckSquare, Calendar, Copy } from 'lucide-react-native';
-import { Task } from '~/lib/templateTypes';
-import { TaskModal } from './modals/TaskModal';
-import { DeleteConfirmationModal } from './modals/DeleteConfirmationModal';
+import { Task } from '~/lib/tekTypes';
+import { TaskModal } from '~/components/modals/TaskModal';
+import { DeleteConfirmationModal } from '~/components/modals/DeleteConfirmationModal';
 
 interface TasksListProps {
   tasks: Task[];
@@ -105,7 +105,7 @@ export const TasksList: React.FC<TasksListProps> = ({ tasks, onUpdateTasks }) =>
                   <Text className="text-sm text-typography-600">Frequency: {task.frequency}</Text>
                   <HStack className="items-center" space="xs">
                     <Text className="text-sm text-typography-600">
-                      Day {task.days_after_stage_start} of stage
+                      Day {String(task.days_after_stage_start)} of stage
                     </Text>
                   </HStack>
                 </VStack>

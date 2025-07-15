@@ -5,7 +5,7 @@ import { HStack } from '~/components/ui/hstack';
 import { View } from '~/components/ui/view';
 import { Skeleton, SkeletonText } from '~/components/ui/skeleton';
 
-export const TemplateCardSkeleton: React.FC = () => {
+export const TekCardSkeleton: React.FC = () => {
   return (
     <Card className="w-11/12 rounded-xl bg-background-0 p-2">
       <VStack className="p-2">
@@ -20,7 +20,7 @@ export const TemplateCardSkeleton: React.FC = () => {
             </View>
           </HStack>
 
-          {/* Template name and privacy/type info */}
+          {/* Tek name and privacy/type info */}
           <HStack className="mb-2 items-center">
             <Skeleton className="h-6 w-6 rounded" />
             <SkeletonText className="ml-2 h-5 w-32" />

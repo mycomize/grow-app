@@ -20,10 +20,10 @@ class Item(BaseModel):
     description: str
     vendor: str
     quantity: str
-    cost: float
+    cost: Optional[str] = None
     url: str
-    created_date: datetime
-    expiration_date: datetime
+    created_date: Optional[datetime] = None
+    expiration_date: Optional[datetime] = None
 
 class Task(BaseModel):
     id: str

@@ -19,7 +19,6 @@ import {
   ModalFooter,
   ModalCloseButton,
 } from '~/components/ui/modal';
-import { Spinner } from '~/components/ui/spinner';
 import { Skeleton, SkeletonText } from '~/components/ui/skeleton';
 import { useToast, Toast } from '~/components/ui/toast';
 import {
@@ -38,19 +37,19 @@ import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '~/lib/AuthContext';
-import { TemplateCard } from '~/components/grow/TemplateCard';
-import { TemplateCardSkeleton } from '~/components/template';
+import { TekCard } from '~/components/tek/TekCard';
+import { TekCardSkeleton } from '~/components/tek';
 import { CountBadge } from '~/components/ui/count-badge';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
-import { BulkGrowTekTemplate } from '~/lib/templateTypes';
+import { BulkGrowTek } from '~/lib/tekTypes';
 
-export default function TemplatesLibraryScreen() {
+export default function TekLibraryScreen() {
   const { token } = useContext(AuthContext);
   const router = useRouter();
   const toast = useToast();
   const { theme } = useTheme();
 
-  const [templates, setTemplates] = useState<BulkGrowTekTemplate[]>([]);
+  const [teks, setTeks] = useState<BulkGrowTek[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -66,17 +65,17 @@ export default function TemplatesLibraryScreen() {
     try {
       setLoading(true);
       setError(null);
-      setTemplates([]);
+      setTeks([]);
 
-      // Load both public and private templates
+      // Load both public and private teks
       const [publicResponse, myResponse] = await Promise.all([
-        fetch(`${getBackendUrl()}/bulk-grow-tek-templates/public?limit=100`, {
+        fetch(`${getBackendUrl()}/bulk-grow-tek/public?limit=100`, {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
         }),
-        fetch(`${getBackendUrl()}/bulk-grow-tek-templates/my?limit=100`, {
+        fetch(`${getBackendUrl()}/bulk-grow-tek/my?limit=100`, {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
@@ -89,20 +88,20 @@ export default function TemplatesLibraryScreen() {
           router.replace('/login');
           return;
         }
-        throw new Error('Failed to load templates');
+        throw new Error('Failed to load teks');
       }
 
       const [publicData, myData] = await Promise.all([publicResponse.json(), myResponse.json()]);
 
-      // Combine and deduplicate templates
-      const allTemplates = [...publicData, ...myData];
-      const uniqueTemplates = allTemplates.filter(
-        (template, index, self) => index === self.findIndex((t) => t.id === template.id)
+      // Combine and deduplicate teks
+      const allTeks = [...publicData, ...myData];
+      const uniqueTeks = allTeks.filter(
+        (tek, index, self) => index === self.findIndex((t) => t.id === tek.id)
       );
 
-      setTemplates(uniqueTemplates);
+      setTeks(uniqueTeks);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load templates');
+      setError(err instanceof Error ? err.message : 'Failed to load teks');
     } finally {
       setLoading(false);
     }
@@ -129,9 +128,9 @@ export default function TemplatesLibraryScreen() {
     setShowFilterModal(false);
   };
 
-  // Sort templates function
-  const sortTemplates = (templatesToSort: BulkGrowTekTemplate[]) => {
-    return [...templatesToSort].sort((a, b) => {
+  // Sort teks function
+  const sortTeks = (teksToSort: BulkGrowTek[]) => {
+    return [...teksToSort].sort((a, b) => {
       switch (sortBy) {
         case 'name':
           return (a.name || '').localeCompare(b.name || '');
@@ -148,17 +147,17 @@ export default function TemplatesLibraryScreen() {
   };
 
   // Calculate filtered counts
-  const publicTemplates = templates.filter((template) => template.is_public);
-  const privateTemplates = templates.filter((template) => !template.is_public);
+  const publicTeks = teks.filter((tek) => tek.is_public);
+  const privateTeks = teks.filter((tek) => !tek.is_public);
 
-  // Filter and sort templates based on search query and filter
-  const filteredAndSortedTemplates = sortTemplates(
-    templates.filter((template) => {
+  // Filter and sort teks based on search query and filter
+  const filteredAndSortedTeks = sortTeks(
+    teks.filter((tek) => {
       // Filter by public/private
       const matchesFilter =
         filterBy === 'all' ||
-        (filterBy === 'public' && template.is_public) ||
-        (filterBy === 'private' && !template.is_public);
+        (filterBy === 'public' && tek.is_public) ||
+        (filterBy === 'private' && !tek.is_public);
 
       // Search filter
       const matchesSearch =
@@ -166,12 +165,12 @@ export default function TemplatesLibraryScreen() {
         (() => {
           const searchLower = searchQuery?.toLowerCase() ?? '';
           return (
-            (template.name?.toLowerCase()?.includes(searchLower) ?? false) ||
-            (template.species?.toLowerCase()?.includes(searchLower) ?? false) ||
-            (template.description?.toLowerCase()?.includes(searchLower) ?? false) ||
-            (template.variant?.toLowerCase()?.includes(searchLower) ?? false) ||
-            (template.creator_name?.toLowerCase()?.includes(searchLower) ?? false) ||
-            (template.tags?.some((tag) => tag.toLowerCase().includes(searchLower)) ?? false)
+            (tek.name?.toLowerCase()?.includes(searchLower) ?? false) ||
+            (tek.species?.toLowerCase()?.includes(searchLower) ?? false) ||
+            (tek.description?.toLowerCase()?.includes(searchLower) ?? false) ||
+            (tek.variant?.toLowerCase()?.includes(searchLower) ?? false) ||
+            (tek.creator_name?.toLowerCase()?.includes(searchLower) ?? false) ||
+            (tek.tags?.some((tag) => tag.toLowerCase().includes(searchLower)) ?? false)
           );
         })();
 
@@ -223,21 +222,21 @@ export default function TemplatesLibraryScreen() {
     }
   }, [error, theme]);
 
-  const handleTemplatePress = (template: BulkGrowTekTemplate) => {
-    router.push(`/templates/${template.id}`);
+  const handleTekPress = (tek: BulkGrowTek) => {
+    router.push(`/teks/${tek.id}`);
   };
 
-  const handleUseTemplate = (template: BulkGrowTekTemplate) => {
-    router.push(`/templates/${template.id}/use`);
+  const handleUseTek = (tek: BulkGrowTek) => {
+    router.push(`/teks/${tek.id}/use`);
   };
 
-  const handleEditTemplate = (template: BulkGrowTekTemplate) => {
-    router.push(`/templates/${template.id}`);
+  const handleEditTek = (tek: BulkGrowTek) => {
+    router.push(`/teks/${tek.id}`);
   };
 
-  const handleDeleteTemplate = async (template: BulkGrowTekTemplate) => {
+  const handleDeleteTek = async (tek: BulkGrowTek) => {
     try {
-      const response = await fetch(`${getBackendUrl()}/bulk-grow-tek-templates/${template.id}`, {
+      const response = await fetch(`${getBackendUrl()}/bulk-grow-tek/${tek.id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -250,34 +249,27 @@ export default function TemplatesLibraryScreen() {
           router.replace('/login');
           return;
         }
-        throw new Error('Failed to delete template');
+        throw new Error('Failed to delete tek');
       }
 
-      showToast('Template deleted successfully', 'success');
+      showToast('Tek deleted successfully', 'success');
       await fetchData(); // Refresh the list
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to delete template', 'error');
+      showToast(err instanceof Error ? err.message : 'Failed to delete tek', 'error');
     }
   };
 
-  const handleConvertToGrow = (template: BulkGrowTekTemplate) => {
+  const handleUseForNewGrow = (tek: BulkGrowTek) => {
     router.push({
       pathname: '/grows/new',
-      params: { fromTemplate: template.id.toString() },
+      params: { fromTek: tek.id.toString() },
     });
   };
 
-  const handleUseForNewGrow = (template: BulkGrowTekTemplate) => {
+  const handleCopyToNewTek = (tek: BulkGrowTek) => {
     router.push({
-      pathname: '/grows/new',
-      params: { fromTemplate: template.id.toString() },
-    });
-  };
-
-  const handleCopyToNewTek = (template: BulkGrowTekTemplate) => {
-    router.push({
-      pathname: '/templates/new',
-      params: { copyFromTemplate: template.id.toString() },
+      pathname: '/teks/new',
+      params: { copyFromTek: tek.id.toString() },
     });
   };
 
@@ -292,7 +284,7 @@ export default function TemplatesLibraryScreen() {
       case 'private':
         return 'Private Only';
       default:
-        return 'All Templates';
+        return 'All Teks';
     }
   };
 
@@ -310,7 +302,7 @@ export default function TemplatesLibraryScreen() {
         <VStack className="items-center gap-4 pb-16">
           <View className="mt-2" />
 
-          {/* Template Control Card Skeleton */}
+          {/* Tek Control Card Skeleton */}
           <Card className="mx-4 w-11/12 bg-background-0">
             <VStack className="p-2" space="md">
               <HStack className="">
@@ -329,16 +321,16 @@ export default function TemplatesLibraryScreen() {
             </VStack>
           </Card>
 
-          {/* Template Card Skeletons */}
+          {/* Tek Card Skeletons */}
           {Array.from({ length: 3 }).map((_, index) => (
-            <TemplateCardSkeleton key={index} />
+            <TekCardSkeleton key={index} />
           ))}
         </VStack>
       </ScrollView>
     );
   }
 
-  return publicTemplates.length === 0 && privateTemplates.length === 0 ? (
+  return publicTeks.length === 0 && privateTeks.length === 0 ? (
     <VStack className="flex-1 items-center justify-center gap-5 bg-background-50">
       <Icon as={Layers} size="xl" className="text-typography-400" />
       <Text className="text-center text-lg ">Create your first tek to get started!</Text>
@@ -346,7 +338,7 @@ export default function TemplatesLibraryScreen() {
         variant="solid"
         className="h-16 w-16 rounded-full"
         action="positive"
-        onPress={() => router.push('/templates/new')}>
+        onPress={() => router.push('/teks/new')}>
         <ButtonIcon as={Plus} className="h-6 w-6 text-white" />
       </Button>
     </VStack>
@@ -355,18 +347,18 @@ export default function TemplatesLibraryScreen() {
       <VStack className="items-center gap-4 pb-16">
         <View className="mt-2" />
 
-        {/* Template Control Card */}
+        {/* Tek Control Card */}
         <Card className="mx-4 w-11/12 bg-background-0">
           <VStack className="p-2" space="md">
             <HStack className="">
               <HStack className="items-center gap-2">
                 <Icon as={Layers} size="xl" className="text-typography-600" />
-                <CountBadge count={templates.length} label="TOTAL" variant="success" />
-                {publicTemplates.length > 0 && (
-                  <CountBadge count={publicTemplates.length} label="PUBLIC" variant="green-dark" />
+                <CountBadge count={teks.length} label="TOTAL" variant="success" />
+                {publicTeks.length > 0 && (
+                  <CountBadge count={publicTeks.length} label="PUBLIC" variant="green-dark" />
                 )}
-                {privateTemplates.length > 0 && (
-                  <CountBadge count={privateTemplates.length} label="PRIVATE" variant="error" />
+                {privateTeks.length > 0 && (
+                  <CountBadge count={privateTeks.length} label="PRIVATE" variant="error" />
                 )}
               </HStack>
             </HStack>
@@ -393,30 +385,29 @@ export default function TemplatesLibraryScreen() {
               <Pressable onPress={handleFilterModalOpen}>
                 <Icon className="text-typography-300" as={Filter} size="md" />
               </Pressable>
-              <Pressable onPress={() => router.push('/templates/new')}>
+              <Pressable onPress={() => router.push('/teks/new')}>
                 <Icon className="text-typography-300" as={CirclePlus} size="md" />
               </Pressable>
             </HStack>
           </VStack>
         </Card>
 
-        {/* Template Cards */}
-        {filteredAndSortedTemplates.map((template) => (
-          <TemplateCard
-            key={template.id}
-            template={template}
-            onPress={handleTemplatePress}
-            onUseTemplate={handleUseTemplate}
-            onDelete={handleDeleteTemplate}
-            onEdit={handleEditTemplate}
-            onConvertToGrow={handleConvertToGrow}
+        {/* Tek Cards */}
+        {filteredAndSortedTeks.map((tek) => (
+          <TekCard
+            key={tek.id}
+            tek={tek}
+            onPress={handleTekPress}
+            onUseTek={handleUseTek}
+            onDelete={handleDeleteTek}
+            onEdit={handleEditTek}
             onUseForNewGrow={handleUseForNewGrow}
             onCopyToNewTek={handleCopyToNewTek}
             onTagPress={handleTagPress}
           />
         ))}
 
-        {filteredAndSortedTemplates.length === 0 && (searchQuery || filterBy !== 'all') && (
+        {filteredAndSortedTeks.length === 0 && (searchQuery || filterBy !== 'all') && (
           <VStack className="items-center justify-center  gap-3 p-8">
             <Icon as={Layers} size="xl" className="text-typography-400" />
             <Text className="mt-0 text-center text-typography-500">
@@ -435,14 +426,14 @@ export default function TemplatesLibraryScreen() {
         <ModalBackdrop />
         <ModalContent>
           <ModalHeader>
-            <Heading size="lg">Sort Templates</Heading>
+            <Heading size="lg">Sort Teks</Heading>
             <ModalCloseButton onPress={() => setShowSortModal(false)}>
               <Icon as={X} />
             </ModalCloseButton>
           </ModalHeader>
           <ModalBody>
             <VStack space="lg">
-              <Text className="text-typography-600">Choose how to sort your templates:</Text>
+              <Text className="text-typography-600">Choose how to sort your teks:</Text>
               <VStack space="md">
                 {[
                   { value: 'name', label: 'Name' },
@@ -481,30 +472,30 @@ export default function TemplatesLibraryScreen() {
         <ModalBackdrop />
         <ModalContent>
           <ModalHeader>
-            <Heading size="lg">Filter Templates</Heading>
+            <Heading size="lg">Filter Teks</Heading>
             <ModalCloseButton onPress={() => setShowFilterModal(false)}>
               <Icon as={X} />
             </ModalCloseButton>
           </ModalHeader>
           <ModalBody>
             <VStack space="lg">
-              <Text className="text-typography-600">Choose which templates to display:</Text>
+              <Text className="text-typography-600">Choose which teks to display:</Text>
               <VStack space="md">
                 {[
                   {
                     value: 'all',
-                    label: 'All Templates',
-                    description: 'Show both public and private templates',
+                    label: 'All Teks',
+                    description: 'Show both public and private teks',
                   },
                   {
                     value: 'public',
                     label: 'Public Only',
-                    description: 'Show only publicly shared templates',
+                    description: 'Show only publicly shared teks',
                   },
                   {
                     value: 'private',
                     label: 'Private Only',
-                    description: 'Show only your private templates',
+                    description: 'Show only your private teks',
                   },
                 ].map((option) => (
                   <Pressable

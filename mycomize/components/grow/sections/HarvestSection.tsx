@@ -6,19 +6,19 @@ import { Icon } from '~/components/ui/icon';
 import { ArrowDownToDot } from 'lucide-react-native';
 
 // Import grow components
-import { FlushList, HarvestFlush } from '../FlushList';
+import { FlushList } from '../FlushList';
 
-// Import template types
-import { StageData } from '~/lib/templateTypes';
+// Import tek types
+import { BulkGrowFlush } from '~/lib/growTypes';
 import { StageTabs } from '~/components/ui/stage-tabs';
 
 interface HarvestSectionProps {
-  flushes: HarvestFlush[];
-  onUpdateFlushes: (flushes: HarvestFlush[]) => void;
+  flushes: BulkGrowFlush[];
+  onUpdateFlushes: (flushes: BulkGrowFlush[]) => void;
 
-  // Template stage data (if available from template)
+  // Tek stage data (if available from tek)
   stageData?: any;
-  onUpdateStageData?: (stageData: any) => void;
+  onUpdateBulkStageData?: (stageData: any) => void;
 
   // Complete button props
   status: string;
@@ -27,16 +27,12 @@ interface HarvestSectionProps {
   advanceToNextStage: () => void;
 }
 
-const potencyOptions = ['Low', 'Medium', 'High', 'Very High', 'Unknown'];
-
 export const HarvestSection: React.FC<HarvestSectionProps> = ({
   flushes,
   onUpdateFlushes,
   stageData,
-  onUpdateStageData,
+  onUpdateBulkStageData,
   status,
-  currentStageIndex,
-  stageIndex,
   advanceToNextStage,
 }) => {
   const showCompleteButton = status === 'active';
@@ -44,7 +40,7 @@ export const HarvestSection: React.FC<HarvestSectionProps> = ({
   return (
     <VStack space="md" className="bg-background-0 p-4">
       {/* Stage Tabs */}
-      <StageTabs stageData={stageData} onUpdateStageData={onUpdateStageData} />
+      <StageTabs stageData={stageData} onUpdateBulkStageData={onUpdateBulkStageData} />
 
       {/* Harvest Flushes */}
       <VStack space="md" className="mt-6 border-t border-background-200 pt-4">
