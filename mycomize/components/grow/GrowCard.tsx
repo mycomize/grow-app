@@ -19,6 +19,10 @@ import {
   SquarePen,
   Trash2,
   Layers,
+  Heart,
+  AlertTriangle,
+  Skull,
+  MapPin,
 } from 'lucide-react-native';
 import { BulkGrowComplete, bulkGrowStatuses } from '~/lib/growTypes';
 import { GatewayStatus } from './GatewayStatus';
@@ -129,36 +133,127 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
 
   const { totalWetYield, totalDryYield } = calculateTotalYields();
 
+  // Calculate overall health status based on stage statuses
+  const calculateHealthStatus = () => {
+    // Get all stage statuses for completed and active stages
+    const stageStatuses: string[] = [];
+
+    // Check each stage status if the stage is completed or active
+    stages.forEach((stage, index) => {
+      const status = getStageStatus(index);
+      if (status === 'completed' || status === 'active') {
+        let stageHealthStatus = null;
+
+        // Map stage to corresponding status field
+        switch (stage.id) {
+          case 'inoculation':
+            stageHealthStatus = grow.inoculation_status;
+            break;
+          case 'spawn_colonization':
+            stageHealthStatus = grow.spawn_colonization_status;
+            break;
+          case 'bulk_colonization':
+            stageHealthStatus = grow.bulk_colonization_status;
+            break;
+          case 'fruiting':
+            stageHealthStatus = grow.fruiting_status;
+            break;
+          case 'harvest':
+            // For harvest stage, use overall grow status
+            stageHealthStatus = grow.status;
+            break;
+        }
+
+        if (stageHealthStatus) {
+          stageStatuses.push(stageHealthStatus.toLowerCase());
+        }
+      }
+    });
+
+    // Priority: contaminated > suspect > healthy
+    if (stageStatuses.some((status) => status === 'contaminated')) {
+      return 'contaminated';
+    }
+    if (stageStatuses.some((status) => status === 'suspect')) {
+      return 'suspect';
+    }
+    return 'healthy';
+  };
+
+  const healthStatus = calculateHealthStatus();
+
+  // Get health status display info
+  const getHealthStatusInfo = () => {
+    switch (healthStatus) {
+      case 'contaminated':
+        return { text: 'Contam', icon: Skull, variant: 'error' as const };
+      case 'suspect':
+        return { text: 'Suspect', icon: AlertTriangle, variant: 'warning' as const };
+      default:
+        return { text: 'Healthy', icon: Heart, variant: 'healthy' as const };
+    }
+  };
+
+  const healthInfo = getHealthStatusInfo();
+
   return (
     <Card className="w-11/12 rounded-xl bg-background-0">
       <VStack className="p-2">
         <View>
           {/* First row: Grow name and strain */}
-          <HStack className="mb-3 items-center justify-between">
-            <Heading size="lg">{grow.name}</Heading>
+          <HStack className="mb-1 items-center justify-between">
+            <Text
+              className="flex-1 text-lg font-bold text-typography-700"
+              numberOfLines={1}
+              ellipsizeMode="tail">
+              {grow.name}
+            </Text>
             {grow.variant && (
-              <Text className="text-lg italic text-typography-500">{grow.variant}</Text>
+              <Text
+                className="text-right text-lg text-typography-700"
+                numberOfLines={1}
+                ellipsizeMode="tail">
+                {grow.variant}
+              </Text>
             )}
             {/* If no variant but has species, show species on first row */}
             {!grow.variant && grow.species && (
-              <Text className="text-lg italic text-typography-500">{grow.species}</Text>
+              <Text
+                className="text-right text-lg text-typography-700"
+                numberOfLines={1}
+                ellipsizeMode="tail">
+                {grow.species}
+              </Text>
             )}
           </HStack>
 
           {/* Second row: Location and species (if variant exists) */}
           {(grow.location || (grow.variant && grow.species)) && (
-            <HStack className="mb-3 items-center justify-between">
+            <HStack className="mb-5 items-center">
               {grow.location && (
-                <Text className="text-md text-typography-600">{grow.location}</Text>
+                <>
+                  <Icon as={MapPin} className="mr-1 text-typography-500" />
+                  <Text
+                    className="text-md text-typography-500"
+                    numberOfLines={1}
+                    ellipsizeMode="tail">
+                    {grow.location}
+                  </Text>
+                </>
               )}
               {grow.variant && grow.species && (
-                <Text className="text-md italic text-typography-500">{grow.species}</Text>
+                <Text
+                  className="text-md ml-auto text-right italic text-typography-500"
+                  numberOfLines={1}
+                  ellipsizeMode="tail">
+                  {grow.species}
+                </Text>
               )}
             </HStack>
           )}
 
           {/* Third row: Stage timeline */}
-          <VStack className="mb-4">
+          <VStack className="mb-5">
             {/* Timeline with icons and connecting lines */}
             <HStack className="items-center">
               {stages.map((stage, index) => {
@@ -168,7 +263,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
                     {/* Stage indicator */}
                     <View className="items-center">
                       {status === 'completed' ? (
-                        <Icon as={CheckCircle} size="md" className="text-blue-500" />
+                        <Icon as={CheckCircle} size="md" className="text-blue-400" />
                       ) : status === 'active' ? (
                         <Icon as={Disc2} size="md" className="text-typography-900" />
                       ) : (
@@ -181,7 +276,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
                       <View
                         className={`h-0.5 flex-1 ${
                           getStageStatus(index) === 'completed'
-                            ? 'bg-blue-500'
+                            ? 'bg-blue-400'
                             : 'bg-typography-200'
                         }`}
                       />
@@ -208,9 +303,9 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
                     <Text
                       className={`text-sm ${
                         status === 'active'
-                          ? 'font-semibold text-typography-900'
+                          ? 'font-semibold text-typography-800'
                           : status === 'completed'
-                            ? 'text-blue-500'
+                            ? 'text-blue-400'
                             : 'text-typography-400'
                       }`}>
                       {stage.name}
@@ -221,30 +316,28 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
             </HStack>
           </VStack>
 
-          {/* Fourth row: Badge row with total cost, wet yield, dry yield, and duration */}
+          {/* Fourth row: Badge row with total cost, health status, dry yield, and duration */}
           <HStack className="mb-4 flex-wrap" space="sm">
             <InfoBadge
-              text={`$${grow.total_cost?.toFixed(2) || '0.00'}`}
-              icon={DollarSign}
-              variant="default"
+              text={healthInfo.text}
+              icon={healthInfo.icon}
+              variant={healthInfo.variant}
               size="md"
             />
-            {totalWetYield > 0 && (
+            {totalDryYield > 0 && (
               <InfoBadge
-                text={`${totalWetYield.toFixed(1)}g wet`}
+                text={`${totalDryYield.toFixed(1)}g`}
                 icon={Scale}
                 variant="default"
                 size="md"
               />
             )}
-            {totalDryYield > 0 && (
-              <InfoBadge
-                text={`${totalDryYield.toFixed(1)}g dry`}
-                icon={Scale}
-                variant="success"
-                size="md"
-              />
-            )}
+            <InfoBadge
+              text={`${grow.total_cost?.toFixed(2) || '0.00'}`}
+              icon={DollarSign}
+              variant="default"
+              size="md"
+            />
             <InfoBadge
               text={growAge === 1 ? `${growAge} day` : `${growAge} days`}
               icon={Clock}

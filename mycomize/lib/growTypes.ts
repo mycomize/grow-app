@@ -152,6 +152,7 @@ export const bulkGrowStatuses = {
   SUSPECT: 'suspect',
   CONTAMINATED: 'contaminated',
   HARVESTED: 'harvested',
+  COMPLETED: 'completed',
 } as const;
 
 // Bulk Grow Stage Status enum - matches backend BulkGrowStageStatus enum
@@ -176,6 +177,7 @@ export const statusLabels = {
   [bulkGrowStatuses.SUSPECT]: 'Suspect',
   [bulkGrowStatuses.CONTAMINATED]: 'Contaminated',
   [bulkGrowStatuses.HARVESTED]: 'Harvested',
+  [bulkGrowStatuses.COMPLETED]: 'Completed',
 } as const;
 
 // Human-readable stage status names

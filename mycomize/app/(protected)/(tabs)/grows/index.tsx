@@ -11,26 +11,7 @@ import { Input, InputField, InputIcon } from '~/components/ui/input';
 import { Pressable } from '~/components/ui/pressable';
 import { Card } from '~/components/ui/card';
 import MushroomIcon from '~/components/icons/MushroomIcon';
-import {
-  Modal,
-  ModalBackdrop,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalCloseButton,
-} from '~/components/ui/modal';
-import {
-  List,
-  PlusIcon,
-  Search,
-  X,
-  ArrowUpDown,
-  Filter,
-  Check,
-  Circle,
-  CircleCheckBig,
-} from 'lucide-react-native';
+import { List, PlusIcon, Search, X, ArrowUpDown, Filter, CirclePlus } from 'lucide-react-native';
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -39,8 +20,8 @@ import { BulkGrowComplete, bulkGrowStatuses, bulkGrowStages } from '~/lib/growTy
 import { GrowCard } from '~/components/grow/GrowCard';
 import { GrowCardSkeleton } from '~/components/grow/GrowCardSkeleton';
 import { CountBadge } from '~/components/ui/count-badge';
-import { useTheme } from '~/components/ui/themeprovider/themeprovider';
-import { getSwitchColors } from '~/lib/switchUtils';
+import { GrowFilterModal } from '~/components/modals/GrowFilterModal';
+import { GrowSortModal, SortOption } from '~/components/modals/GrowSortModal';
 
 export default function GrowScreen() {
   const { token } = useContext(AuthContext);
@@ -48,12 +29,20 @@ export default function GrowScreen() {
   const [grows, setGrows] = useState<BulkGrowComplete[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<string>('name');
-  const [filterActiveOnly, setFilterActiveOnly] = useState<boolean>(false);
+  const [sortBy, setSortBy] = useState<SortOption>('name');
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterStage, setFilterStage] = useState<string>('');
+  const [filterSpecies, setFilterSpecies] = useState<string>('');
+  const [filterVariant, setFilterVariant] = useState<string>('');
+  const [filterLocation, setFilterLocation] = useState<string>('');
   const [showSortModal, setShowSortModal] = useState<boolean>(false);
   const [showFilterModal, setShowFilterModal] = useState<boolean>(false);
-  const [tempSortBy, setTempSortBy] = useState<string>('name');
   const [tempFilterActiveOnly, setTempFilterActiveOnly] = useState<boolean>(false);
+  const [tempFilterStatus, setTempFilterStatus] = useState<string>('');
+  const [tempFilterStage, setTempFilterStage] = useState<string>('');
+  const [tempFilterSpecies, setTempFilterSpecies] = useState<string>('');
+  const [tempFilterVariant, setTempFilterVariant] = useState<string>('');
+  const [tempFilterLocation, setTempFilterLocation] = useState<string>('');
 
   // Define the fetch function
   const fetchData = useCallback(async () => {
@@ -123,28 +112,34 @@ export default function GrowScreen() {
 
   // Modal handler functions
   const handleSortModalOpen = () => {
-    setTempSortBy(sortBy);
     setShowSortModal(true);
   };
 
-  const handleSortConfirm = () => {
-    setSortBy(tempSortBy);
-    setShowSortModal(false);
-  };
-
   const handleFilterModalOpen = () => {
-    setTempFilterActiveOnly(filterActiveOnly);
+    setTempFilterStatus(filterStatus);
+    setTempFilterStage(filterStage);
+    setTempFilterSpecies(filterSpecies);
+    setTempFilterVariant(filterVariant);
+    setTempFilterLocation(filterLocation);
     setShowFilterModal(true);
   };
 
   const handleFilterConfirm = () => {
-    setFilterActiveOnly(tempFilterActiveOnly);
+    setFilterStatus(tempFilterStatus);
+    setFilterStage(tempFilterStage);
+    setFilterSpecies(tempFilterSpecies);
+    setFilterVariant(tempFilterVariant);
+    setFilterLocation(tempFilterLocation);
     setShowFilterModal(false);
   };
 
   const handleClearFiltersAndSort = () => {
     setSortBy('name');
-    setFilterActiveOnly(false);
+    setFilterStatus('');
+    setFilterStage('');
+    setFilterSpecies('');
+    setFilterVariant('');
+    setFilterLocation('');
     setSearchQuery('');
   };
 
@@ -154,22 +149,30 @@ export default function GrowScreen() {
         return 'Name';
       case 'species':
         return 'Species';
+      case 'variant':
+        return 'Variant';
       case 'inoculationDate':
         return 'Inoculation Date';
-      case 'stage':
-        return 'Stage';
+      case 'totalCost':
+        return 'Total Cost';
+      case 'wetYield':
+        return 'Wet Yield';
+      case 'dryYield':
+        return 'Dry Yield';
+      case 'duration':
+        return 'Duration (Days)';
       default:
         return 'Name';
     }
   };
 
-  const getFilterDisplayText = () => {
-    return filterActiveOnly ? 'Active Only' : 'All Grows';
-  };
-
-  // Calculate in-progress grows (have inoculation date but not harvested)
+  // Calculate in-progress grows (have inoculation date but not harvested/completed)
   const inProgressGrows = grows.filter((grow) => {
-    return grow.inoculation_date && grow.status !== bulkGrowStatuses.HARVESTED;
+    return (
+      grow.inoculation_date &&
+      grow.status !== bulkGrowStatuses.HARVESTED &&
+      grow.status !== bulkGrowStatuses.COMPLETED
+    );
   });
 
   // Sort grows function
@@ -180,6 +183,8 @@ export default function GrowScreen() {
           return (a.name || '').localeCompare(b.name || '');
         case 'species':
           return (a.species || '').localeCompare(b.species || '');
+        case 'variant':
+          return (a.variant || '').localeCompare(b.variant || '');
         case 'inoculationDate':
           const dateA = a.inoculation_date;
           const dateB = b.inoculation_date;
@@ -187,33 +192,75 @@ export default function GrowScreen() {
           if (!dateA) return 1;
           if (!dateB) return -1;
           return new Date(dateB).getTime() - new Date(dateA).getTime(); // Most recent first
-        case 'stage':
-          const stageOrder = [
-            bulkGrowStages.INOCULATION,
-            bulkGrowStages.SPAWN_COLONIZATION,
-            bulkGrowStages.BULK_COLONIZATION,
-            bulkGrowStages.FRUITING,
-            bulkGrowStages.HARVEST,
-          ];
-          const stageA = stageOrder.indexOf(a.current_stage as any);
-          const stageB = stageOrder.indexOf(b.current_stage as any);
-          return stageA - stageB;
+        case 'totalCost':
+          const costA = a.total_cost || 0;
+          const costB = b.total_cost || 0;
+          return costB - costA; // Highest cost first
+        case 'wetYield':
+          const wetYieldA =
+            a.flushes?.reduce((sum, flush) => sum + (flush.wet_yield_grams || 0), 0) || 0;
+          const wetYieldB =
+            b.flushes?.reduce((sum, flush) => sum + (flush.wet_yield_grams || 0), 0) || 0;
+          return wetYieldB - wetYieldA; // Highest yield first
+        case 'dryYield':
+          const dryYieldA =
+            a.flushes?.reduce((sum, flush) => sum + (flush.dry_yield_grams || 0), 0) || 0;
+          const dryYieldB =
+            b.flushes?.reduce((sum, flush) => sum + (flush.dry_yield_grams || 0), 0) || 0;
+          return dryYieldB - dryYieldA; // Highest yield first
+        case 'duration':
+          const getDuration = (grow: BulkGrowComplete) => {
+            if (!grow.inoculation_date) return 0;
+            const startDate = new Date(grow.inoculation_date);
+            const endDate =
+              grow.status === bulkGrowStatuses.COMPLETED ||
+              grow.status === bulkGrowStatuses.HARVESTED
+                ? new Date(grow.flushes?.[grow.flushes.length - 1]?.harvest_date || new Date())
+                : new Date();
+            return Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+          };
+          const durationA = getDuration(a);
+          const durationB = getDuration(b);
+          return durationB - durationA; // Longest duration first
         default:
           return 0;
       }
     });
   };
 
-  // Filter and sort grows based on search query and active filter
+  // Filter and sort grows based on search query and filters
   const filteredAndSortedGrows = sortGrows(
     grows.filter((grow) => {
-      // Active filter
-      const isActive = grow.inoculation_date && grow.status !== bulkGrowStatuses.HARVESTED;
-      const matchesActiveFilter = !filterActiveOnly || isActive;
+      // Status filter
+      const matchesStatusFilter = !filterStatus || grow.status === filterStatus;
+
+      // Stage filter
+      const matchesStageFilter = !filterStage || grow.current_stage === filterStage;
+
+      // Species filter (case-insensitive partial match)
+      const matchesSpeciesFilter =
+        !filterSpecies ||
+        (grow.species?.toLowerCase().includes(filterSpecies.toLowerCase()) ?? false);
+
+      // Variant filter (case-insensitive partial match)
+      const matchesVariantFilter =
+        !filterVariant ||
+        (grow.variant?.toLowerCase().includes(filterVariant.toLowerCase()) ?? false);
+
+      // Location filter (case-insensitive partial match)
+      const matchesLocationFilter =
+        !filterLocation ||
+        (grow.location?.toLowerCase().includes(filterLocation.toLowerCase()) ?? false);
 
       // Search filter
       if (searchQuery === '') {
-        return matchesActiveFilter;
+        return (
+          matchesStatusFilter &&
+          matchesStageFilter &&
+          matchesSpeciesFilter &&
+          matchesVariantFilter &&
+          matchesLocationFilter
+        );
       }
 
       const searchLower = searchQuery?.toLowerCase() ?? '';
@@ -225,7 +272,14 @@ export default function GrowScreen() {
         (grow.status?.toLowerCase()?.includes(searchLower) ?? false) ||
         (grow.location?.toLowerCase()?.includes(searchLower) ?? false);
 
-      return matchesActiveFilter && matchesSearch;
+      return (
+        matchesStatusFilter &&
+        matchesStageFilter &&
+        matchesSpeciesFilter &&
+        matchesVariantFilter &&
+        matchesLocationFilter &&
+        matchesSearch
+      );
     })
   );
 
@@ -312,7 +366,7 @@ export default function GrowScreen() {
                 onPress={() => {
                   router.push('/grows/new');
                 }}>
-                <Icon className="text-typography-300" as={PlusIcon} size="md" />
+                <Icon className="text-typography-300" as={CirclePlus} size="md" />
               </Pressable>
             </HStack>
           </VStack>
@@ -323,127 +377,51 @@ export default function GrowScreen() {
           <GrowCard key={index} grow={grow} onDelete={deleteGrow} />
         ))}
 
-        {filteredAndSortedGrows.length === 0 && (searchQuery || filterActiveOnly) && (
+        {filteredAndSortedGrows.length === 0 && searchQuery && (
           <VStack className="items-center justify-center p-8">
             <Text className="text-center text-typography-500">
-              {searchQuery && filterActiveOnly
-                ? `No active grows found matching "${searchQuery}"`
-                : searchQuery
-                  ? `No grows found matching "${searchQuery}"`
-                  : 'No active grows found'}
+              {searchQuery ? `No grows found matching "${searchQuery}"` : 'No active grows found'}
             </Text>
           </VStack>
         )}
       </VStack>
 
       {/* Sort Modal */}
-      <Modal isOpen={showSortModal} onClose={() => setShowSortModal(false)} size="md">
-        <ModalBackdrop />
-        <ModalContent>
-          <ModalHeader>
-            <Heading size="lg">Sort Grows</Heading>
-            <ModalCloseButton onPress={() => setShowSortModal(false)}>
-              <Icon as={X} />
-            </ModalCloseButton>
-          </ModalHeader>
-          <ModalBody>
-            <VStack space="lg">
-              <Text className="text-typography-600">Choose how to sort your grows:</Text>
-              <VStack space="md">
-                {[
-                  { value: 'name', label: 'Name' },
-                  { value: 'species', label: 'Species' },
-                  { value: 'inoculationDate', label: 'Inoculation Date' },
-                  { value: 'stage', label: 'Stage' },
-                ].map((option) => (
-                  <Pressable
-                    key={option.value}
-                    onPress={() => setTempSortBy(option.value)}
-                    className="flex-row items-center justify-between rounded-lg border border-outline-200 p-4">
-                    <Text className="text-typography-900">{option.label}</Text>
-                    {tempSortBy === option.value && (
-                      <Icon as={CircleCheckBig} className="text-success-500" size="xl" />
-                    )}
-                    {tempSortBy !== option.value && (
-                      <Icon as={Circle} className="text-success-500" size="xl" />
-                    )}
-                  </Pressable>
-                ))}
-              </VStack>
-            </VStack>
-          </ModalBody>
-          <ModalFooter>
-            <HStack space="sm" className="w-full justify-end">
-              <Button variant="outline" onPress={() => setShowSortModal(false)}>
-                <ButtonText>Cancel</ButtonText>
-              </Button>
-              <Button action="positive" onPress={handleSortConfirm}>
-                <ButtonText className="text-typography-900">Apply Sort</ButtonText>
-              </Button>
-            </HStack>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <GrowSortModal
+        isOpen={showSortModal}
+        onClose={() => setShowSortModal(false)}
+        currentSort={sortBy}
+        onSortChange={setSortBy}
+      />
 
       {/* Filter Modal */}
-      <Modal isOpen={showFilterModal} onClose={() => setShowFilterModal(false)} size="md">
-        <ModalBackdrop style={{ backdropFilter: 'blur(100px)' }} />
-        <ModalContent>
-          <ModalHeader>
-            <Heading size="lg">Filter Grows</Heading>
-            <ModalCloseButton onPress={() => setShowFilterModal(false)}>
-              <Icon as={X} />
-            </ModalCloseButton>
-          </ModalHeader>
-          <ModalBody>
-            <VStack space="lg">
-              <Text className="text-typography-600">Choose which grows to display:</Text>
-              <VStack space="md">
-                {[
-                  {
-                    value: false,
-                    label: 'All Grows',
-                    description: 'Show all grows regardless of status',
-                  },
-                  {
-                    value: true,
-                    label: 'Active Only',
-                    description: 'Show only grows that are currently active',
-                  },
-                ].map((option) => (
-                  <Pressable
-                    key={option.value.toString()}
-                    onPress={() => setTempFilterActiveOnly(option.value)}
-                    className="rounded-lg border border-outline-200 p-4">
-                    <HStack className="items-center justify-between">
-                      <VStack className="flex-1">
-                        <Text className="text-typography-900">{option.label}</Text>
-                        <Text className="text-sm text-typography-600">{option.description}</Text>
-                      </VStack>
-                      {tempFilterActiveOnly === option.value && (
-                        <Icon as={CircleCheckBig} className="text-success-500" size="xl" />
-                      )}
-                      {tempFilterActiveOnly !== option.value && (
-                        <Icon as={Circle} className="text-success-500" size="xl" />
-                      )}
-                    </HStack>
-                  </Pressable>
-                ))}
-              </VStack>
-            </VStack>
-          </ModalBody>
-          <ModalFooter>
-            <HStack space="sm" className="w-full justify-end">
-              <Button variant="outline" onPress={() => setShowFilterModal(false)}>
-                <ButtonText>Cancel</ButtonText>
-              </Button>
-              <Button action="positive" onPress={handleFilterConfirm}>
-                <ButtonText className="text-typography-900">Apply Filter</ButtonText>
-              </Button>
-            </HStack>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <GrowFilterModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        filterStatus={filterStatus}
+        filterStage={filterStage}
+        filterSpecies={filterSpecies}
+        filterVariant={filterVariant}
+        filterLocation={filterLocation}
+        tempFilterStatus={tempFilterStatus}
+        tempFilterStage={tempFilterStage}
+        tempFilterSpecies={tempFilterSpecies}
+        tempFilterVariant={tempFilterVariant}
+        tempFilterLocation={tempFilterLocation}
+        setTempFilterStatus={setTempFilterStatus}
+        setTempFilterStage={setTempFilterStage}
+        setTempFilterSpecies={setTempFilterSpecies}
+        setTempFilterVariant={setTempFilterVariant}
+        setTempFilterLocation={setTempFilterLocation}
+        onApplyFilters={handleFilterConfirm}
+        onClearAll={() => {
+          setTempFilterStatus('');
+          setTempFilterStage('');
+          setTempFilterSpecies('');
+          setTempFilterVariant('');
+          setTempFilterLocation('');
+        }}
+      />
     </ScrollView>
   );
 }

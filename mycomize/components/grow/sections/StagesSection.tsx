@@ -101,7 +101,7 @@ const stages: Stage[] = [
     name: 'Harvest',
     description: 'Mushroom harvesting period',
     dateField: 'harvest_date',
-    color: 'text-typograpy-700',
+    color: 'text-typography-700',
     bgColor: 'bg-blue-100',
   },
 ];
@@ -359,24 +359,6 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
     }
   };
 
-  // Calculate days since inoculation
-  const getDaysSinceInoculation = () => {
-    if (!growData.inoculation_date) return null;
-
-    const inoculationDate = new Date(growData.inoculation_date);
-    const today = new Date();
-    const diffTime = today.getTime() - inoculationDate.getTime();
-
-    if (diffTime > 0) {
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-      // Add 1 so that grows started today show as "Day 1" instead of "Day 0"
-      return Math.max(1, diffDays + 1);
-    }
-
-    return null;
-  };
-
   return (
     <VStack space="lg" className="bg-background-0 p-2">
       {/* Timeline */}
@@ -393,7 +375,7 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                   {/* Stage circle/checkmark */}
                   <HStack>
                     {status === 'completed' ? (
-                      <Icon as={CheckCircle} size="xl" className="my-0.5 text-green-500" />
+                      <Icon as={CheckCircle} size="xl" className="my-0.5 text-green-700" />
                     ) : status === 'active' ? (
                       <Icon as={Disc2} size="xl" className="my-0.5 text-success-400"></Icon>
                     ) : (
@@ -405,7 +387,7 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                   {!isLast && (
                     <View
                       className={`mt-1 w-0.5 flex-1 ${
-                        status === 'completed' ? 'bg-green-500' : 'bg-typography-200'
+                        status === 'completed' ? 'bg-green-700' : 'bg-typography-200'
                       }`}
                       style={{ minHeight: 60 }}
                     />
