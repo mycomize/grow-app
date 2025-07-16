@@ -35,6 +35,9 @@ const createEmptyBulkGrow = (): BulkGrow => ({
   location: '',
   tags: [],
   inoculation_date: '',
+  spawn_start_date: '',
+  bulk_start_date: '',
+  fruiting_start_date: '',
   full_spawn_colonization_date: '',
   full_bulk_colonization_date: '',
   fruiting_pin_date: '',
@@ -207,7 +210,18 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
       setFlushes(value);
       return;
     }
-    setGrowData((prev) => ({ ...prev, [field]: value }));
+
+    setGrowData((prev) => {
+      const newData = { ...prev, [field]: value };
+
+      // If inoculation_date is being set and spawn_start_date is not set,
+      // automatically set spawn_start_date to inoculation_date
+      if (field === 'inoculation_date' && value && !prev.spawn_start_date) {
+        newData.spawn_start_date = value;
+      }
+
+      return newData;
+    });
   };
 
   // Handle IoT Gateway linking

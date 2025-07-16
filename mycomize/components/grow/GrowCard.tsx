@@ -10,6 +10,7 @@ import { View } from '~/components/ui/view';
 import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
 import { useRouter } from 'expo-router';
 import {
+  Bot,
   CheckCircle,
   Circle,
   Disc2,
@@ -349,6 +350,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
 
           {/* Fifth row: IoT Gateways */}
           <VStack className="mb-4" space="xs">
+            <Icon as={Bot} className="text-typograpy-400" />
             <Text className="mb-1 text-lg font-medium text-typography-600">IoT Gateways</Text>
             {(() => {
               // Get IoT gateways from the grow
@@ -374,7 +376,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
                     key={index}
                     onPress={() => onTagPress?.(tag)}
                     className="rounded-md px-2 py-1">
-                    <Text className="text-sm text-blue-400">#{tag}</Text>
+                    <Text className="text-md text-blue-400">#{tag}</Text>
                   </Pressable>
                 ))}
                 {grow.tags.length > 3 && (

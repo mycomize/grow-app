@@ -43,12 +43,16 @@ class BulkGrow(Base):
     # in each stage's lists (items, env conditions, tasks) and notes
     inoculation_date = Column(Date, nullable=True)
     inoculation_status = Column(String(32), nullable=True)
+    spawn_start_date = Column(Date, nullable=True)
     spawn_colonization_status = Column(String(32), nullable=True)
+    bulk_start_date = Column(Date, nullable=True)
     bulk_colonization_status = Column(String(32), nullable=True)
+    fruiting_start_date = Column(Date, nullable=True)
+    fruiting_status = Column(String(32), nullable=True)
     full_spawn_colonization_date = Column(Date, nullable=True)
     full_bulk_colonization_date = Column(Date, nullable=True)
     fruiting_pin_date = Column(Date, nullable=True)
-    fruiting_status = Column(String(32), nullable=True)
+    s2b_ratio = Column(String(64), nullable=True)
 
     current_stage = Column(String(64), nullable=True)  # Track current stage in timeline
     status = Column(String(64), nullable=True)

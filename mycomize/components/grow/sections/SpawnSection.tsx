@@ -69,8 +69,45 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
       <VStack space="md" className="mt-4 border-t border-background-200 pt-4">
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText className="text-typography-700">
-              Full Spawn Colonization Date
+            <FormControlLabelText className="text-typography-600">Start Date</FormControlLabelText>
+          </FormControlLabel>
+          <Input isReadOnly>
+            <InputField
+              value={
+                parseDate(growData.spawn_start_date || growData.inoculation_date)?.toDateString() ||
+                'Select date'
+              }
+              className={
+                !growData.spawn_start_date && !growData.inoculation_date
+                  ? 'text-typography-400'
+                  : ''
+              }
+            />
+            {growData.spawn_start_date ? (
+              <InputSlot onPress={() => updateField('spawn_start_date', null)}>
+                <Icon as={X} className="mr-3 text-typography-400" />
+              </InputSlot>
+            ) : (
+              <InputSlot onPress={() => setActiveDatePicker('spawn_start_date')}>
+                <Icon as={CalendarDays} className="mr-3 text-typography-400" />
+              </InputSlot>
+            )}
+          </Input>
+          {activeDatePicker === 'spawn_start_date' && (
+            <DateTimePicker
+              value={
+                parseDate(growData.spawn_start_date || growData.inoculation_date) || new Date()
+              }
+              mode="date"
+              onChange={(event, date) => handleDateChange('spawn_start_date', date, event)}
+            />
+          )}
+        </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText className="text-typography-600">
+              Full Colonization Date
             </FormControlLabelText>
           </FormControlLabel>
           <Input isReadOnly>
@@ -103,7 +140,7 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
 
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Status</FormControlLabelText>
+            <FormControlLabelText className="text-typography-600">Status</FormControlLabelText>
           </FormControlLabel>
           <Select
             selectedValue={growData.spawn_colonization_status}
@@ -124,7 +161,7 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
                 </SelectDragIndicatorWrapper>
                 <SelectItem label="Healthy" value="Healthy" />
                 <SelectItem label="Suspect" value="Suspect" />
-                <SelectItem label="Contaminated" value="Contaminated" />
+                <SelectItem label="Contam" value="Contaminated" />
               </SelectContent>
             </SelectPortal>
           </Select>

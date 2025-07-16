@@ -24,6 +24,7 @@ import { CalendarDays, ChevronDown, X, ArrowDownToDot } from 'lucide-react-nativ
 import { StageTabs } from '~/components/ui/stage-tabs';
 
 interface GrowData {
+  fruiting_start_date?: string;
   fruiting_pin_date?: string;
   fruiting_status?: string;
 }
@@ -68,6 +69,36 @@ export const FruitingSection: React.FC<FruitingSectionProps> = ({
 
       {/* Fruiting-specific fields */}
       <VStack space="md" className="mt-4 border-t border-background-200 pt-4">
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText className="text-typography-700">
+              Fruiting Start Date
+            </FormControlLabelText>
+          </FormControlLabel>
+          <Input isReadOnly>
+            <InputField
+              value={parseDate(growData.fruiting_start_date)?.toDateString() || 'Select date'}
+              className={!growData.fruiting_start_date ? 'text-typography-400' : ''}
+            />
+            {growData.fruiting_start_date ? (
+              <InputSlot onPress={() => updateField('fruiting_start_date', null)}>
+                <Icon as={X} className="mr-3 text-typography-400" />
+              </InputSlot>
+            ) : (
+              <InputSlot onPress={() => setActiveDatePicker('fruiting_start_date')}>
+                <Icon as={CalendarDays} className="mr-3 text-typography-400" />
+              </InputSlot>
+            )}
+          </Input>
+          {activeDatePicker === 'fruiting_start_date' && (
+            <DateTimePicker
+              value={parseDate(growData.fruiting_start_date) || new Date()}
+              mode="date"
+              onChange={(event, date) => handleDateChange('fruiting_start_date', date, event)}
+            />
+          )}
+        </FormControl>
+
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText>First Pin Date</FormControlLabelText>

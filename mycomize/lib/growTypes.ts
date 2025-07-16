@@ -42,9 +42,13 @@ export interface BulkGrow {
 
   // Stage-specific dates - matches backend exactly
   inoculation_date?: string;
+  spawn_start_date?: string;
+  bulk_start_date?: string;
+  fruiting_start_date?: string;
   full_spawn_colonization_date?: string;
   full_bulk_colonization_date?: string;
   fruiting_pin_date?: string;
+  s2b_ratio?: string;
 
   // Stage statuses - matches backend exactly
   inoculation_status?: string;
@@ -85,12 +89,16 @@ export interface BulkGrowCreate {
   tags?: string[];
   inoculation_date?: string;
   inoculation_status?: string;
+  spawn_start_date?: string;
   spawn_colonization_status?: string;
+  bulk_start_date?: string;
   bulk_colonization_status?: string;
+  fruiting_start_date?: string;
+  fruiting_status?: string;
   full_spawn_colonization_date?: string;
   full_bulk_colonization_date?: string;
   fruiting_pin_date?: string;
-  fruiting_status?: string;
+  s2b_ratio?: string;
   current_stage?: string;
   status?: string;
   total_cost?: number;
@@ -106,12 +114,16 @@ export interface BulkGrowUpdate {
   tags?: string[];
   inoculation_date?: string;
   inoculation_status?: string;
+  spawn_start_date?: string;
   spawn_colonization_status?: string;
+  bulk_start_date?: string;
   bulk_colonization_status?: string;
+  fruiting_start_date?: string;
+  fruiting_status?: string;
   full_spawn_colonization_date?: string;
   full_bulk_colonization_date?: string;
   fruiting_pin_date?: string;
-  fruiting_status?: string;
+  s2b_ratio?: string;
   current_stage?: string;
   status?: string;
   total_cost?: number;

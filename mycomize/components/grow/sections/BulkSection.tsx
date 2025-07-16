@@ -66,8 +66,36 @@ export const BulkSection: React.FC<BulkSectionProps> = ({
       <VStack space="md" className="mt-4 border-t border-background-200 pt-4">
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText className="text-typography-700">
-              Full Bulk Colonization Date
+            <FormControlLabelText className="text-typography-600">Start Date</FormControlLabelText>
+          </FormControlLabel>
+          <Input isReadOnly>
+            <InputField
+              value={parseDate(growData.bulk_start_date)?.toDateString() || 'Select date'}
+              className={!growData.bulk_start_date ? 'text-typography-400' : ''}
+            />
+            {growData.bulk_start_date ? (
+              <InputSlot onPress={() => updateField('bulk_start_date', null)}>
+                <Icon as={X} className="mr-3 text-typography-400" />
+              </InputSlot>
+            ) : (
+              <InputSlot onPress={() => setActiveDatePicker('bulk_start_date')}>
+                <Icon as={CalendarDays} className="mr-3 text-typography-400" />
+              </InputSlot>
+            )}
+          </Input>
+          {activeDatePicker === 'bulk_start_date' && (
+            <DateTimePicker
+              value={parseDate(growData.bulk_start_date) || new Date()}
+              mode="date"
+              onChange={(event, date) => handleDateChange('bulk_start_date', date, event)}
+            />
+          )}
+        </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText className="text-typography-600">
+              Full Colonization Date
             </FormControlLabelText>
           </FormControlLabel>
           <Input isReadOnly>
@@ -100,7 +128,20 @@ export const BulkSection: React.FC<BulkSectionProps> = ({
 
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Status</FormControlLabelText>
+            <FormControlLabelText className="text-typography-600">S2B Ratio</FormControlLabelText>
+          </FormControlLabel>
+          <Input>
+            <InputField
+              value={growData.s2b_ratio || ''}
+              onChangeText={(value) => updateField('s2b_ratio', value || null)}
+              placeholder="e.g., 1:2, 1/3, 2:1"
+            />
+          </Input>
+        </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText className="text-typography-600">Status</FormControlLabelText>
           </FormControlLabel>
           <Select
             selectedValue={growData.bulk_colonization_status}

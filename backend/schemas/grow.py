@@ -34,12 +34,16 @@ class BulkGrowBase(BaseModel):
 
     inoculation_date: Optional[date] = None
     inoculation_status: Optional[str] = None
+    spawn_start_date: Optional[date] = None
     spawn_colonization_status: Optional[str] = None
+    bulk_start_date: Optional[date] = None
     bulk_colonization_status: Optional[str] = None
+    fruiting_start_date: Optional[date] = None
+    fruiting_status: Optional[str] = None
     full_spawn_colonization_date: Optional[date] = None
     full_bulk_colonization_date: Optional[date] = None
     fruiting_pin_date: Optional[date] = None
-    fruiting_status: Optional[str] = None
+    s2b_ratio: Optional[str] = None
 
     current_stage: Optional[str] = None
     status: Optional[str] = None
@@ -82,12 +86,16 @@ class BulkGrowUpdate(BaseModel):
 
     inoculation_date: Optional[date] = None
     inoculation_status: Optional[str] = None
+    spawn_start_date: Optional[date] = None
     spawn_colonization_status: Optional[str] = None
+    bulk_start_date: Optional[date] = None
     bulk_colonization_status: Optional[str] = None
+    fruiting_start_date: Optional[date] = None
+    fruiting_status: Optional[str] = None
     full_spawn_colonization_date: Optional[date] = None
     full_bulk_colonization_date: Optional[date] = None
     fruiting_pin_date: Optional[date] = None
-    fruiting_status: Optional[str] = None
+    s2b_ratio: Optional[str] = None
 
     current_stage: Optional[str] = None
     status: Optional[str] = None
