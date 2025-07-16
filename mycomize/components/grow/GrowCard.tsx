@@ -31,9 +31,10 @@ import { InfoBadge } from '~/components/ui/info-badge';
 interface GrowCardProps {
   grow: BulkGrowComplete;
   onDelete?: (growId: number) => Promise<void>;
+  onTagPress?: (tag: string) => void;
 }
 
-export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
+export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }) => {
   const router = useRouter();
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
 
@@ -369,9 +370,12 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete }) => {
             <VStack className="mb-4" space="xs">
               <HStack space="xs" className="flex-wrap">
                 {grow.tags.slice(0, 3).map((tag, index) => (
-                  <Text key={index} className="text-md text-blue-400">
-                    #{tag}
-                  </Text>
+                  <Pressable
+                    key={index}
+                    onPress={() => onTagPress?.(tag)}
+                    className="rounded-md px-2 py-1">
+                    <Text className="text-sm text-blue-400">#{tag}</Text>
+                  </Pressable>
                 ))}
                 {grow.tags.length > 3 && (
                   <Text className="text-xs text-typography-400">+{grow.tags.length - 3} more</Text>

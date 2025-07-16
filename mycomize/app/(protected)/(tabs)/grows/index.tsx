@@ -143,6 +143,11 @@ export default function GrowScreen() {
     setSearchQuery('');
   };
 
+  // Handle tag press - populate search query with tag
+  const handleTagPress = (tag: string) => {
+    setSearchQuery(tag);
+  };
+
   const getSortDisplayText = () => {
     switch (sortBy) {
       case 'name':
@@ -270,7 +275,8 @@ export default function GrowScreen() {
         (grow.variant?.toLowerCase()?.includes(searchLower) ?? false) ||
         (grow.current_stage?.toLowerCase()?.includes(searchLower) ?? false) ||
         (grow.status?.toLowerCase()?.includes(searchLower) ?? false) ||
-        (grow.location?.toLowerCase()?.includes(searchLower) ?? false);
+        (grow.location?.toLowerCase()?.includes(searchLower) ?? false) ||
+        (grow.tags?.some((tag) => tag.toLowerCase().includes(searchLower)) ?? false);
 
       return (
         matchesStatusFilter &&
@@ -374,7 +380,7 @@ export default function GrowScreen() {
 
         {/* Grow Cards */}
         {filteredAndSortedGrows.map((grow, index) => (
-          <GrowCard key={index} grow={grow} onDelete={deleteGrow} />
+          <GrowCard key={index} grow={grow} onDelete={deleteGrow} onTagPress={handleTagPress} />
         ))}
 
         {filteredAndSortedGrows.length === 0 && searchQuery && (
