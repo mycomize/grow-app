@@ -6,7 +6,8 @@ import { Text } from '~/components/ui/text';
 import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
-import { Plus, Edit2, Trash2, Package, ExternalLink, Copy } from 'lucide-react-native';
+import { InfoBadge } from '~/components/ui/info-badge';
+import { Plus, Edit2, Trash2, Package, ExternalLink, Copy, DollarSign } from 'lucide-react-native';
 import { Item } from '~/lib/tekTypes';
 import { ItemModal } from '~/components/modals/ItemModal';
 import { DeleteConfirmationModal } from '~/components/modals/DeleteConfirmationModal';
@@ -98,42 +99,49 @@ export const ItemsList: React.FC<ItemsListProps> = ({ items, onUpdateItems }) =>
             <VStack
               key={item.id}
               className="rounded-lg border border-background-200 bg-background-0 p-3"
-              space="md">
+              space="sm">
+              {/* Header with description and cost badge */}
               <HStack className="items-start justify-between">
-                <VStack className="flex-1" space="xs">
-                  <Text className="font-medium text-typography-900">{item.description}</Text>
-                  {item.vendor && (
-                    <Text className="text-sm text-typography-600">Vendor: {item.vendor}</Text>
-                  )}
-                  <Text className="text-sm text-typography-600">Quantity: {item.quantity}</Text>
-                  {item.cost && (
-                    <Text className="text-sm text-typography-600">
-                      Cost: $
-                      {isNaN(parseFloat(item.cost)) ? item.cost : parseFloat(item.cost).toFixed(2)}
-                    </Text>
-                  )}
-                  {item.url && (
-                    <Pressable onPress={() => handleOpenURL(item.url!)}>
-                      <HStack className="items-center" space="xs">
-                        <Icon as={ExternalLink} className="text-primary-600" size="sm" />
-                        <Text className="text-sm text-primary-600">
-                          {item.url.length > 32 ? `${item.url.substring(0, 32)}...` : item.url}
-                        </Text>
-                      </HStack>
-                    </Pressable>
-                  )}
-                </VStack>
-                <HStack space="lg">
-                  <Pressable onPress={() => handleCopyItem(item)} className="rounded p-2">
-                    <Icon as={Copy} className="text-typography-500" size="sm" />
+                <Text className="flex-1 font-medium text-typography-900">{item.description}</Text>
+                {item.cost && (
+                  <InfoBadge
+                    icon={DollarSign}
+                    text={`${isNaN(parseFloat(item.cost)) ? item.cost : parseFloat(item.cost).toFixed(2)}`}
+                    variant="default"
+                    size="sm"
+                  />
+                )}
+              </HStack>
+
+              {/* Item details */}
+              <VStack space="xs">
+                {item.vendor && (
+                  <Text className="text-sm text-typography-600">Vendor: {item.vendor}</Text>
+                )}
+                <Text className="text-sm text-typography-600">Quantity: {item.quantity}</Text>
+                {item.url && (
+                  <Pressable onPress={() => handleOpenURL(item.url!)}>
+                    <HStack className="items-center" space="xs">
+                      <Icon as={ExternalLink} className="text-primary-600" size="sm" />
+                      <Text className="text-sm text-primary-600">
+                        {item.url.length > 32 ? `${item.url.substring(0, 32)}...` : item.url}
+                      </Text>
+                    </HStack>
                   </Pressable>
-                  <Pressable onPress={() => handleEditItem(item)} className="rounded p-2">
-                    <Icon as={Edit2} className="text-typography-500" size="sm" />
-                  </Pressable>
-                  <Pressable onPress={() => handleDeleteItem(item)} className="rounded p-2">
-                    <Icon as={Trash2} className="text-typography-500" size="sm" />
-                  </Pressable>
-                </HStack>
+                )}
+              </VStack>
+
+              {/* Action buttons at bottom */}
+              <HStack className="items-center justify-between px-8 pt-3" space="sm">
+                <Pressable onPress={() => handleCopyItem(item)} className="rounded px-2">
+                  <Icon as={Copy} className="text-typography-500" size="sm" />
+                </Pressable>
+                <Pressable onPress={() => handleEditItem(item)} className="rounded px-2">
+                  <Icon as={Edit2} className="text-typography-500" size="sm" />
+                </Pressable>
+                <Pressable onPress={() => handleDeleteItem(item)} className="rounded px-2">
+                  <Icon as={Trash2} className="text-typography-500" size="sm" />
+                </Pressable>
               </HStack>
             </VStack>
           ))}

@@ -11,10 +11,11 @@ import {
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
-import { Button, ButtonText } from '~/components/ui/button';
+import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Input, InputField } from '~/components/ui/input';
-import { X, CheckSquare } from 'lucide-react-native';
+import { Menu, MenuItem, MenuItemLabel } from '~/components/ui/menu';
+import { X, CheckSquare, ChevronDown } from 'lucide-react-native';
 import { Task, generateId } from '~/lib/tekTypes';
 
 interface TaskModalProps {
@@ -27,7 +28,8 @@ interface TaskModalProps {
 export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task }) => {
   const [formData, setFormData] = useState({
     action: '',
-    frequency: '',
+    repeatCount: '1',
+    repeatUnit: 'day' as 'day' | 'week' | 'stage',
     days_after_stage_start: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -39,14 +41,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
       if (task) {
         setFormData({
           action: task.action,
-          frequency: task.frequency,
+          repeatCount: task.repeatCount?.toString() || '1',
+          repeatUnit: task.repeatUnit || 'day',
           days_after_stage_start: task.days_after_stage_start.toString(),
         });
       } else {
         // Default to 0 days for new tasks
         setFormData({
           action: '',
-          frequency: '',
+          repeatCount: '1',
+          repeatUnit: 'day',
           days_after_stage_start: '0',
         });
       }
@@ -61,8 +65,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
       newErrors.action = 'Action is required';
     }
 
-    if (!formData.frequency.trim()) {
-      newErrors.frequency = 'Frequency is required';
+    if (!formData.repeatCount.trim()) {
+      newErrors.repeatCount = 'Repeat count is required';
+    } else {
+      const count = parseInt(formData.repeatCount, 10);
+      if (isNaN(count) || count < 1 || count > 7) {
+        newErrors.repeatCount = 'Must be a number between 1 and 7';
+      }
     }
 
     if (!formData.days_after_stage_start.trim()) {
@@ -78,15 +87,32 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
     return Object.keys(newErrors).length === 0;
   };
 
+  // Helper function to generate frequency string for backward compatibility
+  const generateFrequencyString = (count: number, unit: string): string => {
+    const unitText = unit === 'day' ? 'day' : unit === 'week' ? 'week' : 'stage';
+    const unitPlural = unit === 'day' ? 'days' : unit === 'week' ? 'weeks' : 'stages';
+
+    if (count === 1) {
+      return `Once per ${unitText}`;
+    } else {
+      return `${count} times per ${unitText}`;
+    }
+  };
+
   const handleSave = () => {
     if (!validateForm()) {
       return;
     }
 
+    const repeatCount = parseInt(formData.repeatCount, 10);
+    const frequencyString = generateFrequencyString(repeatCount, formData.repeatUnit);
+
     const taskData: Task = {
       id: task?.id || generateId(),
       action: formData.action.trim(),
-      frequency: formData.frequency.trim(),
+      frequency: frequencyString,
+      repeatCount: repeatCount,
+      repeatUnit: formData.repeatUnit,
       days_after_stage_start: parseInt(formData.days_after_stage_start, 10),
     };
 
@@ -127,18 +153,49 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
               {errors.action && <Text className="text-sm text-error-600">{errors.action}</Text>}
             </VStack>
 
-            {/* Frequency */}
+            {/* Repeat Frequency */}
             <VStack space="xs">
               <Text className="font-medium">Frequency</Text>
-              <Input className={errors.frequency ? 'border-error-500' : ''}>
-                <InputField
-                  placeholder="e.g., Once, Daily for 7 days, Every 3 days, As needed"
-                  value={formData.frequency}
-                  onChangeText={(value) => updateField('frequency', value)}
-                />
-              </Input>
-              {errors.frequency && (
-                <Text className="text-sm text-error-600">{errors.frequency}</Text>
+              <HStack space="sm" className="items-center">
+                <Text className="text-sm">Repeat</Text>
+                <Menu
+                  trigger={({ ...triggerProps }) => {
+                    return (
+                      <Button {...triggerProps} variant="outline" size="sm" className="flex-1">
+                        <ButtonText>{formData.repeatCount}</ButtonText>
+                        <ButtonIcon as={ChevronDown} className="ml-2" />
+                      </Button>
+                    );
+                  }}>
+                  {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                    <MenuItem key={num} onPress={() => updateField('repeatCount', num.toString())}>
+                      <MenuItemLabel>{num.toString()}</MenuItemLabel>
+                    </MenuItem>
+                  ))}
+                </Menu>
+                <Text className="text-sm">time{formData.repeatCount !== '1' ? 's' : ''} per</Text>
+                <Menu
+                  trigger={({ ...triggerProps }) => {
+                    return (
+                      <Button {...triggerProps} variant="outline" size="sm" className="flex-1">
+                        <ButtonText>{formData.repeatUnit}</ButtonText>
+                        <ButtonIcon as={ChevronDown} className="ml-2" />
+                      </Button>
+                    );
+                  }}>
+                  <MenuItem onPress={() => updateField('repeatUnit', 'day')}>
+                    <MenuItemLabel>day</MenuItemLabel>
+                  </MenuItem>
+                  <MenuItem onPress={() => updateField('repeatUnit', 'week')}>
+                    <MenuItemLabel>week</MenuItemLabel>
+                  </MenuItem>
+                  <MenuItem onPress={() => updateField('repeatUnit', 'stage')}>
+                    <MenuItemLabel>stage</MenuItemLabel>
+                  </MenuItem>
+                </Menu>
+              </HStack>
+              {errors.repeatCount && (
+                <Text className="text-sm text-error-600">{errors.repeatCount}</Text>
               )}
             </VStack>
 
@@ -157,7 +214,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
                 <Text className="text-sm text-error-600">{errors.days_after_stage_start}</Text>
               )}
               <Text className="text-xs text-typography-500">
-                Days after beginning of stage on which to being the task
+                Days after beginning of the stage on which to begin the task
               </Text>
             </VStack>
           </VStack>

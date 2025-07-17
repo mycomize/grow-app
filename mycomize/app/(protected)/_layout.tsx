@@ -3,6 +3,7 @@ import { AuthContext } from '~/lib/AuthContext';
 import { useContext } from 'react';
 import { Text } from 'react-native';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
+import { CalendarProvider } from '~/lib/CalendarContext';
 
 export default function ProtectedLayout() {
   const authState = useContext(AuthContext);
@@ -24,15 +25,17 @@ export default function ProtectedLayout() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerStyle,
-        headerTintColor,
-        headerTitleStyle: {
-          color: headerTintColor,
-        },
-      }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-    </Stack>
+    <CalendarProvider>
+      <Stack
+        screenOptions={{
+          headerStyle,
+          headerTintColor,
+          headerTitleStyle: {
+            color: headerTintColor,
+          },
+        }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      </Stack>
+    </CalendarProvider>
   );
 }

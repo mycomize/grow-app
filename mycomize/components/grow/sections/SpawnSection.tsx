@@ -63,10 +63,16 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
   return (
     <VStack space="md" className="bg-background-0 p-4">
       {/* Stage Tabs */}
-      <StageTabs stageData={stageData} onUpdateBulkStageData={onUpdateBulkStageData} />
+      <StageTabs
+        stageData={stageData}
+        onUpdateBulkStageData={onUpdateBulkStageData}
+        grow={growData}
+        stageName="Spawn Colonization"
+        stageStartDate={growData.spawn_start_date || growData.inoculation_date}
+      />
 
       {/* Spawn-specific fields */}
-      <VStack space="md" className="mt-4 border-t border-background-200 pt-4">
+      <VStack space="lg" className="mt-4 border-t border-background-200 pt-4">
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText className="text-typography-600">Start Date</FormControlLabelText>

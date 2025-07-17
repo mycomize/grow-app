@@ -95,32 +95,31 @@ export const EnvironmentalConditionsList: React.FC<EnvironmentalConditionsListPr
               key={condition.id}
               className="rounded-lg border border-background-200 bg-background-0 p-3"
               space="sm">
-              <HStack className="items-start justify-between">
-                <VStack className="flex-1" space="xs">
-                  <Text className="font-medium text-typography-900">{condition.name}</Text>
-                  {condition.type && (
-                    <Text className="text-sm text-typography-600">Type: {condition.type}</Text>
-                  )}
-                  <HStack className="items-center" space="xs">
-                    <Text className="text-sm text-typography-600">
-                      Range: {String(condition.lower_bound)} - {String(condition.upper_bound)}{' '}
-                      {condition.unit}
-                    </Text>
-                  </HStack>
-                </VStack>
-                <HStack space="lg">
-                  <Pressable onPress={() => handleCopyCondition(condition)} className="rounded p-2">
-                    <Icon as={Copy} className="text-typography-500" size="sm" />
-                  </Pressable>
-                  <Pressable onPress={() => handleEditCondition(condition)} className="rounded p-2">
-                    <Icon as={Edit2} className="text-typography-500" size="sm" />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => handleDeleteCondition(condition)}
-                    className="rounded p-2">
-                    <Icon as={Trash2} className="text-typography-500" size="sm" />
-                  </Pressable>
-                </HStack>
+              {/* Main content */}
+              <VStack className="flex-1" space="xs">
+                <Text className="font-medium text-typography-900">{condition.name}</Text>
+                {condition.type && (
+                  <Text className="text-sm text-typography-600">Type: {condition.type}</Text>
+                )}
+                <Text className="text-sm text-typography-600">
+                  Range: {String(condition.lower_bound)} - {String(condition.upper_bound)}{' '}
+                  {condition.unit}
+                </Text>
+              </VStack>
+
+              {/* Action buttons at bottom */}
+              <HStack className="items-center justify-between px-8 pt-3" space="sm">
+                <Pressable onPress={() => handleCopyCondition(condition)} className="rounded px-2">
+                  <Icon as={Copy} className="text-typography-500" size="sm" />
+                </Pressable>
+                <Pressable onPress={() => handleEditCondition(condition)} className="rounded px-2">
+                  <Icon as={Edit2} className="text-typography-500" size="sm" />
+                </Pressable>
+                <Pressable
+                  onPress={() => handleDeleteCondition(condition)}
+                  className="rounded px-2">
+                  <Icon as={Trash2} className="text-typography-500" size="sm" />
+                </Pressable>
               </HStack>
             </VStack>
           ))}

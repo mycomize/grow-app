@@ -21,7 +21,9 @@ export interface EnvironmentalCondition {
 export interface Task {
   id: string;
   action: string; // e.g., "Break and shake", "Mist substrate"
-  frequency: string; // Free-form text (e.g., "Daily for 7 days", "Once", "Every 3 days")
+  frequency: string; // Free-form text (e.g., "Daily for 7 days", "Once", "Every 3 days") - kept for backward compatibility
+  repeatCount?: number; // Number of times to repeat (1-10)
+  repeatUnit?: 'day' | 'week' | 'stage'; // Unit for repetition
   days_after_stage_start: number; // Number of days after the stage begins (e.g., 14 for break and shake on day 14)
 }
 

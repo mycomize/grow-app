@@ -210,18 +210,7 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
       setFlushes(value);
       return;
     }
-
-    setGrowData((prev) => {
-      const newData = { ...prev, [field]: value };
-
-      // If inoculation_date is being set and spawn_start_date is not set,
-      // automatically set spawn_start_date to inoculation_date
-      if (field === 'inoculation_date' && value && !prev.spawn_start_date) {
-        newData.spawn_start_date = value;
-      }
-
-      return newData;
-    });
+    setGrowData((prev) => ({ ...prev, [field]: value }));
   };
 
   // Handle IoT Gateway linking

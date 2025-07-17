@@ -375,9 +375,9 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                   {/* Stage circle/checkmark */}
                   <HStack>
                     {status === 'completed' ? (
-                      <Icon as={CheckCircle} size="xl" className="my-0.5 text-green-700" />
+                      <Icon as={CheckCircle} size="xl" className="my-0.5 text-green-600" />
                     ) : status === 'active' ? (
-                      <Icon as={Disc2} size="xl" className="my-0.5 text-success-400"></Icon>
+                      <Icon as={Disc2} size="xl" className="my-0.5 text-blue-400"></Icon>
                     ) : (
                       <Icon as={Circle} size="xl" className="my-0.5 text-typography-300" />
                     )}
@@ -387,7 +387,7 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                   {!isLast && (
                     <View
                       className={`mt-1 w-0.5 flex-1 ${
-                        status === 'completed' ? 'bg-green-700' : 'bg-typography-200'
+                        status === 'completed' ? 'bg-green-600' : 'bg-typography-200'
                       }`}
                       style={{ minHeight: 60 }}
                     />

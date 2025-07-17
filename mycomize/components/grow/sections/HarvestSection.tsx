@@ -15,6 +15,7 @@ import { StageTabs } from '~/components/ui/stage-tabs';
 interface HarvestSectionProps {
   flushes: BulkGrowFlush[];
   onUpdateFlushes: (flushes: BulkGrowFlush[]) => void;
+  growData?: any; // Grow data for calendar integration
 
   // Tek stage data (if available from tek)
   stageData?: any;
@@ -30,6 +31,7 @@ interface HarvestSectionProps {
 export const HarvestSection: React.FC<HarvestSectionProps> = ({
   flushes,
   onUpdateFlushes,
+  growData,
   stageData,
   onUpdateBulkStageData,
   status,
@@ -40,10 +42,16 @@ export const HarvestSection: React.FC<HarvestSectionProps> = ({
   return (
     <VStack space="md" className="bg-background-0 p-4">
       {/* Stage Tabs */}
-      <StageTabs stageData={stageData} onUpdateBulkStageData={onUpdateBulkStageData} />
+      <StageTabs
+        stageData={stageData}
+        onUpdateBulkStageData={onUpdateBulkStageData}
+        grow={growData}
+        stageName="Harvest"
+        stageStartDate={growData?.fruiting_start_date}
+      />
 
       {/* Harvest Flushes */}
-      <VStack space="md" className="mt-4 border-t border-background-200 pt-4">
+      <VStack space="lg" className="mt-4 border-t border-background-200 pt-4">
         <FlushList flushes={flushes} onUpdateFlushes={onUpdateFlushes} />
 
         {/* Complete button */}

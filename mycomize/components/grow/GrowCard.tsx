@@ -350,8 +350,10 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
 
           {/* Fifth row: IoT Gateways */}
           <VStack className="mb-4" space="xs">
-            <Icon as={Bot} className="text-typograpy-400" />
-            <Text className="mb-1 text-lg font-medium text-typography-600">IoT Gateways</Text>
+            <HStack className="items-center gap-2">
+              <Icon as={Bot} className="text-typography-400" size="xl" />
+              <Text className="text-lg font-medium text-typography-600">IoT Gateways</Text>
+            </HStack>
             {(() => {
               // Get IoT gateways from the grow
               const gateways = grow.iot_gateways || [];

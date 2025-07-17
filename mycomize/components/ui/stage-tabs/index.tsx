@@ -19,9 +19,18 @@ type TabType = 'items' | 'conditions' | 'tasks' | 'notes';
 interface StageTabsProps {
   stageData?: BulkStageData;
   onUpdateBulkStageData?: (stageData: BulkStageData) => void;
+  grow?: any; // Grow data for calendar integration
+  stageName?: string; // Stage name for calendar integration
+  stageStartDate?: string; // Stage start date for calendar integration
 }
 
-export const StageTabs: React.FC<StageTabsProps> = ({ stageData, onUpdateBulkStageData }) => {
+export const StageTabs: React.FC<StageTabsProps> = ({
+  stageData,
+  onUpdateBulkStageData,
+  grow,
+  stageName,
+  stageStartDate,
+}) => {
   const [activeTab, setActiveTab] = useState<TabType>('items');
 
   // Initialize empty stage data if not provided
@@ -115,7 +124,13 @@ export const StageTabs: React.FC<StageTabsProps> = ({ stageData, onUpdateBulkSta
           />
         )}
         {activeTab === 'tasks' && (
-          <TasksList tasks={currentBulkStageData.tasks} onUpdateTasks={handleUpdateTasks} />
+          <TasksList
+            tasks={currentBulkStageData.tasks}
+            onUpdateTasks={handleUpdateTasks}
+            grow={grow}
+            stageName={stageName}
+            stageStartDate={stageStartDate}
+          />
         )}
         {activeTab === 'notes' && (
           <StageNotes notes={currentBulkStageData.notes} onUpdateNotes={handleUpdateNotes} />
