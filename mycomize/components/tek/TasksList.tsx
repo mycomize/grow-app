@@ -299,6 +299,7 @@ export const TasksList: React.FC<TasksListProps> = ({
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveTask}
         task={editingTask}
+        stageStartDate={stageStartDate}
       />
 
       {/* Delete Confirmation Modal */}

@@ -23,9 +23,16 @@ interface TaskModalProps {
   onClose: () => void;
   onSave: (task: Task) => void;
   task?: Task | null;
+  stageStartDate?: string;
 }
 
-export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task }) => {
+export const TaskModal: React.FC<TaskModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  task,
+  stageStartDate,
+}) => {
   const [formData, setFormData] = useState({
     action: '',
     repeatCount: '1',
@@ -127,6 +134,33 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
     }
   };
 
+  // Calculate the actual start date of the task
+  const calculateTaskStartDate = (): string | null => {
+    if (!stageStartDate || !formData.days_after_stage_start.trim()) {
+      return null;
+    }
+
+    const daysToAdd = parseInt(formData.days_after_stage_start, 10);
+    if (isNaN(daysToAdd)) {
+      return null;
+    }
+
+    try {
+      // Parse the stage start date (YYYY-MM-DD format)
+      const [year, month, day] = stageStartDate.split('-').map(Number);
+      const stageDate = new Date(year, month - 1, day); // month is 0-indexed
+
+      // Add the specified number of days
+      const taskStartDate = new Date(stageDate);
+      taskStartDate.setDate(taskStartDate.getDate() + daysToAdd);
+
+      // Format as a readable date string
+      return taskStartDate.toLocaleDateString();
+    } catch {
+      return null;
+    }
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalBackdrop />
@@ -139,7 +173,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
         </ModalHeader>
 
         <ModalBody>
-          <VStack space="md">
+          <VStack space="2xl" className="mt-3">
             {/* Action */}
             <VStack space="xs">
               <Text className="font-medium">Action</Text>
@@ -173,7 +207,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
                     </MenuItem>
                   ))}
                 </Menu>
-                <Text className="text-sm">time{formData.repeatCount !== '1' ? 's' : ''} per</Text>
+                <Text className="text-sm"> time{formData.repeatCount !== '1' ? 's' : ''} per</Text>
                 <Menu
                   trigger={({ ...triggerProps }) => {
                     return (
@@ -201,7 +235,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
 
             {/* Days After Stage Start */}
             <VStack space="xs">
-              <Text className="font-medium">Start Day</Text>
+              <HStack className="items-center justify-between">
+                <Text className="font-medium">Start Day</Text>
+                {calculateTaskStartDate() && (
+                  <Text className="text-sm font-medium text-primary-600">
+                    Task starts on: {calculateTaskStartDate()}
+                  </Text>
+                )}
+              </HStack>
               <Input className={errors.days_after_stage_start ? 'border-error-500' : ''}>
                 <InputField
                   placeholder="e.g., 0, 14, 30"
@@ -214,7 +255,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, t
                 <Text className="text-sm text-error-600">{errors.days_after_stage_start}</Text>
               )}
               <Text className="text-xs text-typography-500">
-                Days after beginning of the stage on which to begin the task
+                Number of days after {stageStartDate} on which to start the task
               </Text>
             </VStack>
           </VStack>
