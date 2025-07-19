@@ -46,7 +46,8 @@ export const TasksList: React.FC<TasksListProps> = ({
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
-  const { addTaskToCalendar, removeTaskFromCalendar, isTaskInCalendar } = useCalendar();
+  const { addTaskToCalendar, removeTaskFromCalendar, isTaskInCalendar, calendarState } =
+    useCalendar();
   const toast = useToast();
   const { theme } = useTheme();
 
@@ -148,7 +149,6 @@ export const TasksList: React.FC<TasksListProps> = ({
   const getTaskCalendarStatus = (task: Task) => {
     if (!grow || !canUseCalendar) return null;
 
-    const { calendarState } = useCalendar();
     const calendarTasks = calendarState.tasks.filter(
       (calendarTask) => calendarTask.taskId === task.id && calendarTask.growId === grow.id
     );
