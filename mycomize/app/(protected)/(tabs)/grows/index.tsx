@@ -5,7 +5,7 @@ import { Text } from '~/components/ui/text';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { ScrollView } from '~/components/ui/scroll-view';
-import { getBackendUrl } from '~/lib/backendUrl';
+import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { Icon } from '~/components/ui/icon';
 import { Input, InputField, InputIcon } from '~/components/ui/input';
 import { Pressable } from '~/components/ui/pressable';
@@ -48,33 +48,18 @@ export default function GrowScreen() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const url = getBackendUrl();
       // Reset grows before fetching to avoid stale data
       setGrows([]);
 
-      const response = await fetch(`${url}/grows/all`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace('/login');
-        } else {
-          console.error('Failed to fetch grows:', response.statusText);
-        }
-        setLoading(false);
-        return;
-      }
-
-      const data: BulkGrowComplete[] = await response.json();
+      const data: BulkGrowComplete[] = await apiClient.getBulkGrows(token!);
       setGrows(data);
       setLoading(false);
     } catch (error) {
-      console.error('Exception fetching grows:', error);
+      if (isUnauthorizedError(error as Error)) {
+        router.replace('/login');
+      } else {
+        console.error('Exception fetching grows:', error);
+      }
       setLoading(false);
     }
   }, [token, router]);
@@ -83,28 +68,15 @@ export default function GrowScreen() {
   const deleteGrow = useCallback(
     async (growId: number) => {
       try {
-        const url = getBackendUrl();
-        const response = await fetch(`${url}/grows/${growId}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            router.replace('/login');
-          } else {
-            console.error('Failed to delete grow:', response.statusText);
-          }
-          return;
-        }
-
+        await apiClient.deleteBulkGrow(growId.toString(), token!);
         // Remove the grow from the local state
         setGrows((prevGrows) => prevGrows.filter((grow) => grow.id !== growId));
       } catch (error) {
-        console.error('Exception deleting grow:', error);
+        if (isUnauthorizedError(error as Error)) {
+          router.replace('/login');
+        } else {
+          console.error('Exception deleting grow:', error);
+        }
       }
     },
     [token, router]

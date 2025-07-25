@@ -228,6 +228,14 @@ async def update_tek(
     # Update fields
     update_data = tek_data.dict(exclude_unset=True)
     
+    # Validate one-way public transition: once public, always public
+    if 'is_public' in update_data:
+        if tek.is_public and not update_data['is_public']:
+            raise HTTPException(
+                status_code=400, 
+                detail="Public teks cannot be made private again. Once public, a tek remains public."
+            )
+    
     # Sanitize datetime fields in stages data if present
     if 'stages' in update_data and update_data['stages'] is not None:
         update_data['stages'] = sanitize_stages_datetime_fields(update_data['stages'])

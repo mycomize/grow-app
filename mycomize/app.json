@@ -25,7 +25,8 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.mycomize"
+      "bundleIdentifier": "com.anonymous.mycomize",
+      "jsEngine": "hermes"
     },
     "android": {
       "architectures": ["arm64-v8a", "armeabi-v7a"],
@@ -34,7 +35,8 @@
         "backgroundColor": "#ffffff"
       },
       "softwareKeyboardLayoutMode": "pan",
-      "package": "com.anonymous.mycomize"
+      "package": "com.anonymous.mycomize",
+      "jsEngine": "hermes"
     },
     "extra": {
       "router": {},

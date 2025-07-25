@@ -1,11 +1,9 @@
 import { useEffect, useCallback, useReducer } from 'react';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { getBackendUrl } from '~/lib/backendUrl';
+import { apiClient } from '~/lib/ApiClient';
 
 type UseStateHook<T> = [[boolean, T | null], (value: T | null) => void];
-
-const BACKEND_URL = getBackendUrl();
 
 // State is of the form [isLoading, valueToSave/Load]
 function useAsyncState<T>(
@@ -22,24 +20,24 @@ export async function setStorageItemAsync(key: string, value: string | null) {
   if (Platform.OS === 'web') {
     try {
       if (value === null) {
-        await fetch(`${BACKEND_URL}/api/clear-cookie`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        await apiClient.call({
+          endpoint: '/api/clear-cookie',
+          config: {
+            method: 'POST',
+            body: { key },
           },
-          body: JSON.stringify({ key }),
         });
       } else {
-        await fetch(`${BACKEND_URL}/api/set-cookie`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        await apiClient.call({
+          endpoint: '/api/set-cookie',
+          config: {
+            method: 'POST',
+            body: { key, value },
           },
-          body: JSON.stringify({ key, value }),
         });
       }
     } catch (error) {
-      console.error('Error clearing cookie:', error);
+      console.error('Error setting/clearing cookie:', error);
     }
   } else {
     if (value === null) {
@@ -55,8 +53,11 @@ export function useStorageState(key: string): UseStateHook<string> {
 
   useEffect(() => {
     if (Platform.OS === 'web') {
-      fetch(`${BACKEND_URL}/api/get-cookie?key=${key}`)
-        .then((response) => response.json())
+      apiClient
+        .call({
+          endpoint: `/api/get-cookie?key=${key}`,
+          config: { method: 'GET' },
+        })
         .then((data) => {
           setState(data.value);
         })

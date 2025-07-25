@@ -7,7 +7,7 @@ import { Pressable } from '~/components/ui/pressable';
 import { useRouter } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import { AuthContext } from '~/lib/AuthContext';
-import { getBackendUrl } from '~/lib/backendUrl';
+import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { IoTEntity } from '~/lib/iot';
 import { ConnectionStatusBadge, ConnectionStatus } from '~/components/ui/connection-status-badge';
 import { CountBadge } from '~/components/ui/count-badge';
@@ -35,41 +35,29 @@ export const GatewayStatus: React.FC<GatewayStatusProps> = ({ gateway }) => {
 
   // Fetch full gateway details including api_key
   const fetchGatewayDetails = async () => {
+    if (!token) return null;
+
     try {
-      const url = getBackendUrl();
-      const response = await fetch(`${url}/iot-gateways/${gateway.id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const gatewayData = await apiClient.getIoTGateway(gateway.id.toString(), token);
+      setFullGateway(gatewayData);
 
-      if (response.ok) {
-        const gatewayData = await response.json();
-        setFullGateway(gatewayData);
-
-        try {
-          const url = getBackendUrl();
-          const response = await fetch(`${url}/iot-gateways/${gateway.id}/entities`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (response.ok) {
-            const entities: IoTEntity[] = await response.json();
-            setEnabledStates(new Set(entities.filter((e) => e.is_enabled).map((e) => e.entity_id)));
-          }
-        } catch (err) {
-          console.error('Failed to fetch enabled entities:', err);
+      try {
+        const entities: IoTEntity[] = await apiClient.getIoTEntities(gateway.id.toString(), token);
+        setEnabledStates(new Set(entities.filter((e) => e.is_enabled).map((e) => e.entity_id)));
+      } catch (err) {
+        if (isUnauthorizedError(err as Error)) {
+          router.replace('/login');
+          return null;
         }
-
-        return gatewayData;
+        console.error('Failed to fetch enabled entities:', err);
       }
+
+      return gatewayData;
     } catch (error) {
+      if (isUnauthorizedError(error as Error)) {
+        router.replace('/login');
+        return null;
+      }
       console.error('Failed to fetch gateway details:', error);
     }
     return null;

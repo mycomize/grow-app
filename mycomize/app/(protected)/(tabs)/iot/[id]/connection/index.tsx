@@ -26,7 +26,7 @@ import {
 } from 'lucide-react-native';
 
 import { AuthContext } from '~/lib/AuthContext';
-import { getBackendUrl } from '~/lib/backendUrl';
+import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { IoTGateway, IoTGatewayUpdate } from '~/lib/iot';
 import { ConnectionStatusBadge, ConnectionStatus } from '~/components/ui/connection-status-badge';
 
@@ -62,24 +62,7 @@ export default function ConnectionDetailsScreen() {
   // Fetch gateway details
   const fetchGateway = async () => {
     try {
-      const url = getBackendUrl();
-      const response = await fetch(`${url}/iot-gateways/${id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace('/login');
-          return;
-        }
-        throw new Error('Failed to fetch integration details');
-      }
-
-      const data: IoTGateway = await response.json();
+      const data: IoTGateway = await apiClient.getIoTGateway(id as string, token!);
       setGateway(data);
 
       // Initialize form with current values
@@ -97,6 +80,10 @@ export default function ConnectionDetailsScreen() {
         checkConnection(data);
       }
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
@@ -135,28 +122,10 @@ export default function ConnectionDetailsScreen() {
     if (!gateway) return;
 
     try {
-      const url = getBackendUrl();
-      const endpoint = gateway.is_active
-        ? `/iot-gateways/${id}/disable`
-        : `/iot-gateways/${id}/enable`;
+      const updatedGateway: IoTGateway = gateway.is_active
+        ? await apiClient.disableIoTGateway(id as string, token!)
+        : await apiClient.enableIoTGateway(id as string, token!);
 
-      const response = await fetch(`${url}${endpoint}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace('/login');
-          return;
-        }
-        throw new Error('Failed to update integration status');
-      }
-
-      const updatedGateway: IoTGateway = await response.json();
       setGateway(updatedGateway);
 
       if (updatedGateway.is_active) {
@@ -167,6 +136,10 @@ export default function ConnectionDetailsScreen() {
         setSuccess('Integration disconnected');
       }
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
   };
@@ -178,26 +151,11 @@ export default function ConnectionDetailsScreen() {
     setIsSaving(true);
 
     try {
-      const url = getBackendUrl();
-      const response = await fetch(`${url}/iot-gateways/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace('/login');
-          return;
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to update integration');
-      }
-
-      const updatedGateway: IoTGateway = await response.json();
+      const updatedGateway: IoTGateway = await apiClient.updateIoTGateway(
+        id as string,
+        formData,
+        token!
+      );
       setGateway(updatedGateway);
       setSuccess('Integration settings updated successfully');
 
@@ -206,6 +164,10 @@ export default function ConnectionDetailsScreen() {
         checkConnection(updatedGateway);
       }
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsSaving(false);

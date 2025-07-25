@@ -22,7 +22,7 @@ import {
 } from 'lucide-react-native';
 
 import { AuthContext } from '~/lib/AuthContext';
-import { getBackendUrl } from '~/lib/backendUrl';
+import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { IoTGateway, HAState } from '~/lib/iot';
 import { SensorGraph } from '~/components/charts/SensorGraph';
 
@@ -62,22 +62,7 @@ export default function SensorDetailScreen() {
       setIsLoading(true);
 
       // Fetch gateway details
-      const gatewayResponse = await fetch(`${getBackendUrl()}/iot-gateways/${id}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!gatewayResponse.ok) {
-        if (gatewayResponse.status === 401) {
-          router.replace('/login');
-          return;
-        }
-        throw new Error('Failed to fetch gateway details');
-      }
-
-      const gatewayData: IoTGateway = await gatewayResponse.json();
+      const gatewayData: IoTGateway = await apiClient.getIoTGateway(id as string, token!);
       setGateway({
         ...gatewayData,
         created_at: new Date(gatewayData.created_at),
@@ -100,6 +85,10 @@ export default function SensorDetailScreen() {
         }
       }
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Failed to load sensor data');
     } finally {
       setIsLoading(false);

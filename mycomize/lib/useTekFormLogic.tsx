@@ -1,15 +1,9 @@
 import { useState, useEffect, useContext } from 'react';
 import { useRouter } from 'expo-router';
-import { useToast, Toast } from '~/components/ui/toast';
-import { useTheme } from '~/components/ui/themeprovider/themeprovider';
-import { VStack } from '~/components/ui/vstack';
-import { HStack } from '~/components/ui/hstack';
-import { Text } from '~/components/ui/text';
-import { Icon } from '~/components/ui/icon';
-import { AlertCircle, CheckCircle } from 'lucide-react-native';
+import { useUnifiedToast } from '~/components/ui/unified-toast';
 
 import { AuthContext } from '~/lib/AuthContext';
-import { getBackendUrl } from '~/lib/backendUrl';
+import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { BulkGrowTekData, createEmptyTekData } from '~/lib/tekTypes';
 
 interface UseTekFormLogicProps {
@@ -20,8 +14,7 @@ interface UseTekFormLogicProps {
 export function useTekFormLogic({ initialData, tekId }: UseTekFormLogicProps = {}) {
   const { token } = useContext(AuthContext);
   const router = useRouter();
-  const toast = useToast();
-  const { theme } = useTheme();
+  const { showError, showSuccess } = useUnifiedToast();
 
   const [tekData, setTekData] = useState<BulkGrowTekData>(initialData || createEmptyTekData());
 
@@ -60,43 +53,6 @@ export function useTekFormLogic({ initialData, tekId }: UseTekFormLogicProps = {
     );
   };
 
-  // Toast functions
-  const showToast = (message: string, type: 'error' | 'success') => {
-    const toastId = Math.random().toString();
-    const bgColor = 'bg-background-0';
-    const textColor =
-      type === 'error'
-        ? theme === 'dark'
-          ? 'text-error-600'
-          : 'text-error-700'
-        : theme === 'dark'
-          ? 'text-green-600'
-          : 'text-green-700';
-    const descColor = 'text-typography-300';
-
-    toast.show({
-      id: `${type}-toast-${toastId}`,
-      placement: 'top',
-      duration: 3000,
-      render: () => (
-        <Toast variant="outline" className={`mx-auto mt-36 w-full p-4 ${bgColor}`}>
-          <VStack space="xs" className="w-full">
-            <HStack className="flex-row gap-2">
-              <Icon
-                as={type === 'error' ? AlertCircle : CheckCircle}
-                className={`mt-0.5 ${textColor}`}
-              />
-              <Text className={`font-semibold ${textColor}`}>
-                {type === 'error' ? 'Error' : 'Success'}
-              </Text>
-            </HStack>
-            <Text className={descColor}>{message}</Text>
-          </VStack>
-        </Toast>
-      ),
-    });
-  };
-
   // Save tek
   const saveTek = async () => {
     // Basic validation
@@ -114,39 +70,19 @@ export function useTekFormLogic({ initialData, tekId }: UseTekFormLogicProps = {
 
     try {
       const isEdit = !!tekId;
-      const url = isEdit
-        ? `${getBackendUrl()}/bulk-grow-tek/${tekId}`
-        : `${getBackendUrl()}/bulk-grow-tek/`;
-      const method = isEdit ? 'PUT' : 'POST';
 
       // Debug logging
       console.log('Saving tek data:', tekData);
       console.log('is_public value:', tekData.is_public);
-      console.log('URL:', url);
-      console.log('Method:', method);
+      console.log('Method:', isEdit ? 'PUT' : 'POST');
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(tekData),
-      });
-
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace('/login');
-          return;
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.detail || `Failed to ${isEdit ? 'update' : 'save'} tek`);
+      if (isEdit) {
+        // Update existing tek
+        await apiClient.updateBulkGrowTek(tekId!, tekData, token!);
+      } else {
+        // Create new tek
+        await apiClient.createBulkGrowTek(tekData, token!);
       }
-
-      const responseData = await response.json();
 
       const successMessage = isEdit ? 'Tek updated successfully!' : 'Tek saved successfully!';
       setSuccess(successMessage);
@@ -161,6 +97,10 @@ export function useTekFormLogic({ initialData, tekId }: UseTekFormLogicProps = {
       }, 1500);
     } catch (err) {
       console.log('Save tek error:', err);
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : `Failed to ${tekId ? 'update' : 'save'} tek`);
     } finally {
       setIsSaving(false);
@@ -170,17 +110,17 @@ export function useTekFormLogic({ initialData, tekId }: UseTekFormLogicProps = {
   // Handle toast display
   useEffect(() => {
     if (error) {
-      showToast(error, 'error');
+      showError(error);
       setError(null);
     }
-  }, [error, theme]);
+  }, [error, showError]);
 
   useEffect(() => {
     if (success) {
-      showToast(success, 'success');
+      showSuccess(success);
       setSuccess(null);
     }
-  }, [success, theme]);
+  }, [success, showSuccess]);
 
   return {
     tekData,

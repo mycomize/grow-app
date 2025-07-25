@@ -32,37 +32,39 @@ class BulkGrow(Base):
     __tablename__ = "bulk_grows"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(128), nullable=True)
+    # All user data fields converted to TEXT to support encryption
+    name = Column(Text, nullable=True)
     description = Column(Text, nullable=True)
-    species = Column(String(64), nullable=True, index=True)
-    variant = Column(String(64), nullable=True, index=True)
-    location = Column(String(128), nullable=True)
-    tags = Column(JSON, nullable=True) # array of strings
+    species = Column(Text, nullable=True)  # Removed index - can't index encrypted data
+    variant = Column(Text, nullable=True)  # Removed index - can't index encrypted data
+    location = Column(Text, nullable=True)
+    tags = Column(Text, nullable=True) # JSON stored as encrypted string
 
     # Stage specific fields that are above and beyond what is included
     # in each stage's lists (items, env conditions, tasks) and notes
-    inoculation_date = Column(Date, nullable=True)
-    inoculation_status = Column(String(32), nullable=True)
-    spawn_start_date = Column(Date, nullable=True)
-    spawn_colonization_status = Column(String(32), nullable=True)
-    bulk_start_date = Column(Date, nullable=True)
-    bulk_colonization_status = Column(String(32), nullable=True)
-    fruiting_start_date = Column(Date, nullable=True)
-    fruiting_status = Column(String(32), nullable=True)
-    full_spawn_colonization_date = Column(Date, nullable=True)
-    full_bulk_colonization_date = Column(Date, nullable=True)
-    fruiting_pin_date = Column(Date, nullable=True)
-    s2b_ratio = Column(String(64), nullable=True)
+    # All date fields converted to TEXT to support encryption
+    inoculation_date = Column(Text, nullable=True)
+    inoculation_status = Column(Text, nullable=True)
+    spawn_start_date = Column(Text, nullable=True)
+    spawn_colonization_status = Column(Text, nullable=True)
+    bulk_start_date = Column(Text, nullable=True)
+    bulk_colonization_status = Column(Text, nullable=True)
+    fruiting_start_date = Column(Text, nullable=True)
+    fruiting_status = Column(Text, nullable=True)
+    full_spawn_colonization_date = Column(Text, nullable=True)
+    full_bulk_colonization_date = Column(Text, nullable=True)
+    fruiting_pin_date = Column(Text, nullable=True)
+    s2b_ratio = Column(Text, nullable=True)
 
-    current_stage = Column(String(64), nullable=True)  # Track current stage in timeline
-    status = Column(String(64), nullable=True)
-    total_cost = Column(Float, default=0.0)
+    current_stage = Column(Text, nullable=True)  # Track current stage in timeline
+    status = Column(Text, nullable=True)
+    total_cost = Column(Text, nullable=True)  # Converted from Float to support encryption
 
     # Stage-based data structure (JSON for flexibility)
     # Stages include: inoculation, spawn colonization, bulk colonization, fruiting, and harvest
     # Each stage has: Item list, EnvironmentalConditions list, Task list, and notes. These
     # lists and notes are optional though. See backend/schemas/bulk_stage.py for definitions.
-    stages = Column(JSON, nullable=True)
+    stages = Column(Text, nullable=True)  # JSON stored as encrypted string
 
     # Foreign key to user
     user_id = Column(Integer, ForeignKey("users.id"))
@@ -82,10 +84,11 @@ class BulkGrowFlush(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     bulk_grow_id = Column(Integer, ForeignKey("bulk_grows.id"), nullable=False)
-    harvest_date = Column(Date, nullable=True)
-    wet_yield_grams = Column(Float, nullable=True)
-    dry_yield_grams = Column(Float, nullable=True)
-    concentration_mg_per_gram = Column(Float, nullable=True)
+    # All user data fields converted to TEXT to support encryption
+    harvest_date = Column(Text, nullable=True)
+    wet_yield_grams = Column(Text, nullable=True)
+    dry_yield_grams = Column(Text, nullable=True)
+    concentration_mg_per_gram = Column(Text, nullable=True)
 
     # Relationship back to grow
     bulk_grow = relationship("BulkGrow", back_populates="flushes")

@@ -1,10 +1,10 @@
 import { Image } from '@/components/ui/image';
-import { useState } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { View } from 'react-native';
 import { ScrollView } from '@/components/ui/scroll-view';
 import { Box } from '@/components/ui/box';
-import { useContext } from 'react';
 import { AuthContext } from '~/lib/AuthContext';
+import { useEncryption } from '~/lib/EncryptionContext';
 import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { FormControl } from '@/components/ui/form-control';
 import { Heading } from '@/components/ui/heading';
@@ -21,6 +21,7 @@ import MycomizeLogo from '@/assets/mycomize-logo.svg';
 export default function LoginScreen() {
   const router = useRouter();
   const authState = useContext(AuthContext);
+  const { isInitialized, checkEncryptionStatus } = useEncryption();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -38,12 +39,22 @@ export default function LoginScreen() {
     setErrorMessage(null);
     setIsLoading(true);
     try {
-      // signIn returns an error message or null on success
-      const error = await authState.signIn(username, password);
+      // signIn returns an error message or null on success, skip redirect to check encryption
+      const error = await authState.signIn(username, password, true);
       if (error) {
         setErrorMessage(error);
+      } else {
+        // Check encryption status after successful login
+        await checkEncryptionStatus();
+
+        // If encryption is not initialized, redirect to setup
+        if (!isInitialized) {
+          router.replace('/encryption-setup');
+        } else {
+          // If already initialized, go to home
+          router.replace('/');
+        }
       }
-      // signIn handles redirect to / on success
     } catch (error) {
       setErrorMessage('An unexpected error occurred. Please try again.');
     } finally {

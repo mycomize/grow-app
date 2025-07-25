@@ -1,17 +1,17 @@
 import { use, createContext, type PropsWithChildren } from 'react';
 import { useStorageState } from '~/lib/useStorageState';
 import { useRouter } from 'expo-router';
-import { getBackendUrl } from '~/lib/backendUrl';
+import { apiClient } from '~/lib/ApiClient';
 
 type AuthState = {
   register: (username: string, password: string) => Promise<string | null>;
-  signIn: (username: string, password: string) => Promise<string | null>;
+  signIn: (username: string, password: string, skipRedirect?: boolean) => Promise<string | null>;
   signOut: () => Promise<string | null>;
   token?: string | null;
   isTokenLoading: boolean;
 };
 
-const BACKEND_URL = getBackendUrl();
+// Remove the constant since we'll use apiClient directly
 
 export const AuthContext = createContext<AuthState>({
   register: async () => null,
@@ -24,7 +24,7 @@ export const AuthContext = createContext<AuthState>({
 export function useAuthSession() {
   const value = use(AuthContext);
 
-  if (value) {
+  if (!value) {
     throw new Error('useSession must be used within an AuthProvider');
   }
 
@@ -34,11 +34,10 @@ export function useAuthSession() {
 export function AuthProvider({ children }: PropsWithChildren) {
   const [[isTokenLoading, token], setToken] = useStorageState('auth-token');
   const router = useRouter();
-  const url = `${BACKEND_URL}/auth`;
 
-  const signIn = async (username: string, password: string) => {
+  const signIn = async (username: string, password: string, skipRedirect?: boolean) => {
     try {
-      console.log(`Attempting to sign in user: ${username} to URL: ${url}/token`);
+      console.log(`Attempting to sign in user: ${username}`);
 
       // The token endpoint expects form data in a specific format for OAuth2PasswordRequestForm
       const formData = new URLSearchParams();
@@ -51,38 +50,32 @@ export function AuthProvider({ children }: PropsWithChildren) {
       formData.append('client_id', '');
       formData.append('client_secret', '');
 
-      console.log(`Form data: ${formData.toString()}`);
-
-      const response = await fetch(`${url}/token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Accept: 'application/json',
+      const responseData = await apiClient.call({
+        endpoint: '/auth/token',
+        config: {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Accept: 'application/json',
+          },
+          body: formData.toString(),
         },
-        body: formData.toString(),
       });
-
-      console.log(`Response status: ${response.status}`);
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        // Handle specific FastAPI HTTPExceptions based on status codes
-        if (response.status === 401) {
-          return 'Invalid username or password. Please try again.';
-        } else {
-          return 'Authentication failed. Please try again.';
-        }
-      }
 
       // Store the JWT token and set user as logged in
       setToken(responseData.access_token);
 
-      // Navigate to the home page
-      router.replace('/');
+      // Navigate to the home page (unless skipRedirect is true)
+      if (!skipRedirect) {
+        router.replace('/');
+      }
       return null; // No error
     } catch (error) {
       console.error('Failed to sign in: ', error);
+      const errorMessage = (error as Error).message;
+      if (errorMessage.includes('401') || errorMessage.toLowerCase().includes('unauthorized')) {
+        return 'Invalid username or password. Please try again.';
+      }
       return 'Network error. Please check your connection and try again.';
     }
   };
@@ -103,29 +96,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const register = async (username: string, password: string) => {
     try {
-      const response = await fetch(`${url}/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      await apiClient.call({
+        endpoint: '/auth/register',
+        config: {
+          method: 'POST',
+          body: { username, password },
         },
-        body: JSON.stringify({ username, password }),
       });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        // Handle specific FastAPI HTTPExceptions based on status codes
-        if (response.status === 400 && responseData.detail === 'Username already registered') {
-          return 'This username is already taken. Please choose another one.';
-        } else {
-          return 'Registration failed. Please try again.';
-        }
-      }
 
       router.replace('/login');
       return null; // No error
     } catch (error) {
       console.error('Failed to register user: ', error);
+      const errorMessage = (error as Error).message;
+      if (
+        errorMessage.includes('already registered') ||
+        errorMessage.includes('Username already registered')
+      ) {
+        return 'This username is already taken. Please choose another one.';
+      }
       return 'Network error. Please check your connection and try again.';
     }
   };

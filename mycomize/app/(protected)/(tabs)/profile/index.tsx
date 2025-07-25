@@ -13,7 +13,7 @@ import { useToast, Toast } from '@/components/ui/toast';
 
 import { AuthContext } from '@/lib/AuthContext';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
-import { getBackendUrl } from '@/lib/backendUrl';
+import { apiClient, isUnauthorizedError } from '@/lib/ApiClient';
 import { useContext, useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { getSwitchColors } from '@/lib/switchUtils';
@@ -57,20 +57,15 @@ export default function ProfileScreen() {
     if (!token) return;
 
     try {
-      const response = await fetch(`${getBackendUrl()}/auth/me`, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
-        setUsername(userData.username);
-        setUserId(userData.id?.toString());
-        setProfileImage(userData.profile_image);
-      }
+      const userData = await apiClient.get('/auth/me', token);
+      setUsername(userData.username);
+      setUserId(userData.id?.toString());
+      setProfileImage(userData.profile_image);
     } catch (error) {
+      if (isUnauthorizedError(error as Error)) {
+        router.replace('/login');
+        return;
+      }
       console.error('Error loading user profile:', error);
     }
   };
@@ -148,37 +143,30 @@ export default function ProfileScreen() {
       if (!result.canceled && result.assets[0]) {
         setIsUploadingImage(true);
 
+        if (!token) {
+          showToast('Authentication required', 'error');
+          return;
+        }
+
         const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
 
         // Upload to backend
-        const response = await fetch(`${getBackendUrl()}/auth/profile-image`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
+        const userData = await apiClient.put(
+          '/auth/profile-image',
+          {
             profile_image: base64Image,
-          }),
-        });
+          },
+          token
+        );
 
-        if (response.ok) {
-          const userData = await response.json();
-          setProfileImage(userData.profile_image);
+        setProfileImage(userData.profile_image);
 
-          // Cache the updated image
-          if (userId && userData.profile_image) {
-            await cacheProfileImage(userId, userData.profile_image);
-          }
-
-          showToast('Profile image updated successfully!', 'success');
-        } else {
-          if (response.status === 401) {
-            router.replace('/login');
-            return;
-          }
-          throw new Error('Failed to update profile image');
+        // Cache the updated image
+        if (userId && userData.profile_image) {
+          await cacheProfileImage(userId, userData.profile_image);
         }
+
+        showToast('Profile image updated successfully!', 'success');
       }
     } catch (error) {
       console.error('Error uploading image:', error);

@@ -5,8 +5,7 @@ import { Text } from '~/components/ui/text';
 import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
-import { useToast, Toast } from '~/components/ui/toast';
-import { useTheme } from '~/components/ui/themeprovider/themeprovider';
+import { useUnifiedToast } from '~/components/ui/unified-toast';
 import { InfoBadge } from '~/components/ui/info-badge';
 import {
   Plus,
@@ -48,8 +47,7 @@ export const TasksList: React.FC<TasksListProps> = ({
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const { addTaskToCalendar, removeTaskFromCalendar, isTaskInCalendar, calendarState } =
     useCalendar();
-  const toast = useToast();
-  const { theme } = useTheme();
+  const { showSuccess } = useUnifiedToast();
 
   const handleAddTask = () => {
     setEditingTask(null);
@@ -95,36 +93,11 @@ export const TasksList: React.FC<TasksListProps> = ({
       // Also remove the task from calendar if it exists there
       if (grow && isTaskInCalendar(taskToDelete.id, grow.id)) {
         removeTaskFromCalendar(taskToDelete.id);
-        showToast(`Task "${taskToDelete.action}" removed from calendar`);
+        showSuccess(`Task "${taskToDelete.action}" removed from calendar`);
       }
 
       setTaskToDelete(null);
     }
-  };
-
-  // Toast function for success messages
-  const showToast = (message: string) => {
-    const toastId = Math.random().toString();
-    const bgColor = 'bg-background-0';
-    const textColor = theme === 'dark' ? 'text-green-600' : 'text-green-700';
-    const descColor = 'text-typography-300';
-
-    toast.show({
-      id: `success-toast-${toastId}`,
-      placement: 'top',
-      duration: 3000,
-      render: () => (
-        <Toast variant="outline" className={`mx-auto mt-36 w-full p-4 ${bgColor}`}>
-          <VStack space="xs" className="w-full">
-            <HStack className="flex-row gap-2">
-              <Icon as={CheckCircle} className={`mt-0.5 ${textColor}`} />
-              <Text className={`font-semibold ${textColor}`}>Success</Text>
-            </HStack>
-            <Text className={descColor}>{message}</Text>
-          </VStack>
-        </Toast>
-      ),
-    });
   };
 
   const handleToggleCalendar = (task: Task) => {
@@ -138,10 +111,10 @@ export const TasksList: React.FC<TasksListProps> = ({
 
     if (taskInCalendar) {
       removeTaskFromCalendar(task.id);
-      showToast(`Task "${task.action}" removed from calendar`);
+      showSuccess(`Task "${task.action}" removed from calendar`);
     } else {
       addTaskToCalendar(task, grow, stageName, stageStartDate);
-      showToast(`Task "${task.action}" added to calendar`);
+      showSuccess(`Task "${task.action}" added to calendar`);
     }
   };
 

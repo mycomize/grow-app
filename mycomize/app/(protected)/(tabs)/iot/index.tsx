@@ -4,7 +4,7 @@ import { Text } from '~/components/ui/text';
 import { VStack } from '~/components/ui/vstack';
 import { Card } from '~/components/ui/card';
 import { Heading } from '~/components/ui/heading';
-import { getBackendUrl } from '~/lib/backendUrl';
+import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { HStack } from '~/components/ui/hstack';
 import { Icon } from '~/components/ui/icon';
 import { Input, InputField, InputIcon } from '~/components/ui/input';
@@ -169,31 +169,14 @@ export default function IoTScreen() {
 
   // Define the fetch function
   const fetchData = useCallback(async () => {
+    if (!token) return;
+
     try {
       setLoading(true);
-      const url = getBackendUrl();
       // Reset gateways before fetching to avoid stale data
       setGateways([]);
 
-      const response = await fetch(`${url}/iot-gateways/`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace('/login');
-        } else {
-          console.error('Failed to fetch IoT gateways:', response.statusText);
-        }
-        setLoading(false);
-        return;
-      }
-
-      const data: IoTGateway[] = await response.json();
+      const data: IoTGateway[] = await apiClient.get('/iot-gateways/', token, 'IoTGateway', true);
       const formattedGateways = data.map((gateway) => ({
         ...gateway,
         created_at: new Date(gateway.created_at),
@@ -202,6 +185,10 @@ export default function IoTScreen() {
       setGateways(formattedGateways);
       setLoading(false);
     } catch (error) {
+      if (isUnauthorizedError(error as Error)) {
+        router.replace('/login');
+        return;
+      }
       console.error('Exception fetching IoT gateways:', error);
       setLoading(false);
     }

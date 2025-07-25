@@ -49,7 +49,7 @@ import {
 
 import { CountBadge } from '~/components/ui/count-badge';
 import { AuthContext } from '~/lib/AuthContext';
-import { getBackendUrl } from '~/lib/backendUrl';
+import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { IoTGateway, IoTGatewayUpdate, IoTEntity, HAState } from '~/lib/iot';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import { getSwitchColors } from '~/lib/switchUtils';
@@ -100,35 +100,28 @@ export default function IoTIntegrationDetailScreen() {
   // Fetch enabled entities from backend
   const fetchEnabledEntities = useCallback(
     async (gatewayData?: IoTGateway) => {
-      if (!id) return;
+      if (!id || !token) return;
 
       try {
-        const url = getBackendUrl();
-        const response = await fetch(`${url}/iot-gateways/${id}/entities`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const entities: IoTEntity[] = await apiClient.getIoTEntities(id as string, token);
+        setEnabledStates(entities.filter((e) => e.is_enabled).map((e) => e.entity_id));
 
-        if (response.ok) {
-          const entities: IoTEntity[] = await response.json();
-          setEnabledStates(entities.filter((e) => e.is_enabled).map((e) => e.entity_id));
-
-          // Fetch current states for enabled entities
-          if (gatewayData && gatewayData.is_active) {
-            await fetchCurrentStates(
-              gatewayData,
-              entities.filter((e) => e.is_enabled)
-            );
-          }
+        // Fetch current states for enabled entities
+        if (gatewayData && gatewayData.is_active) {
+          await fetchCurrentStates(
+            gatewayData,
+            entities.filter((e) => e.is_enabled)
+          );
         }
       } catch (err) {
+        if (isUnauthorizedError(err as Error)) {
+          router.replace('/login');
+          return;
+        }
         console.error('Failed to fetch enabled entities:', err);
       }
     },
-    [id, token]
+    [id, token, router]
   );
 
   // Fetch current states for enabled entities
@@ -157,25 +150,10 @@ export default function IoTIntegrationDetailScreen() {
 
   // Fetch gateway details
   const fetchGateway = useCallback(async () => {
+    if (!id || !token) return;
+
     try {
-      const url = getBackendUrl();
-      const response = await fetch(`${url}/iot-gateways/${id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace('/login');
-          return;
-        }
-        throw new Error('Failed to fetch integration details');
-      }
-
-      const data: IoTGateway = await response.json();
+      const data: IoTGateway = await apiClient.getIoTGateway(id as string, token);
       setGateway({
         ...data,
         created_at: new Date(data.created_at),
@@ -197,6 +175,10 @@ export default function IoTIntegrationDetailScreen() {
       // Fetch enabled entities
       await fetchEnabledEntities(data);
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
@@ -282,31 +264,18 @@ export default function IoTIntegrationDetailScreen() {
 
   // Toggle gateway active status
   const toggleGatewayStatus = async () => {
-    if (!gateway) return;
+    if (!gateway || !token) return;
 
     try {
-      const url = getBackendUrl();
       const endpoint = gateway.is_active
         ? `/iot-gateways/${id}/disable`
         : `/iot-gateways/${id}/enable`;
 
-      const response = await fetch(`${url}${endpoint}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+      const updatedGateway: IoTGateway = await apiClient.call({
+        endpoint,
+        config: { method: 'PUT', token },
       });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace('/login');
-          return;
-        }
-        throw new Error('Failed to update integration status');
-      }
-
-      const updatedGateway: IoTGateway = await response.json();
       setGateway({
         ...updatedGateway,
         created_at: new Date(updatedGateway.created_at),
@@ -320,37 +289,29 @@ export default function IoTIntegrationDetailScreen() {
         setSuccess('Integration disconnected');
       }
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
   };
 
   // Save gateway changes
   const saveChanges = async () => {
+    if (!token) return;
+
     setError(null);
     setSuccess(null);
     setIsSaving(true);
 
     try {
-      const url = getBackendUrl();
-      const response = await fetch(`${url}/iot-gateways/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
+      const updatedGateway: IoTGateway = await apiClient.updateIoTGateway(
+        id as string,
+        formData,
+        token
+      );
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace('/login');
-          return;
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to update integration');
-      }
-
-      const updatedGateway: IoTGateway = await response.json();
       setGateway({
         ...updatedGateway,
         created_at: new Date(updatedGateway.created_at),
@@ -363,6 +324,10 @@ export default function IoTIntegrationDetailScreen() {
         checkHomeAssistantConnection(updatedGateway);
       }
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsSaving(false);
@@ -413,17 +378,22 @@ export default function IoTIntegrationDetailScreen() {
 
       if (response.ok) {
         // Refresh states to get updated values
-        if (gateway.is_active) {
-          const url = getBackendUrl();
-          const entitiesResponse = await fetch(`${url}/iot-gateways/${gateway.id}/entities`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (entitiesResponse.ok) {
-            const entities: IoTEntity[] = await entitiesResponse.json();
+        if (gateway.is_active && token) {
+          try {
+            const entities: IoTEntity[] = await apiClient.getIoTEntities(
+              gateway.id.toString(),
+              token
+            );
             await fetchCurrentStates(
               gateway,
               entities.filter((e) => e.is_enabled)
             );
+          } catch (err) {
+            if (isUnauthorizedError(err as Error)) {
+              router.replace('/login');
+              return;
+            }
+            console.error('Failed to refresh entity states:', err);
           }
         }
       } else {

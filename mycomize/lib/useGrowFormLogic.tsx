@@ -1,16 +1,10 @@
 import { useState, useEffect, useContext } from 'react';
 import { useRouter } from 'expo-router';
 import { Keyboard } from 'react-native';
-import { useToast, Toast } from '~/components/ui/toast';
-import { useTheme } from '~/components/ui/themeprovider/themeprovider';
-import { VStack } from '~/components/ui/vstack';
-import { HStack } from '~/components/ui/hstack';
-import { Text } from '~/components/ui/text';
-import { Icon } from '~/components/ui/icon';
-import { AlertCircle, CheckCircle } from 'lucide-react-native';
+import { useUnifiedToast } from '~/components/ui/unified-toast';
 
 import { AuthContext } from '~/lib/AuthContext';
-import { getBackendUrl } from '~/lib/backendUrl';
+import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { BulkGrow, BulkGrowFlush } from '~/lib/growTypes';
 
 type GrowData = BulkGrow;
@@ -67,8 +61,7 @@ interface UseGrowFormLogicProps {
 export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLogicProps = {}) {
   const { token } = useContext(AuthContext);
   const router = useRouter();
-  const toast = useToast();
-  const { theme } = useTheme();
+  const { showError, showSuccess } = useUnifiedToast();
 
   const [growData, setGrowData] = useState<GrowData>(initialData || createEmptyBulkGrow());
   const [flushes, setFlushes] = useState<BulkGrowFlush[]>([]);
@@ -110,22 +103,7 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
       const fetchTek = async () => {
         setIsLoading(true);
         try {
-          const response = await fetch(`${getBackendUrl()}/bulk-grow-tek/${fromTek}`, {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (!response.ok) {
-            if (response.status === 401) {
-              router.replace('/login');
-              return;
-            }
-            throw new Error('Failed to load tek');
-          }
-
-          const tekData = await response.json();
+          const tekData = await apiClient.getBulkGrowTek(fromTek, token!);
 
           // Populate grow data from tek - copy all basic tek fields
           setGrowData((prev) => ({
@@ -140,6 +118,10 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
             space: '',
           }));
         } catch (err) {
+          if (isUnauthorizedError(err as Error)) {
+            router.replace('/login');
+            return;
+          }
           setError(err instanceof Error ? err.message : 'Failed to load tek');
         } finally {
           setIsLoading(false);
@@ -155,22 +137,7 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
     const fetchGrow = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`${getBackendUrl()}/grows/${growId}`, {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            router.replace('/login');
-            return;
-          }
-          throw new Error('Failed to load grow');
-        }
-
-        const data = await response.json();
+        const data = await apiClient.getBulkGrow(growId, token!);
 
         // Convert numeric fields to strings for form inputs
         setGrowData(data);
@@ -180,6 +147,10 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
           setFlushes(data.flushes);
         }
       } catch (err) {
+        if (isUnauthorizedError(err as Error)) {
+          router.replace('/login');
+          return;
+        }
         setError(err instanceof Error ? err.message : 'Failed to load grow');
       } finally {
         setIsLoading(false);
@@ -281,43 +252,6 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
     return totalCost || growData.total_cost || 0;
   };
 
-  // Toast functions
-  const showToast = (message: string, type: 'error' | 'success') => {
-    const toastId = Math.random().toString();
-    const bgColor = 'bg-background-0';
-    const textColor =
-      type === 'error'
-        ? theme === 'dark'
-          ? 'text-error-600'
-          : 'text-error-700'
-        : theme === 'dark'
-          ? 'text-green-600'
-          : 'text-green-700';
-    const descColor = 'text-typography-300';
-
-    toast.show({
-      id: `${type}-toast-${toastId}`,
-      placement: 'top',
-      duration: 3000,
-      render: () => (
-        <Toast variant="outline" className={`mx-auto mt-36 w-full p-4 ${bgColor}`}>
-          <VStack space="xs" className="w-full">
-            <HStack className="flex-row gap-2">
-              <Icon
-                as={type === 'error' ? AlertCircle : CheckCircle}
-                className={`mt-0.5 ${textColor}`}
-              />
-              <Text className={`font-semibold ${textColor}`}>
-                {type === 'error' ? 'Error' : 'Success'}
-              </Text>
-            </HStack>
-            <Text className={descColor}>{message}</Text>
-          </VStack>
-        </Toast>
-      ),
-    });
-  };
-
   // Delete grow
   const deleteGrow = async () => {
     if (!growId || growId === 'new') return;
@@ -326,21 +260,7 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
     setError(null);
 
     try {
-      const response = await fetch(`${getBackendUrl()}/grows/${growId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace('/login');
-          return;
-        }
-        throw new Error('Failed to delete grow');
-      }
+      await apiClient.deleteBulkGrow(growId, token!);
 
       setSuccess('Grow deleted successfully!');
       setShowDeleteModal(false);
@@ -350,6 +270,10 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
         router.replace('/grows');
       }, 1000);
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Failed to delete grow');
     } finally {
       setIsDeleting(false);
@@ -398,38 +322,14 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
         }
       });
 
-      let response;
       const isEdit = growId && growId !== 'new';
 
       if (isEdit) {
         // Update existing grow
-        response = await fetch(`${getBackendUrl()}/grows/${growId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(apiData),
-        });
+        await apiClient.updateBulkGrow(growId, apiData, token!);
       } else {
         // Create new grow
-        response = await fetch(`${getBackendUrl()}/grows/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(apiData),
-        });
-      }
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace('/login');
-          return;
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to save grow');
+        await apiClient.createBulkGrow(apiData, token!);
       }
 
       const successMessage = isEdit ? 'Grow updated successfully!' : 'Grow saved successfully!';
@@ -449,17 +349,17 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
   // Handle toast display
   useEffect(() => {
     if (error) {
-      showToast(error, 'error');
+      showError(error);
       setError(null);
     }
-  }, [error, theme]);
+  }, [error, showError]);
 
   useEffect(() => {
     if (success) {
-      showToast(success, 'success');
+      showSuccess(success);
       setSuccess(null);
     }
-  }, [success, theme]);
+  }, [success, showSuccess]);
 
   return {
     // Data

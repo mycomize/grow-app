@@ -17,7 +17,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { Avatar, AvatarFallbackText } from '@/components/ui/avatar';
 
 import { AuthContext } from '@/lib/AuthContext';
-import { getBackendUrl } from '@/lib/backendUrl';
+import { apiClient, isUnauthorizedError } from '@/lib/ApiClient';
 import { PasswordInput } from '@/components/ui/password-input';
 
 // Function to decode JWT token and extract username
@@ -103,37 +103,39 @@ export default function ChangePasswordScreen() {
       return;
     }
 
+    if (!token) {
+      setErrorMessage('Authentication required');
+      handleErrorToast();
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const response = await fetch(`${getBackendUrl()}/auth/change-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      await apiClient.post(
+        '/auth/change-password',
+        {
           current_password: currentPassword,
           new_password: newPassword,
-        }),
-      });
+        },
+        token
+      );
 
-      if (response.ok) {
-        handleSuccessToast();
-        // Clear form
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-        setPasswordsMatch(false);
-        // Navigate back after a short delay
-        setTimeout(() => {
-          router.back();
-        }, 2000);
-      } else {
-        const errorData = await response.json();
-        setErrorMessage(errorData.detail || 'Failed to change password');
-        handleErrorToast();
-      }
+      handleSuccessToast();
+      // Clear form
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordsMatch(false);
+      // Navigate back after a short delay
+      setTimeout(() => {
+        router.back();
+      }, 2000);
     } catch (error) {
-      setErrorMessage('Network error. Please try again.');
+      if (isUnauthorizedError(error as Error)) {
+        router.replace('/login');
+        return;
+      }
+      setErrorMessage((error as Error).message || 'Failed to change password');
       handleErrorToast();
     } finally {
       setIsLoading(false);

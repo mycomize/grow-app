@@ -5,7 +5,7 @@ import { Text } from '~/components/ui/text';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { ScrollView } from '~/components/ui/scroll-view';
-import { getBackendUrl } from '~/lib/backendUrl';
+import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { Icon } from '~/components/ui/icon';
 import { Input, InputField, InputIcon } from '~/components/ui/input';
 import { Pressable } from '~/components/ui/pressable';
@@ -20,7 +20,7 @@ import {
   ModalCloseButton,
 } from '~/components/ui/modal';
 import { Skeleton, SkeletonText } from '~/components/ui/skeleton';
-import { useToast, Toast } from '~/components/ui/toast';
+import { useUnifiedToast } from '~/components/ui/unified-toast';
 import {
   Plus,
   CirclePlus,
@@ -46,8 +46,7 @@ import { BulkGrowTek } from '~/lib/tekTypes';
 export default function TekLibraryScreen() {
   const { token } = useContext(AuthContext);
   const router = useRouter();
-  const toast = useToast();
-  const { theme } = useTheme();
+  const { showError, showSuccess } = useUnifiedToast();
 
   const [teks, setTeks] = useState<BulkGrowTek[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -67,40 +66,14 @@ export default function TekLibraryScreen() {
       setError(null);
       setTeks([]);
 
-      // Load both public and private teks
-      const [publicResponse, myResponse] = await Promise.all([
-        fetch(`${getBackendUrl()}/bulk-grow-tek/public?limit=100`, {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        }),
-        fetch(`${getBackendUrl()}/bulk-grow-tek/my?limit=100`, {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        }),
-      ]);
-
-      if (!publicResponse.ok || !myResponse.ok) {
-        if (publicResponse.status === 401 || myResponse.status === 401) {
-          router.replace('/login');
-          return;
-        }
-        throw new Error('Failed to load teks');
-      }
-
-      const [publicData, myData] = await Promise.all([publicResponse.json(), myResponse.json()]);
-
-      // Combine and deduplicate teks
-      const allTeks = [...publicData, ...myData];
-      const uniqueTeks = allTeks.filter(
-        (tek, index, self) => index === self.findIndex((t) => t.id === tek.id)
-      );
-
-      setTeks(uniqueTeks);
+      // Load teks using the encrypted API client
+      const allTeks = await apiClient.getBulkGrowTeks(token!);
+      setTeks(allTeks);
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Failed to load teks');
     } finally {
       setLoading(false);
@@ -178,49 +151,12 @@ export default function TekLibraryScreen() {
     })
   );
 
-  // Toast functions
-  const showToast = (message: string, type: 'error' | 'success') => {
-    const toastId = Math.random().toString();
-    const bgColor = 'bg-background-0';
-    const textColor =
-      type === 'error'
-        ? theme === 'dark'
-          ? 'text-error-600'
-          : 'text-error-700'
-        : theme === 'dark'
-          ? 'text-green-600'
-          : 'text-green-700';
-    const descColor = 'text-typography-300';
-
-    toast.show({
-      id: `${type}-toast-${toastId}`,
-      placement: 'top',
-      duration: 3000,
-      render: () => (
-        <Toast variant="outline" className={`mx-auto mt-32 w-full p-4 ${bgColor}`}>
-          <VStack space="xs" className="w-full">
-            <HStack className="flex-row gap-2">
-              <Icon
-                as={type === 'error' ? AlertCircle : CheckCircle}
-                className={`mt-0.5 ${textColor}`}
-              />
-              <Text className={`font-semibold ${textColor}`}>
-                {type === 'error' ? 'Error' : 'Success'}
-              </Text>
-            </HStack>
-            <Text className={descColor}>{message}</Text>
-          </VStack>
-        </Toast>
-      ),
-    });
-  };
-
   useEffect(() => {
     if (error) {
-      showToast(error, 'error');
+      showError(error);
       setError(null);
     }
-  }, [error, theme]);
+  }, [error, showError]);
 
   const handleTekPress = (tek: BulkGrowTek) => {
     router.push(`/teks/${tek.id}`);
@@ -236,26 +172,15 @@ export default function TekLibraryScreen() {
 
   const handleDeleteTek = async (tek: BulkGrowTek) => {
     try {
-      const response = await fetch(`${getBackendUrl()}/bulk-grow-tek/${tek.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace('/login');
-          return;
-        }
-        throw new Error('Failed to delete tek');
-      }
-
-      showToast('Tek deleted successfully', 'success');
+      await apiClient.deleteBulkGrowTek(tek.id.toString(), token!);
+      showSuccess('Tek deleted successfully');
       await fetchData(); // Refresh the list
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to delete tek', 'error');
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
+      showError(err instanceof Error ? err.message : 'Failed to delete tek');
     }
   };
 

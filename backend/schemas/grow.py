@@ -4,12 +4,15 @@ from datetime import date, datetime
 from backend.schemas.iot import IoTGateway
 from backend.schemas.bulk_stage import BulkGrowStages
 
+# Note: Removed Field validators for encrypted fields since they cannot validate encrypted strings
+
 # BulkGrowFlush schemas
 class BulkGrowFlushBase(BaseModel):
-    harvest_date: Optional[date] = None
-    wet_yield_grams: Optional[float] = None
-    dry_yield_grams: Optional[float] = None
-    concentration_mg_per_gram: Optional[float] = None
+    # All user data fields are now strings to support encryption
+    harvest_date: Optional[str] = None
+    wet_yield_grams: Optional[str] = None
+    dry_yield_grams: Optional[str] = None
+    concentration_mg_per_gram: Optional[str] = None
 
 class BulkGrowFlushCreate(BulkGrowFlushBase):
     bulk_grow_id: int
@@ -25,30 +28,32 @@ class BulkGrowFlush(BulkGrowFlushBase):
         from_attributes = True
 
 class BulkGrowBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=128)
+    # All user data fields are now strings to support encryption
+    # Removed Field constraints (min_length, max_length) as they don't work with encrypted data
+    name: Optional[str] = None
     description: Optional[str] = None
-    species: str = Field(..., min_length=1, max_length=64)
-    variant: Optional[str] = Field(None, max_length=64)
+    species: Optional[str] = None
+    variant: Optional[str] = None
     location: Optional[str] = None
-    tags: Optional[List[str]] = []
+    tags: Optional[str] = None  # JSON stored as encrypted string
 
-    inoculation_date: Optional[date] = None
+    inoculation_date: Optional[str] = None
     inoculation_status: Optional[str] = None
-    spawn_start_date: Optional[date] = None
+    spawn_start_date: Optional[str] = None
     spawn_colonization_status: Optional[str] = None
-    bulk_start_date: Optional[date] = None
+    bulk_start_date: Optional[str] = None
     bulk_colonization_status: Optional[str] = None
-    fruiting_start_date: Optional[date] = None
+    fruiting_start_date: Optional[str] = None
     fruiting_status: Optional[str] = None
-    full_spawn_colonization_date: Optional[date] = None
-    full_bulk_colonization_date: Optional[date] = None
-    fruiting_pin_date: Optional[date] = None
+    full_spawn_colonization_date: Optional[str] = None
+    full_bulk_colonization_date: Optional[str] = None
+    fruiting_pin_date: Optional[str] = None
     s2b_ratio: Optional[str] = None
 
     current_stage: Optional[str] = None
     status: Optional[str] = None
-    total_cost: Optional[float] = 0
-    stages: Optional[BulkGrowStages] = None
+    total_cost: Optional[str] = None  # Converted from float to support encryption
+    stages: Optional[str] = None  # JSON stored as encrypted string
 
 class BulkGrowCreate(BulkGrowBase):
     """Schema for creating a new grow"""
@@ -77,28 +82,29 @@ class BulkGrowComplete(BulkGrow):
 
 class BulkGrowUpdate(BaseModel):
     """Schema for updating a grow"""
+    # All user data fields are now strings to support encryption
     name: Optional[str] = None
     description: Optional[str] = None
     species: Optional[str] = None
     variant: Optional[str] = None
     location: Optional[str] = None
-    tags: Optional[List[str]] = None
+    tags: Optional[str] = None  # JSON stored as encrypted string
 
-    inoculation_date: Optional[date] = None
+    inoculation_date: Optional[str] = None
     inoculation_status: Optional[str] = None
-    spawn_start_date: Optional[date] = None
+    spawn_start_date: Optional[str] = None
     spawn_colonization_status: Optional[str] = None
-    bulk_start_date: Optional[date] = None
+    bulk_start_date: Optional[str] = None
     bulk_colonization_status: Optional[str] = None
-    fruiting_start_date: Optional[date] = None
+    fruiting_start_date: Optional[str] = None
     fruiting_status: Optional[str] = None
-    full_spawn_colonization_date: Optional[date] = None
-    full_bulk_colonization_date: Optional[date] = None
-    fruiting_pin_date: Optional[date] = None
+    full_spawn_colonization_date: Optional[str] = None
+    full_bulk_colonization_date: Optional[str] = None
+    fruiting_pin_date: Optional[str] = None
     s2b_ratio: Optional[str] = None
 
     current_stage: Optional[str] = None
     status: Optional[str] = None
-    total_cost: Optional[float] = 0
+    total_cost: Optional[str] = None  # Converted from float to support encryption
 
-    stages: Optional[BulkGrowStages] = None
+    stages: Optional[str] = None  # JSON stored as encrypted string

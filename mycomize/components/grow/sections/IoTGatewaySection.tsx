@@ -33,7 +33,7 @@ import {
 } from 'lucide-react-native';
 
 import { AuthContext } from '~/lib/AuthContext';
-import { getBackendUrl } from '~/lib/backendUrl';
+import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { IoTGateway, gatewayTypeLabels, IoTEntity, HAState } from '~/lib/iot';
 
 interface IoTGatewaySectionProps {
@@ -83,48 +83,40 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({
 
   // Fetch enabled sensors for a gateway
   const fetchEnabledSensors = async (gateway: IoTGateway) => {
-    if (!gateway.is_active) return;
+    if (!gateway.is_active || !token) return;
 
     setIsLoadingSensors(true);
     try {
       // Fetch enabled entities from backend
-      const entitiesResponse = await fetch(
-        `${getBackendUrl()}/iot-gateways/${gateway.id}/entities`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const entities: IoTEntity[] = await apiClient.getIoTEntities(gateway.id.toString(), token);
+      const enabledSensorEntities = entities.filter(
+        (entity) => entity.is_enabled && entity.entity_id.startsWith('sensor.')
       );
+      setEnabledSensors(enabledSensorEntities);
 
-      if (entitiesResponse.ok) {
-        const entities: IoTEntity[] = await entitiesResponse.json();
-        const enabledSensorEntities = entities.filter(
-          (entity) => entity.is_enabled && entity.entity_id.startsWith('sensor.')
-        );
-        setEnabledSensors(enabledSensorEntities);
+      // Fetch current states for enabled sensors
+      if (enabledSensorEntities.length > 0) {
+        const statesResponse = await fetch(`${gateway.api_url}/api/states`, {
+          headers: {
+            Authorization: `Bearer ${gateway.api_key}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
-        // Fetch current states for enabled sensors
-        if (enabledSensorEntities.length > 0) {
-          const statesResponse = await fetch(`${gateway.api_url}/api/states`, {
-            headers: {
-              Authorization: `Bearer ${gateway.api_key}`,
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (statesResponse.ok) {
-            const allStates: HAState[] = await statesResponse.json();
-            const enabledEntityIds = enabledSensorEntities.map((e) => e.entity_id);
-            const filteredStates = allStates.filter((state) =>
-              enabledEntityIds.includes(state.entity_id)
-            );
-            setSensorStates(filteredStates);
-          }
+        if (statesResponse.ok) {
+          const allStates: HAState[] = await statesResponse.json();
+          const enabledEntityIds = enabledSensorEntities.map((e) => e.entity_id);
+          const filteredStates = allStates.filter((state) =>
+            enabledEntityIds.includes(state.entity_id)
+          );
+          setSensorStates(filteredStates);
         }
       }
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       console.error('Failed to fetch enabled sensors:', err);
     } finally {
       setIsLoadingSensors(false);
@@ -138,27 +130,13 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({
 
   // Fetch available gateways
   const fetchGateways = async () => {
+    if (!token) return;
+
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`${getBackendUrl()}/iot-gateways/`, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          const router = useRouter();
-          router.replace('/login');
-          return;
-        }
-        throw new Error('Failed to fetch IoT gateways');
-      }
-
-      const data: IoTGateway[] = await response.json();
+      const data: IoTGateway[] = await apiClient.get('/iot-gateways/', token, 'IoTGateway', true);
       const formattedGateways = data.map((gateway) => ({
         ...gateway,
         created_at: new Date(gateway.created_at),
@@ -173,6 +151,10 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({
         await fetchEnabledSensors(linkedGateway);
       }
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Failed to fetch gateways');
     } finally {
       setIsLoading(false);
@@ -197,31 +179,17 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({
 
   // Link gateway to grow
   const linkGateway = async (gatewayId: number) => {
-    if (!growId) return;
+    if (!growId || !token) return;
 
     setIsLinking(gatewayId);
     setError(null);
     setSuccess(null);
 
     try {
-      const response = await fetch(`${getBackendUrl()}/iot-gateways/${gatewayId}/link/${growId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+      await apiClient.call({
+        endpoint: `/iot-gateways/${gatewayId}/link/${growId}`,
+        config: { method: 'PUT', token },
       });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          const router = useRouter();
-          router.replace('/login');
-          return;
-        }
-
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to link gateway');
-      }
 
       setSuccess('Gateway linked successfully!');
       onGatewayLinked?.(gatewayId);
@@ -229,6 +197,10 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({
       // Refresh gateways to show updated state
       await fetchGateways();
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Failed to link gateway');
     } finally {
       setIsLinking(null);
@@ -237,28 +209,17 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({
 
   // Unlink gateway from grow
   const unlinkGateway = async (gatewayId: number) => {
+    if (!token) return;
+
     setIsLinking(gatewayId);
     setError(null);
     setSuccess(null);
 
     try {
-      const response = await fetch(`${getBackendUrl()}/iot-gateways/${gatewayId}/unlink`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+      await apiClient.call({
+        endpoint: `/iot-gateways/${gatewayId}/unlink`,
+        config: { method: 'PUT', token },
       });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          const router = useRouter();
-          router.replace('/login');
-          return;
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to unlink gateway');
-      }
 
       setSuccess('Gateway unlinked successfully!');
       onGatewayUnlinked?.();
@@ -270,6 +231,10 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({
       // Refresh gateways to show updated state
       fetchGateways();
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Failed to unlink gateway');
     } finally {
       setIsLinking(null);

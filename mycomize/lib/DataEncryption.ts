@@ -1,0 +1,374 @@
+import { getEncryptionService } from './EncryptionService';
+
+/**
+ * ALLOWLIST APPROACH: Explicit list of fields that should NEVER be encrypted
+ * All other fields are encrypted by default unless explicitly allowed
+ */
+const SYSTEM_FIELDS_ALLOWLIST = [
+  // Core system identifiers
+  'id',
+  'created_at',
+  'updated_at',
+  'last_updated',
+
+  // Relationship foreign keys
+  'user_id',
+  'created_by',
+  'bulk_grow_id',
+  'gateway_id',
+
+  // System flags and metadata
+  'is_active',
+  'is_public',
+  'is_enabled',
+  'usage_count',
+
+  // Entity type identifiers
+  'type',
+  'entity_type',
+
+  // Authentication fields (must remain unencrypted for system to function)
+  'username',
+  'hashed_password',
+] as const;
+
+/**
+ * Model-specific allowlists for fields that should never be encrypted
+ * These extend the global SYSTEM_FIELDS_ALLOWLIST
+ */
+const MODEL_SPECIFIC_ALLOWLISTS = {
+  User: [] as const, // No additional unencrypted fields beyond system fields
+  BulkGrow: [] as const, // No additional unencrypted fields beyond system fields
+  BulkGrowFlush: [] as const, // No additional unencrypted fields beyond system fields
+  BulkGrowTek: [] as const, // No additional unencrypted fields beyond system fields (is_public handled separately)
+  IoTGateway: [] as const, // No additional unencrypted fields beyond system fields
+  IoTEntity: [] as const, // No additional unencrypted fields beyond system fields
+} as const;
+
+/**
+ * Configuration for encryption behavior by data type
+ * Following the security principle: encrypt by default, explicit allowlist for unencrypted
+ */
+export const ENCRYPTION_CONFIG = {
+  User: {
+    encryptionStrategy: 'encrypt_all_except_allowlist' as const,
+    allowedUnencryptedFields: [...SYSTEM_FIELDS_ALLOWLIST, ...MODEL_SPECIFIC_ALLOWLISTS.User],
+  },
+
+  BulkGrow: {
+    encryptionStrategy: 'encrypt_all_except_allowlist' as const,
+    allowedUnencryptedFields: [...SYSTEM_FIELDS_ALLOWLIST, ...MODEL_SPECIFIC_ALLOWLISTS.BulkGrow],
+  },
+
+  BulkGrowFlush: {
+    encryptionStrategy: 'encrypt_all_except_allowlist' as const,
+    allowedUnencryptedFields: [
+      ...SYSTEM_FIELDS_ALLOWLIST,
+      ...MODEL_SPECIFIC_ALLOWLISTS.BulkGrowFlush,
+    ],
+  },
+
+  BulkGrowTek: {
+    encryptionStrategy: 'conditional_on_public_flag' as const,
+    allowedUnencryptedFields: [
+      ...SYSTEM_FIELDS_ALLOWLIST,
+      ...MODEL_SPECIFIC_ALLOWLISTS.BulkGrowTek,
+    ],
+    conditionalField: 'is_public', // If true, store in cleartext; if false, encrypt
+  },
+
+  IoTGateway: {
+    encryptionStrategy: 'encrypt_all_except_allowlist' as const,
+    allowedUnencryptedFields: [...SYSTEM_FIELDS_ALLOWLIST, ...MODEL_SPECIFIC_ALLOWLISTS.IoTGateway],
+  },
+
+  IoTEntity: {
+    encryptionStrategy: 'encrypt_all_except_allowlist' as const,
+    allowedUnencryptedFields: [...SYSTEM_FIELDS_ALLOWLIST, ...MODEL_SPECIFIC_ALLOWLISTS.IoTEntity],
+  },
+} as const;
+
+export type DataType = keyof typeof ENCRYPTION_CONFIG;
+
+/**
+ * Generic encryption function for any field value
+ */
+async function encryptField(value: any): Promise<string> {
+  if (value === null || value === undefined) return '';
+
+  const encryptionService = getEncryptionService();
+  if (!encryptionService.isInitialized()) {
+    throw new Error('Encryption not initialized');
+  }
+
+  if (typeof value === 'object') {
+    return await encryptionService.encryptJSON(value);
+  }
+  return await encryptionService.encrypt(String(value));
+}
+
+/**
+ * Generic decryption function for any field value
+ */
+async function decryptField(value: string): Promise<any> {
+  if (!value) return '';
+
+  const encryptionService = getEncryptionService();
+  if (!encryptionService.isInitialized()) {
+    throw new Error('Encryption not initialized');
+  }
+
+  if (!encryptionService.isEncrypted(value)) {
+    return value; // Return as-is if not encrypted
+  }
+
+  try {
+    // Try to decrypt as JSON first, fall back to string
+    return await encryptionService.decryptJSON(value);
+  } catch {
+    return await encryptionService.decrypt(value);
+  }
+}
+
+/**
+ * Determines if a specific field should be encrypted based on allowlist
+ */
+function shouldEncryptField(dataType: DataType, fieldName: string, data: any): boolean {
+  const config = ENCRYPTION_CONFIG[dataType];
+
+  // Check if field is in allowlist (should NOT be encrypted)
+  if (config.allowedUnencryptedFields.includes(fieldName as any)) {
+    return false;
+  }
+
+  // Handle BulkGrowTek special case - if is_public=true, don't encrypt any user data fields
+  if (dataType === 'BulkGrowTek' && config.encryptionStrategy === 'conditional_on_public_flag') {
+    const isPublic = data[config.conditionalField!];
+    if (isPublic) {
+      return false; // Don't encrypt if public
+    }
+  }
+
+  // Encrypt all fields not in allowlist
+  return true;
+}
+
+/**
+ * Get all field names that should be encrypted for a given data object
+ */
+function getEncryptableFields(dataType: DataType, data: any): string[] {
+  const allFields = Object.keys(data);
+  return allFields.filter((field) => shouldEncryptField(dataType, field, data));
+}
+
+/**
+ * Encrypts data object based on allowlist configuration
+ */
+export async function encryptData<T extends Record<string, any>>(
+  dataType: DataType,
+  data: T
+): Promise<T> {
+  const encryptedData = { ...data } as any;
+  const fieldsToEncrypt = getEncryptableFields(dataType, data);
+
+  // Encrypt each field that's not in the allowlist
+  for (const field of fieldsToEncrypt) {
+    if (encryptedData[field] !== undefined && encryptedData[field] !== null) {
+      encryptedData[field] = await encryptField(encryptedData[field]);
+    }
+  }
+
+  // Handle nested arrays (like flushes in BulkGrow)
+  if (dataType === 'BulkGrow' && encryptedData.flushes && Array.isArray(encryptedData.flushes)) {
+    encryptedData.flushes = await Promise.all(
+      encryptedData.flushes.map(async (flush: any) => await encryptData('BulkGrowFlush', flush))
+    );
+  }
+
+  return encryptedData as T;
+}
+
+/**
+ * Decrypts data object based on allowlist configuration
+ */
+export async function decryptData<T extends Record<string, any>>(
+  dataType: DataType,
+  data: T
+): Promise<T> {
+  const encryptionService = getEncryptionService();
+  if (!encryptionService.isInitialized()) {
+    throw new Error('Encryption not initialized');
+  }
+
+  const decryptedData = { ...data } as any;
+  const fieldsToDecrypt = getEncryptableFields(dataType, data);
+
+  // Decrypt each field that would have been encrypted
+  for (const field of fieldsToDecrypt) {
+    if (decryptedData[field]) {
+      try {
+        decryptedData[field] = await decryptField(decryptedData[field]);
+
+        // Handle type conversion for specific fields
+        if (dataType === 'BulkGrow' && field === 'total_cost') {
+          decryptedData[field] = parseFloat(decryptedData[field]) || 0;
+        }
+        if (
+          dataType === 'BulkGrowFlush' &&
+          ['wet_yield_grams', 'dry_yield_grams', 'concentration_mg_per_gram'].includes(field)
+        ) {
+          decryptedData[field] = parseFloat(decryptedData[field]) || 0;
+        }
+      } catch (error) {
+        console.warn(`Failed to decrypt field ${field} for ${dataType}:`, error);
+        // Keep original value if decryption fails
+      }
+    }
+  }
+
+  // Handle nested arrays (like flushes in BulkGrow)
+  if (dataType === 'BulkGrow' && decryptedData.flushes && Array.isArray(decryptedData.flushes)) {
+    decryptedData.flushes = await Promise.all(
+      decryptedData.flushes.map(async (flush: any) => await decryptData('BulkGrowFlush', flush))
+    );
+  }
+
+  return decryptedData as T;
+}
+
+/**
+ * Convenience function to encrypt array of data
+ */
+export async function encryptDataArray<T extends Record<string, any>>(
+  dataType: DataType,
+  dataArray: T[]
+): Promise<T[]> {
+  return await Promise.all(dataArray.map((item) => encryptData(dataType, item)));
+}
+
+/**
+ * Convenience function to decrypt array of data
+ */
+export async function decryptDataArray<T extends Record<string, any>>(
+  dataType: DataType,
+  dataArray: T[]
+): Promise<T[]> {
+  return await Promise.all(dataArray.map((item) => decryptData(dataType, item)));
+}
+
+/**
+ * Higher-order function to wrap API calls with automatic encryption/decryption
+ */
+export function withEncryption<
+  TRequest extends Record<string, any>,
+  TResponse extends Record<string, any>,
+>(requestDataType: DataType | null, responseDataType: DataType | null) {
+  return function encryptionWrapper(apiCall: (data: TRequest) => Promise<TResponse>) {
+    return async function wrappedApiCall(data: TRequest): Promise<TResponse> {
+      // Encrypt request data if needed
+      let processedRequestData = data;
+      if (requestDataType) {
+        try {
+          processedRequestData = await encryptData(requestDataType, data);
+        } catch (error) {
+          console.error(`Failed to encrypt ${requestDataType} request data:`, error);
+          throw new Error(`Failed to encrypt ${requestDataType} data`);
+        }
+      }
+
+      // Make API call
+      const response = await apiCall(processedRequestData);
+
+      // Decrypt response data if needed
+      if (responseDataType) {
+        try {
+          return await decryptData(responseDataType, response);
+        } catch (error) {
+          console.error(`Failed to decrypt ${responseDataType} response data:`, error);
+          throw new Error(`Failed to decrypt ${responseDataType} data`);
+        }
+      }
+
+      return response;
+    };
+  };
+}
+
+/**
+ * Wrapper for API calls that return arrays
+ */
+export function withEncryptionArray<TResponse extends Record<string, any>>(
+  responseDataType: DataType
+) {
+  return function encryptionArrayWrapper(apiCall: () => Promise<TResponse[]>) {
+    return async function wrappedApiCall(): Promise<TResponse[]> {
+      const response = await apiCall();
+
+      try {
+        return await decryptDataArray(responseDataType, response);
+      } catch (error) {
+        console.error(`Failed to decrypt ${responseDataType} array response:`, error);
+        throw new Error(`Failed to decrypt ${responseDataType} array data`);
+      }
+    };
+  };
+}
+
+/**
+ * Check if data appears to be encrypted (for debugging/validation)
+ */
+export function isDataEncrypted(data: any): boolean {
+  if (typeof data === 'string') {
+    const encryptionService = getEncryptionService();
+    return encryptionService.isEncrypted(data);
+  }
+
+  if (typeof data === 'object' && data !== null) {
+    return Object.values(data).some(
+      (value) => typeof value === 'string' && getEncryptionService().isEncrypted(value)
+    );
+  }
+
+  return false;
+}
+
+/**
+ * Validate encryption configuration and identify any fields that might be missed
+ * This helps enforce the "encrypt by default" rule by showing which fields will be encrypted
+ */
+export function validateEncryptionConfig(
+  dataType: DataType,
+  sampleData: Record<string, any>
+): {
+  fieldsToEncrypt: string[];
+  fieldsToKeepUnencrypted: string[];
+} {
+  const config = ENCRYPTION_CONFIG[dataType];
+  const allFields = Object.keys(sampleData);
+
+  const fieldsToKeepUnencrypted: string[] = [];
+  const fieldsToEncrypt: string[] = [];
+
+  for (const field of allFields) {
+    if (shouldEncryptField(dataType, field, sampleData)) {
+      fieldsToEncrypt.push(field);
+    } else {
+      fieldsToKeepUnencrypted.push(field);
+    }
+  }
+
+  return {
+    fieldsToEncrypt,
+    fieldsToKeepUnencrypted,
+  };
+}
+
+/**
+ * Debug helper to show encryption plan for data
+ */
+export function getEncryptionPlan(dataType: DataType, sampleData: Record<string, any>): void {
+  const plan = validateEncryptionConfig(dataType, sampleData);
+  console.log(`Encryption plan for ${dataType}:`);
+  console.log('✅ Fields to encrypt:', plan.fieldsToEncrypt);
+  console.log('🔓 Fields to keep unencrypted:', plan.fieldsToKeepUnencrypted);
+}

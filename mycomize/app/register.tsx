@@ -15,7 +15,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Image } from '@/components/ui/image';
 import { Link, LinkText } from '@/components/ui/link';
 import { Text } from '~/components/ui/text';
-import { useToast, Toast, ToastTitle, ToastDescription } from '@/components/ui/toast';
+import { useUnifiedToast } from '~/components/ui/unified-toast';
 import { useRouter } from 'expo-router';
 import { CircleX, UserPlus, LogIn } from 'lucide-react-native';
 import { Icon } from '@/components/ui/icon';
@@ -24,10 +24,9 @@ import MycomizeLogo from '~/assets/mycomize-logo.svg';
 
 export default function SignUpScreen() {
   const router = useRouter();
-  const toast = useToast();
+  const { showError } = useUnifiedToast();
 
   const authState = useContext(AuthContext);
-  const [toastId, setToastId] = useState(0);
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -35,7 +34,6 @@ export default function SignUpScreen() {
   const [confirmFocused, setConfirmFocused] = useState(false);
   const [passwordsMatch, setPasswordsMatch] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
 
   const handleConfirmPassword = (text: string) => {
     setConfirmPassword(text);
@@ -54,46 +52,15 @@ export default function SignUpScreen() {
       // register returns an error message or null on success
       const error = await authState.register(username, password);
       if (error) {
-        setErrorMessage(error);
-        handleErrorToast();
+        showError(error);
       }
 
       // register handles redirect to /login on success
     } catch (error) {
-      setErrorMessage('An unexpected error occurred. Please try again.');
+      showError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleErrorToast = () => {
-    if (!toast.isActive('toast-' + toastId)) {
-      showNewErrorToast();
-    }
-  };
-
-  const showNewErrorToast = () => {
-    const newId = Math.random();
-    setToastId(newId);
-
-    toast.show({
-      id: 'toast-' + newId,
-      placement: 'top',
-      duration: 3000,
-      render: ({ id }) => {
-        return (
-          <Toast variant="outline" className="mx-auto mt-36 w-full bg-background-0 p-4">
-            <VStack space="xs" className="w-full">
-              <HStack className="flex-row gap-2">
-                <Icon as={CircleX} className="mt-0.5 stroke-error-500 " />
-                <ToastTitle className="font-semibold text-error-500 ">Error</ToastTitle>
-              </HStack>
-              <ToastDescription className="text-typography-200 ">{errorMessage}</ToastDescription>
-            </VStack>
-          </Toast>
-        );
-      },
-    });
   };
 
   return (

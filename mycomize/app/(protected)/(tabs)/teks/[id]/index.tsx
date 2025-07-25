@@ -5,7 +5,7 @@ import { Text } from '~/components/ui/text';
 import { Spinner } from '~/components/ui/spinner';
 
 import { AuthContext } from '~/lib/AuthContext';
-import { getBackendUrl } from '~/lib/backendUrl';
+import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { BulkGrowTekData, BulkGrowTek } from '~/lib/tekTypes';
 import { useTekFormLogic } from '~/lib/useTekFormLogic';
 import { TekForm } from '~/components/tek/TekForm';
@@ -20,31 +20,13 @@ export default function TekEditScreen() {
 
   // Load tek data
   const loadTek = async () => {
-    if (!id) return;
+    if (!id || !token) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`${getBackendUrl()}/bulk-grow-tek/${id}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace('/login');
-          return;
-        }
-        if (response.status === 404) {
-          throw new Error('Tek not found');
-        }
-        throw new Error('Failed to load tek');
-      }
-
-      const tek: BulkGrowTek = await response.json();
+      const tek: BulkGrowTek = await apiClient.getBulkGrowTek(id as string, token);
 
       // Convert tek to editable format
       const editableTek: BulkGrowTekData = {
@@ -65,6 +47,10 @@ export default function TekEditScreen() {
 
       setLoadedTekData(editableTek);
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Failed to load tek');
     } finally {
       setIsLoading(false);

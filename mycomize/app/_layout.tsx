@@ -4,9 +4,9 @@ import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '~/lib/AuthContext';
+import { EncryptionProvider } from '~/lib/EncryptionContext';
 import { ThemeProvider, useTheme } from '@/components/ui/themeprovider/themeprovider';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Wrapper component to use the theme context
@@ -44,6 +44,7 @@ function ThemedApp() {
           <Stack.Screen name="(protected)" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="register" options={{ headerShown: false }} />
+          <Stack.Screen name="encryption-setup" options={{ headerShown: false }} />
         </Stack>
       </GluestackUIProvider>
     </SafeAreaProvider>
@@ -54,9 +55,11 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
-        <ThemeProvider>
-          <ThemedApp />
-        </ThemeProvider>
+        <EncryptionProvider>
+          <ThemeProvider>
+            <ThemedApp />
+          </ThemeProvider>
+        </EncryptionProvider>
       </AuthProvider>
     </GestureHandlerRootView>
   );

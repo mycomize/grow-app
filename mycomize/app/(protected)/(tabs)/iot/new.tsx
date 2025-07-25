@@ -11,7 +11,7 @@ import { Button, ButtonText } from '~/components/ui/button';
 import { Alert, AlertIcon, AlertText } from '~/components/ui/alert';
 import { InfoIcon, Eye, EyeOff } from 'lucide-react-native';
 import { AuthContext } from '~/lib/AuthContext';
-import { getBackendUrl } from '~/lib/backendUrl';
+import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { IoTGatewayCreate, gatewayTypes, gatewayTypeLabels } from '~/lib/iot';
 import { Textarea, TextareaInput } from '~/components/ui/textarea';
 import { Icon } from '~/components/ui/icon';
@@ -43,31 +43,22 @@ export default function NewIoTIntegrationScreen() {
       return;
     }
 
+    if (!token) {
+      setError('Authentication required');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const url = getBackendUrl();
-      const response = await fetch(`${url}/iot-gateways/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace('/login');
-          return;
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to create integration');
-      }
-
+      await apiClient.createIoTGateway(formData, token);
       // Navigate back to the IoT list
       router.back();
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);

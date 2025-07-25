@@ -5,11 +5,12 @@ from enum import Enum
 from backend.models.iot import IoTGatewayType
 
 class IoTGatewayBase(BaseModel):
-    name: str
-    type: str
-    api_url: str
-    api_key: str
-    is_active: bool = False
+    # All user data fields are now strings to support encryption
+    name: Optional[str] = None
+    type: str  # System field - remains unencrypted
+    api_url: Optional[str] = None
+    api_key: Optional[str] = None
+    is_active: bool = False  # System field - remains unencrypted
     description: Optional[str] = None
 
 class IoTGatewayTypeEnum(str, Enum):
@@ -18,12 +19,6 @@ class IoTGatewayTypeEnum(str, Enum):
 
 class IoTGatewayCreate(IoTGatewayBase):
     """Schema for creating a new IoT gateway"""
-    @validator('name')
-    def name_must_not_be_empty(cls, v):
-        if not v or not v.strip():
-            raise ValueError('Gateway name cannot be empty')
-        return v.strip()
-
     @validator('type')
     def type_must_be_valid(cls, v):
         if not v or not v.strip():
@@ -36,17 +31,8 @@ class IoTGatewayCreate(IoTGatewayBase):
 
         return v.strip()
 
-    @validator('api_url')
-    def api_url_must_not_be_empty(cls, v):
-        if not v or not v.strip():
-            raise ValueError('API URL cannot be empty')
-        return v.strip()
-
-    @validator('api_key')
-    def api_key_must_not_be_empty(cls, v):
-        if not v or not v.strip():
-            raise ValueError('API key cannot be empty')
-        return v.strip()
+    # Removed validators for encrypted fields (name, api_url, api_key)
+    # These will be encrypted strings and cannot be validated at the schema level
 
 class IoTGateway(IoTGatewayBase):
     """Schema for returning a IoT gateway"""
@@ -69,12 +55,6 @@ class IoTGatewayUpdate(BaseModel):
     api_key: Optional[str] = None
     is_active: Optional[bool] = None
 
-    @validator('name')
-    def name_must_not_be_empty(cls, v):
-        if v is not None and not v.strip():
-            raise ValueError('Gateway name cannot be empty')
-        return v.strip() if v else v
-
     @validator('type')
     def type_must_be_valid(cls, v):
         if v is not None and not v.strip():
@@ -87,14 +67,5 @@ class IoTGatewayUpdate(BaseModel):
 
         return v.strip() if v else v
 
-    @validator('api_url')
-    def api_url_must_not_be_empty(cls, v):
-        if v is not None and not v.strip():
-            raise ValueError('API URL cannot be empty')
-        return v.strip() if v else v
-
-    @validator('api_key')
-    def api_key_must_not_be_empty(cls, v):
-        if v is not None and not v.strip():
-            raise ValueError('API key cannot be empty')
-        return v.strip() if v else v
+    # Removed validators for encrypted fields (name, api_url, api_key, description)
+    # These will be encrypted strings and cannot be validated at the schema level

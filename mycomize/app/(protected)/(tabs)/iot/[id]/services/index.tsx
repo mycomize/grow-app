@@ -17,7 +17,7 @@ import { Alert, AlertIcon, AlertText } from '~/components/ui/alert';
 import { Search, X, Power, AlertCircle, Filter, ChevronRight } from 'lucide-react-native';
 
 import { AuthContext } from '~/lib/AuthContext';
-import { getBackendUrl } from '~/lib/backendUrl';
+import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { IoTGateway, HAService } from '~/lib/iot';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import { getSwitchColors } from '~/lib/switchUtils';
@@ -43,24 +43,7 @@ export default function ServicesScreen() {
   // Fetch gateway details
   const fetchGateway = useCallback(async () => {
     try {
-      const url = getBackendUrl();
-      const response = await fetch(`${url}/iot-gateways/${id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace('/login');
-          return;
-        }
-        throw new Error('Failed to fetch integration details');
-      }
-
-      const data: IoTGateway = await response.json();
+      const data: IoTGateway = await apiClient.getIoTGateway(id as string, token!);
       setGateway(data);
 
       // Fetch services if active
@@ -70,6 +53,10 @@ export default function ServicesScreen() {
         setError('Integration is not active. Please connect it first.');
       }
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);

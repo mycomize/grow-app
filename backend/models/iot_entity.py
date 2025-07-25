@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, JSON, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from backend.database import Base
@@ -21,12 +21,13 @@ class IoTEntity(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     gateway_id = Column(Integer, ForeignKey("iot_gateways.id"), nullable=False)
-    entity_id = Column(String(256), nullable=False, index=True)
+    # All user data fields converted to TEXT to support encryption
+    entity_id = Column(Text, nullable=False)  # Removed index - can't index encrypted data
     entity_type = Column(String(64), nullable=False)
-    friendly_name = Column(String(256), nullable=True)
+    friendly_name = Column(Text, nullable=True)
     is_enabled = Column(Boolean, default=True)
-    last_state = Column(String(64), nullable=True)
-    last_attributes = Column(JSON, nullable=True)
+    last_state = Column(Text, nullable=True)
+    last_attributes = Column(Text, nullable=True)  # JSON stored as encrypted string
     last_updated = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.now, nullable=False)
     

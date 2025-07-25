@@ -131,18 +131,34 @@ export function TekForm({
                   </HStack>
 
                   {/* Public/Private */}
-                  <HStack className="items-center justify-between">
-                    <VStack className="flex-1" space="xs">
-                      <Text className="font-medium">Make Public</Text>
-                      <Text className="text-sm text-typography-500">
-                        Allow other mycomize users to view and use this tek
+                  <VStack space="sm">
+                    <HStack className="items-center justify-between">
+                      <VStack className="flex-1" space="xs">
+                        <Text className="font-medium">Make Public</Text>
+                        <Text className="text-sm text-typography-500">
+                          {tekData.is_public
+                            ? 'This tek is public and visible to all mycomize users'
+                            : 'Allow other mycomize users to view and use this tek'}
+                        </Text>
+                        {tekData.is_public && (
+                          <Text className="text-xs text-typography-400">
+                            Public teks cannot be made private again
+                          </Text>
+                        )}
+                      </VStack>
+                      <Switch
+                        value={tekData.is_public}
+                        onValueChange={(value) => onUpdateField('is_public', value)}
+                        isDisabled={tekData.is_public}
+                      />
+                    </HStack>
+                    {!tekData.is_public && (
+                      <Text className="rounded-md bg-orange-50 p-2 text-xs text-orange-600">
+                        ⚠️ Warning: Making a tek public is permanent. Once public, it cannot be made
+                        private again.
                       </Text>
-                    </VStack>
-                    <Switch
-                      value={tekData.is_public}
-                      onValueChange={(value) => onUpdateField('is_public', value)}
-                    />
-                  </HStack>
+                    )}
+                  </VStack>
 
                   {/* Tags */}
                   <TagManager

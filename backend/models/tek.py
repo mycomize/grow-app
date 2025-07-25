@@ -8,13 +8,15 @@ class BulkGrowTek(Base):
     __tablename__ = "bulk_grow_teks"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(128), nullable=False)
+    # All user data fields converted to TEXT to support encryption
+    # These will be encrypted when is_public=False, cleartext when is_public=True
+    name = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
-    species = Column(String(64), nullable=False, index=True)
-    variant = Column(String(64), nullable=True, index=True)
+    species = Column(Text, nullable=False)  # Removed index - can't index encrypted data
+    variant = Column(Text, nullable=True)   # Removed index - can't index encrypted data
 
     # Bulk grow tek type
-    tags = Column(JSON, nullable=True) # array of strings
+    tags = Column(Text, nullable=True) # JSON stored as encrypted string
 
     # Privacy and ownership
     is_public = Column(Boolean, default=False, index=True)  # Indexed for search
@@ -27,7 +29,7 @@ class BulkGrowTek(Base):
     # Each stage has: Item list, EnvironmentalConditions list, Task list, and notes. These
     # lists and notes are optional though (lists may be empty, notes may be empty). See
     # backend/schemas/bulk_stage.py for definitions.
-    stages = Column(JSON, nullable=True)
+    stages = Column(Text, nullable=True)  # JSON stored as encrypted string
 
     # Usage statistics (for tek popularity)
     usage_count = Column(Integer, default=0)

@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from backend.database import Base
@@ -16,10 +16,11 @@ class IoTGateway(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     type = Column(String(64), nullable=False)
-    name = Column(String, index=True, nullable=False)
-    description = Column(String, nullable=True)
-    api_url = Column(String(256), nullable=False)
-    api_key = Column(String(256), nullable=False)
+    # All user data fields converted to TEXT to support encryption
+    name = Column(Text, nullable=False)  # Removed index - can't index encrypted data
+    description = Column(Text, nullable=True)
+    api_url = Column(Text, nullable=False)
+    api_key = Column(Text, nullable=False)
     is_active = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.now, nullable=False)
 

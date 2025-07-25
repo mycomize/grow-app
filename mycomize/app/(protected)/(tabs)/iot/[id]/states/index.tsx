@@ -29,7 +29,7 @@ import {
 import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 
 import { AuthContext } from '~/lib/AuthContext';
-import { getBackendUrl } from '~/lib/backendUrl';
+import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { IoTGateway, HAState, IoTEntity, IoTEntityCreate } from '~/lib/iot';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import { getSwitchColors } from '~/lib/switchUtils';
@@ -67,25 +67,10 @@ export default function EntityStatesScreen() {
 
   // Fetch gateway details
   const fetchGateway = useCallback(async () => {
+    if (!id || !token) return;
+
     try {
-      const url = getBackendUrl();
-      const response = await fetch(`${url}/iot-gateways/${id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace('/login');
-          return;
-        }
-        throw new Error('Failed to fetch integration details');
-      }
-
-      const data: IoTGateway = await response.json();
+      const data: IoTGateway = await apiClient.getIoTGateway(id as string, token);
       setGateway(data);
 
       // Fetch enabled entities and states if active
@@ -95,31 +80,30 @@ export default function EntityStatesScreen() {
         setError('Integration is not active. Please connect it first.');
       }
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [id, token]);
+  }, [id, token, router]);
 
   // Fetch enabled entities from backend
   const fetchEnabledEntities = async (gatewayId: number) => {
-    try {
-      const url = getBackendUrl();
-      const response = await fetch(`${url}/iot-gateways/${gatewayId}/entities`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    if (!token) return;
 
-      if (response.ok) {
-        const entities: IoTEntity[] = await response.json();
-        setEnabledEntities(entities);
-        setEnabledStates(new Set(entities.filter((e) => e.is_enabled).map((e) => e.entity_id)));
-      }
+    try {
+      const entities: IoTEntity[] = await apiClient.getIoTEntities(gatewayId.toString(), token);
+      setEnabledEntities(entities);
+      setEnabledStates(new Set(entities.filter((e) => e.is_enabled).map((e) => e.entity_id)));
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       console.error('Failed to fetch enabled entities:', err);
     }
   };
@@ -157,10 +141,9 @@ export default function EntityStatesScreen() {
     entityType: string,
     friendlyName?: string
   ) => {
-    if (!gateway) return;
+    if (!gateway || !token) return;
 
     try {
-      const url = getBackendUrl();
       const entityData: IoTEntityCreate = {
         gateway_id: gateway.id,
         entity_id: entityId,
@@ -169,49 +152,32 @@ export default function EntityStatesScreen() {
         is_enabled: true,
       };
 
-      const response = await fetch(`${url}/iot-gateways/${gateway.id}/entities`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(entityData),
-      });
-
-      if (response.ok) {
-        await fetchEnabledEntities(gateway.id);
-      } else {
-        const errorData = await response.json();
-        console.error('Failed to add entity:', errorData);
-      }
+      await apiClient.createIoTEntity(gateway.id.toString(), entityData, token);
+      await fetchEnabledEntities(gateway.id);
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       console.error('Failed to add entity:', err);
     }
   };
 
   // Remove entity from gateway
   const removeEntityFromGateway = async (entityId: string) => {
-    if (!gateway) return;
+    if (!gateway || !token) return;
 
     try {
       const entity = enabledEntities.find((e) => e.entity_id === entityId);
       if (!entity) return;
 
-      const url = getBackendUrl();
-      const response = await fetch(`${url}/iot-gateways/${gateway.id}/entities/${entity.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        await fetchEnabledEntities(gateway.id);
-      } else {
-        console.error('Failed to remove entity');
-      }
+      await apiClient.deleteIoTEntity(gateway.id.toString(), entity.id.toString(), token);
+      await fetchEnabledEntities(gateway.id);
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       console.error('Failed to remove entity:', err);
     }
   };
