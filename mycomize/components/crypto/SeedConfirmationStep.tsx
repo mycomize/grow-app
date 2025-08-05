@@ -182,7 +182,7 @@ export function SeedConfirmationStep({
           )}
 
           {/* Seed Password Section */}
-          <VStack space="lg" className="mt-6">
+          <VStack space="lg" className="mt-4">
             <HStack className="items-start justify-between">
               <VStack space="xs" className="mr-4 flex-1">
                 <HStack space="sm" className="items-center">
@@ -195,7 +195,16 @@ export function SeedConfirmationStep({
                   <Checkbox
                     value="use-password"
                     isChecked={usePassword}
-                    onChange={() => setUsePassword(!usePassword)}
+                    onChange={() => {
+                      const newUsePassword = !usePassword;
+                      setUsePassword(newUsePassword);
+
+                      // Reset password fields when deselecting password option
+                      if (!newUsePassword) {
+                        setEncryptionPassword('');
+                        setConfirmPassword('');
+                      }
+                    }}
                     size="md"
                     className="ml-auto">
                     <CheckboxIndicator>

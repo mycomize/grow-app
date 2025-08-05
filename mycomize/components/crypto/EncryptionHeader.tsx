@@ -34,7 +34,7 @@ export function EncryptionHeader({ currentStep, totalSteps }: EncryptionHeaderPr
       </Box>
 
       {/* Header */}
-      <HStack className="mx-4 items-center" space="sm">
+      <HStack className="mx-4 mt-3 items-center" space="sm">
         <Icon as={Shield} size="xl" className="text-typography-500" />
         <Heading size="xl" className="text-center text-typography-800">
           Encryption Setup

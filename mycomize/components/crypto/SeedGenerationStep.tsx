@@ -94,10 +94,9 @@ export function SeedGenerationStep({ onBack, onNext }: SeedGenerationStepProps) 
                 </Button>
               )}
             </HStack>
-            <Text className="mt-1">
-              Enter your 12-word seed phrase. This is the secret used to derive your encryption key.
-              You can generate one below or, if you know what you are doing, you can enter one your
-              self.
+            <Text className="mt-2">
+              Generate your 12-word seed phrase. This is the secret used to derive your encryption
+              key.
             </Text>
           </VStack>
 
