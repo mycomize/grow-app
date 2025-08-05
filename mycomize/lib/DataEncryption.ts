@@ -38,7 +38,7 @@ const SYSTEM_FIELDS_ALLOWLIST = [
  */
 const MODEL_SPECIFIC_ALLOWLISTS = {
   User: [] as const, // No additional unencrypted fields beyond system fields
-  BulkGrow: [] as const, // No additional unencrypted fields beyond system fields
+  BulkGrow: ['flushes'] as const, // flushes handled by special array processing logic
   BulkGrowFlush: [] as const, // No additional unencrypted fields beyond system fields
   BulkGrowTek: [] as const, // No additional unencrypted fields beyond system fields (is_public handled separately)
   IoTGateway: [] as const, // No additional unencrypted fields beyond system fields

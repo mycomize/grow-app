@@ -24,6 +24,7 @@ export function useTekFormLogic({ initialData, tekId }: UseTekFormLogicProps = {
   const [tagInput, setTagInput] = useState('');
   const [showTypeModal, setShowTypeModal] = useState(false);
   const [tempSelectedType, setTempSelectedType] = useState('Bulk Grow');
+  const [showMakePublicModal, setShowMakePublicModal] = useState(false);
 
   // Update tek data when initialData changes
   useEffect(() => {
@@ -36,6 +37,25 @@ export function useTekFormLogic({ initialData, tekId }: UseTekFormLogicProps = {
   const updateField = (field: keyof BulkGrowTekData, value: any) => {
     setTekData((prev: BulkGrowTekData) => ({ ...prev, [field]: value }));
   };
+
+  // Handle public switch toggle with confirmation modal
+  const handlePublicToggle = (value: boolean) => {
+    if (value && !tekData.is_public) {
+      // User is trying to make tek public, show confirmation modal
+      setShowMakePublicModal(true);
+    } else {
+      // User is turning off public or tek is already public (should be disabled anyway)
+      updateField('is_public', value);
+    }
+  };
+
+  // Confirm making tek public
+  const confirmMakePublic = () => {
+    updateField('is_public', true);
+  };
+
+  // Check if this is an existing public tek
+  const isExistingPublicTek = !!(tekId && initialData?.is_public);
 
   // Add tag
   const addTag = () => {
@@ -132,7 +152,12 @@ export function useTekFormLogic({ initialData, tekId }: UseTekFormLogicProps = {
     setShowTypeModal,
     tempSelectedType,
     setTempSelectedType,
+    showMakePublicModal,
+    setShowMakePublicModal,
     updateField,
+    handlePublicToggle,
+    confirmMakePublic,
+    isExistingPublicTek,
     addTag,
     removeTag,
     saveTek,

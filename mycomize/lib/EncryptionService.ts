@@ -309,31 +309,23 @@ export class EncryptionService {
    */
   private async encryptWithKey(plaintext: string, key: Buffer): Promise<string> {
     // Generate random IV (12 bytes for GCM)
-    console.log('encryptWithKey: 1');
     const iv = QuickCrypto.randomBytes(12);
-    console.log('encryptWithKey: 2');
 
     // Create cipher
     const cipher = QuickCrypto.createCipheriv('aes-256-gcm', key, iv);
-    console.log('encryptWithKey: 3');
 
     // Encrypt the data
     let encrypted = cipher.update(plaintext, 'utf8');
-    console.log('encryptWithKey: 4');
     encrypted = Buffer.concat([encrypted, cipher.final()]);
-    console.log('encryptWithKey: 5');
 
     // Get authentication tag
     const authTag = cipher.getAuthTag();
-    console.log('encryptWithKey: 6');
 
     // Combine IV, encrypted data, and auth tag
     const combined = Buffer.concat([iv, encrypted, authTag]);
-    console.log('encryptWithKey: 7 type: ', typeof combined);
 
     // Convert to base64 and add prefix and version
     const base64 = combined.toString('base64');
-    console.log('encryptWithKey: 8');
     return `${ENCRYPTION_CONFIG.cipherPrefix}${ENCRYPTION_CONFIG.version}:${base64}`;
   }
 

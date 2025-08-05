@@ -11,6 +11,8 @@ export default function NewTekScreen() {
       tagInput={formLogic.tagInput}
       showTypeModal={formLogic.showTypeModal}
       tempSelectedType={formLogic.tempSelectedType}
+      showMakePublicModal={formLogic.showMakePublicModal}
+      isExistingPublicTek={formLogic.isExistingPublicTek}
       onUpdateField={formLogic.updateField}
       onSetTekData={formLogic.setTekData}
       onTagInputChange={formLogic.setTagInput}
@@ -18,6 +20,9 @@ export default function NewTekScreen() {
       onRemoveTag={formLogic.removeTag}
       onShowTypeModal={formLogic.setShowTypeModal}
       onTempSelectedTypeChange={formLogic.setTempSelectedType}
+      onHandlePublicToggle={formLogic.handlePublicToggle}
+      onConfirmMakePublic={formLogic.confirmMakePublic}
+      onSetShowMakePublicModal={formLogic.setShowMakePublicModal}
       onSaveTek={formLogic.saveTek}
       saveButtonText="Save Tek"
     />

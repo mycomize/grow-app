@@ -29,7 +29,6 @@ export function TagManager({
       <HStack space="sm" className="items-center">
         <Input className="flex-1">
           <InputField
-            placeholder="Add tags..."
             value={tagInput}
             onChangeText={onTagInputChange}
             onSubmitEditing={onAddTag}

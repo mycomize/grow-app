@@ -20,6 +20,7 @@ import { useRouter } from 'expo-router';
 import { BulkGrowTekData } from '~/lib/tekTypes';
 import { StageAccordion } from '~/components/tek/StageAccordion';
 import { TagManager } from '~/components/tek/TagManager';
+import { ConfirmationModal } from '~/components/modals/ConfirmationModal';
 
 interface TekFormProps {
   tekData: BulkGrowTekData;
@@ -27,6 +28,8 @@ interface TekFormProps {
   tagInput: string;
   showTypeModal: boolean;
   tempSelectedType: string;
+  showMakePublicModal: boolean;
+  isExistingPublicTek: boolean;
   onUpdateField: (field: keyof BulkGrowTekData, value: any) => void;
   onSetTekData: (data: BulkGrowTekData) => void;
   onTagInputChange: (value: string) => void;
@@ -34,6 +37,9 @@ interface TekFormProps {
   onRemoveTag: (tag: string) => void;
   onShowTypeModal: (show: boolean) => void;
   onTempSelectedTypeChange: (type: string) => void;
+  onHandlePublicToggle: (value: boolean) => void;
+  onConfirmMakePublic: () => void;
+  onSetShowMakePublicModal: (show: boolean) => void;
   onSaveTek: () => void;
   saveButtonText?: string;
 }
@@ -42,11 +48,16 @@ export function TekForm({
   tekData,
   isSaving,
   tagInput,
+  showMakePublicModal,
+  isExistingPublicTek,
   onUpdateField,
   onSetTekData,
   onTagInputChange,
   onAddTag,
   onRemoveTag,
+  onHandlePublicToggle,
+  onConfirmMakePublic,
+  onSetShowMakePublicModal,
   onSaveTek,
   saveButtonText = 'Save Tek',
 }: TekFormProps) {
@@ -84,7 +95,6 @@ export function TekForm({
                     <Text className="font-medium">Name</Text>
                     <Input>
                       <InputField
-                        placeholder="e.g., Super Awesome High Yield Monotub 3000"
                         value={tekData.name}
                         onChangeText={(value) => onUpdateField('name', value)}
                         maxLength={120}
@@ -97,7 +107,6 @@ export function TekForm({
                     <Text className="font-medium">Description</Text>
                     <Textarea>
                       <TextareaInput
-                        placeholder="Describe your tek..."
                         value={tekData.description}
                         onChangeText={(value) => onUpdateField('description', value)}
                         style={{ textAlignVertical: 'top' }}
@@ -140,7 +149,7 @@ export function TekForm({
                             ? 'This tek is public and visible to all mycomize users'
                             : 'Allow other mycomize users to view and use this tek'}
                         </Text>
-                        {tekData.is_public && (
+                        {isExistingPublicTek && (
                           <Text className="text-xs text-typography-400">
                             Public teks cannot be made private again
                           </Text>
@@ -148,16 +157,10 @@ export function TekForm({
                       </VStack>
                       <Switch
                         value={tekData.is_public}
-                        onValueChange={(value) => onUpdateField('is_public', value)}
-                        isDisabled={tekData.is_public}
+                        onValueChange={onHandlePublicToggle}
+                        isDisabled={isExistingPublicTek}
                       />
                     </HStack>
-                    {!tekData.is_public && (
-                      <Text className="rounded-md bg-orange-50 p-2 text-xs text-orange-600">
-                        ⚠️ Warning: Making a tek public is permanent. Once public, it cannot be made
-                        private again.
-                      </Text>
-                    )}
                   </VStack>
 
                   {/* Tags */}
@@ -220,6 +223,18 @@ export function TekForm({
           <ButtonText className="text-white">{isSaving ? 'Saving...' : saveButtonText}</ButtonText>
         </Button>
       </HStack>
+
+      {/* Make Public Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showMakePublicModal}
+        onClose={() => onSetShowMakePublicModal(false)}
+        onConfirm={onConfirmMakePublic}
+        type="make-public"
+        title="Make Tek Public"
+        message="Are you sure you want to make this tek public? Once public, it cannot be made private again. All of the tek's data will be visible to all mycomize users."
+        itemName={tekData.name}
+        confirmText="Make Public"
+      />
     </VStack>
   );
 }
