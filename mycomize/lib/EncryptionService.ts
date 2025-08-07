@@ -213,7 +213,7 @@ export class EncryptionService {
    * Check if a string is encrypted (has the encryption prefix)
    */
   isEncrypted(data: string): boolean {
-    return data.startsWith(ENCRYPTION_CONFIG.cipherPrefix);
+    return typeof data === 'string' && data.startsWith(ENCRYPTION_CONFIG.cipherPrefix);
   }
 
   /**

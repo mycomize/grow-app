@@ -37,12 +37,12 @@ const SYSTEM_FIELDS_ALLOWLIST = [
  * These extend the global SYSTEM_FIELDS_ALLOWLIST
  */
 const MODEL_SPECIFIC_ALLOWLISTS = {
-  User: [] as const, // No additional unencrypted fields beyond system fields
-  BulkGrow: ['flushes'] as const, // flushes handled by special array processing logic
-  BulkGrowFlush: [] as const, // No additional unencrypted fields beyond system fields
-  BulkGrowTek: [] as const, // No additional unencrypted fields beyond system fields (is_public handled separately)
-  IoTGateway: [] as const, // No additional unencrypted fields beyond system fields
-  IoTEntity: [] as const, // No additional unencrypted fields beyond system fields
+  User: ['bulk_grows', 'bulk_grow_teks', 'iot_gateways'] as const, // SQLAlchemy relationships
+  BulkGrow: ['flushes', 'iot_gateways', 'user'] as const, // SQLAlchemy relationships
+  BulkGrowFlush: ['bulk_grow'] as const, // SQLAlchemy relationships
+  BulkGrowTek: ['creator'] as const, // SQLAlchemy relationships
+  IoTGateway: ['user', 'bulk_grow', 'entities'] as const, // SQLAlchemy relationships
+  IoTEntity: ['gateway'] as const, // SQLAlchemy relationships
 } as const;
 
 /**
@@ -178,6 +178,17 @@ export async function encryptData<T extends Record<string, any>>(
     }
   }
 
+  // Special handling for BulkGrowTek public teks - complex fields still need JSON serialization
+  if (dataType === 'BulkGrowTek' && data.is_public) {
+    // Convert complex fields to JSON strings even for public teks
+    if (encryptedData.stages && typeof encryptedData.stages === 'object') {
+      encryptedData.stages = JSON.stringify(encryptedData.stages);
+    }
+    if (encryptedData.tags && typeof encryptedData.tags === 'object') {
+      encryptedData.tags = JSON.stringify(encryptedData.tags);
+    }
+  }
+
   // Handle nested arrays (like flushes in BulkGrow)
   if (dataType === 'BulkGrow' && encryptedData.flushes && Array.isArray(encryptedData.flushes)) {
     encryptedData.flushes = await Promise.all(
@@ -222,6 +233,25 @@ export async function decryptData<T extends Record<string, any>>(
       } catch (error) {
         console.warn(`Failed to decrypt field ${field} for ${dataType}:`, error);
         // Keep original value if decryption fails
+      }
+    }
+  }
+
+  // Special handling for BulkGrowTek public teks - parse JSON strings back to objects
+  if (dataType === 'BulkGrowTek' && data.is_public) {
+    // Convert JSON strings back to objects for public teks
+    if (decryptedData.stages && typeof decryptedData.stages === 'string') {
+      try {
+        decryptedData.stages = JSON.parse(decryptedData.stages);
+      } catch (error) {
+        console.warn('Failed to parse stages JSON for public tek:', error);
+      }
+    }
+    if (decryptedData.tags && typeof decryptedData.tags === 'string') {
+      try {
+        decryptedData.tags = JSON.parse(decryptedData.tags);
+      } catch (error) {
+        console.warn('Failed to parse tags JSON for public tek:', error);
       }
     }
   }

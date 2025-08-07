@@ -80,13 +80,6 @@ async def create_grow(
     current_user: User = Depends(get_current_active_user)
 ):
     """Create a new grow for the current user"""
-    # Convert stages Pydantic model to dict for JSON storage
-    stages_dict = grow.stages.dict() if grow.stages else None
-    
-    # Sanitize datetime fields in stages data
-    if stages_dict:
-        stages_dict = sanitize_stages_datetime_fields(stages_dict)
-    
     # Create the grow
     db_grow = BulkGrow(
         name=grow.name,
@@ -108,7 +101,7 @@ async def create_grow(
         current_stage=grow.current_stage,
         status=grow.status,
         total_cost=grow.total_cost,
-        stages=stages_dict,
+        stages=grow.stages,
         user_id=current_user.id
     )
 
@@ -116,12 +109,13 @@ async def create_grow(
     db.commit()
     db.refresh(db_grow)
 
-    # Handle flushes if provided
+    # Handle flushes if provided - store encrypted values directly
     if grow.flushes:
         for flush_data in grow.flushes:
             db_flush = BulkGrowFlush(
                 bulk_grow_id=db_grow.id,
-                harvest_date=parse_date_string(flush_data.get('harvest_date')),
+                # Store encrypted leaf values directly without processing
+                harvest_date=flush_data.get('harvest_date'),
                 wet_yield_grams=flush_data.get('wet_yield_grams'),
                 dry_yield_grams=flush_data.get('dry_yield_grams'),
                 concentration_mg_per_gram=flush_data.get('concentration_mg_per_gram')
@@ -141,12 +135,6 @@ async def read_grows(
 ):
     """Get all grows for the current user"""
     grows = db.query(BulkGrow).filter(BulkGrow.user_id == current_user.id).offset(skip).limit(limit).all()
-    
-    # Sanitize stages data for each grow
-    for grow in grows:
-        if grow.stages:
-            grow.stages = sanitize_stages_datetime_fields(grow.stages)
-    
     return grows
 
 @router.get("/all", response_model=List[BulkGrowComplete])
@@ -160,12 +148,6 @@ async def read_all_grows(
         joinedload(BulkGrow.iot_gateways),
         joinedload(BulkGrow.flushes)
     ).filter(BulkGrow.user_id == current_user.id).all()
-
-    # Sanitize stages data for each grow
-    for grow in grows:
-        if grow.stages:
-            grow.stages = sanitize_stages_datetime_fields(grow.stages)
-
     return grows
 
 @router.get("/{grow_id}", response_model=BulkGrowComplete)
@@ -179,13 +161,10 @@ async def read_grow(
         joinedload(BulkGrow.iot_gateways),
         joinedload(BulkGrow.flushes)
     ).filter(BulkGrow.id == grow_id, BulkGrow.user_id == current_user.id).first()
+
     if grow is None:
         raise HTTPException(status_code=404, detail="Grow not found")
-    
-    # Sanitize stages data
-    if grow.stages:
-        grow.stages = sanitize_stages_datetime_fields(grow.stages)
-    
+
     return grow
 
 
@@ -211,30 +190,20 @@ async def update_grow(
     # Handle flushes separately
     flushes_data = grow_data.pop('flushes', None)
     
-    # Convert stages Pydantic model to dict if present and it's not already a dict
-    if 'stages' in grow_data and grow_data['stages'] is not None:
-        if not isinstance(grow_data['stages'], dict):
-            grow_data['stages'] = grow_data['stages'].dict()
-        # Sanitize datetime fields in stages data
-        grow_data['stages'] = sanitize_stages_datetime_fields(grow_data['stages'])
-    
+    # Since data arrives encrypted, store stages directly as encrypted string
     for key, value in grow_data.items():
         setattr(db_grow, key, value)
 
-    # If harvest_date is set, update status to harvested
-    if grow_data.get('harvest_date') and not db_grow.status == 'harvested':
-        db_grow.status = 'harvested'
-
-    # Handle flushes if provided
+    # Handle flushes if provided - store encrypted values directly
     if flushes_data is not None:
         # Delete existing flushes
         db.query(BulkGrowFlush).filter(BulkGrowFlush.bulk_grow_id == grow_id).delete()
         
-        # Add new flushes
+        # Add new flushes - store encrypted leaf values directly without processing
         for flush_data in flushes_data:
             db_flush = BulkGrowFlush(
                 bulk_grow_id=grow_id,
-                harvest_date=parse_date_string(flush_data.get('harvest_date')),
+                harvest_date=flush_data.get('harvest_date'),
                 wet_yield_grams=flush_data.get('wet_yield_grams'),
                 dry_yield_grams=flush_data.get('dry_yield_grams'),
                 concentration_mg_per_gram=flush_data.get('concentration_mg_per_gram')

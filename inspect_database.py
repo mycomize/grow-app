@@ -1,0 +1,426 @@
+#!/usr/bin/env python3
+"""
+Database inspection script for Mycomize SQLite database.
+This script allows you to inspect the raw database contents to verify encryption is working properly.
+"""
+
+import sqlite3
+import sys
+import argparse
+from typing import Dict, List, Any, Optional
+import json
+from datetime import datetime
+
+# Encryption prefixes/patterns to identify encrypted fields
+ENCRYPTION_INDICATORS = [
+    'enc:',  # Common encryption prefix
+    'enc_v1:',  # Versioned encryption prefix
+    'enc_v2:',  # Versioned encryption prefix
+    'encrypted:',  # Another common prefix
+    'v1.',  # Version prefix
+    'v2.',  # Version prefix
+]
+
+def connect_to_database(db_path: str = "./backend/data/mycomize.db") -> sqlite3.Connection:
+    """Connect to the SQLite database."""
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row  # This makes rows accessible by column name
+        return conn
+    except sqlite3.Error as e:
+        print(f"Error connecting to database: {e}")
+        sys.exit(1)
+
+def get_table_names(conn: sqlite3.Connection) -> List[str]:
+    """Get all table names in the database."""
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;")
+    return [row[0] for row in cursor.fetchall()]
+
+def get_table_schema(conn: sqlite3.Connection, table_name: str) -> List[Dict[str, Any]]:
+    """Get the schema information for a table."""
+    cursor = conn.cursor()
+    cursor.execute(f"PRAGMA table_info({table_name});")
+    columns = []
+    for row in cursor.fetchall():
+        columns.append({
+            'name': row[1],
+            'type': row[2],
+            'not_null': row[3],
+            'default': row[4],
+            'primary_key': row[5]
+        })
+    return columns
+
+def is_likely_encrypted(value: str) -> bool:
+    """Check if a string value appears to be encrypted."""
+    if not isinstance(value, str) or len(value) < 10:
+        return False
+    
+    # Check for encryption prefixes
+    for indicator in ENCRYPTION_INDICATORS:
+        if value.startswith(indicator):
+            return True
+    
+    # Check if it looks like base64 (common in encryption)
+    # Base64 encoded strings are typically longer and contain specific characters
+    if len(value) > 20 and all(c.isalnum() or c in '+/=' for c in value):
+        # Additional heuristic: if it's very long and looks random, likely encrypted
+        if len(value) > 50:
+            return True
+    
+    return False
+
+def format_field_value(value: Any, max_length: int = 50) -> str:
+    """Format a field value for display, truncating long values."""
+    if value is None:
+        return "NULL"
+    
+    str_value = str(value)
+    if len(str_value) <= max_length:
+        return str_value
+    
+    return str_value[:max_length] + "..."
+
+def analyze_encryption_status(row: sqlite3.Row) -> Dict[str, str]:
+    """Analyze which fields in a row appear to be encrypted."""
+    analysis = {}
+    for key in row.keys():
+        value = row[key]
+        if isinstance(value, str):
+            if is_likely_encrypted(value):
+                analysis[key] = "[ENCRYPTED]"
+            else:
+                analysis[key] = "[CLEARTEXT]"
+        elif value is None:
+            analysis[key] = "[NULL]"
+        else:
+            analysis[key] = f"[{type(value).__name__.upper()}]"
+    return analysis
+
+def list_users(conn: sqlite3.Connection) -> None:
+    """List all users in the database."""
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username, is_active, created_at FROM users ORDER BY id;")
+    
+    print("\n=== USERS ===")
+    print(f"{'ID':<5} {'Username':<20} {'Active':<8} {'Created':<20}")
+    print("-" * 60)
+    
+    for row in cursor.fetchall():
+        print(f"{row[0]:<5} {row[1]:<20} {row[2]:<8} {row[3]:<20}")
+
+def get_system_fields() -> List[str]:
+    """Get list of fields that should be system fields (not encrypted)."""
+    return [
+        'id', 'user_id', 'created_at', 'updated_at', 'last_updated',
+        'bulk_grow_id', 'gateway_id', 'created_by', 'is_active', 
+        'is_public', 'is_enabled', 'usage_count', 'type', 'entity_type',
+        'username', 'hashed_password'
+    ]
+
+def categorize_fields(row: sqlite3.Row) -> Dict[str, List[str]]:
+    """Categorize fields into system vs user data fields."""
+    system_fields = get_system_fields()
+    
+    categorized = {
+        'system': [],
+        'user_data': []
+    }
+    
+    for field_name in row.keys():
+        if field_name in system_fields:
+            categorized['system'].append(field_name)
+        else:
+            categorized['user_data'].append(field_name)
+    
+    return categorized
+
+def inspect_user_data(conn: sqlite3.Connection, user_id: int) -> None:
+    """Inspect all data for a specific user."""
+    print(f"\n=== USER {user_id} DATA INSPECTION ===")
+    
+    # Check if user exists
+    cursor = conn.cursor()
+    cursor.execute("SELECT username FROM users WHERE id = ?", (user_id,))
+    user = cursor.fetchone()
+    if not user:
+        print(f"User with ID {user_id} not found.")
+        return
+    
+    print(f"Username: {user[0]}")
+    
+    # Inspect BulkGrows
+    print(f"\n--- BulkGrows for User {user_id} ---")
+    cursor.execute("SELECT * FROM bulk_grows WHERE user_id = ? ORDER BY id;", (user_id,))
+    grows = cursor.fetchall()
+    
+    if not grows:
+        print("No grows found for this user.")
+    else:
+        for i, grow in enumerate(grows):
+            print(f"\n** Grow {grow['id']} **")
+            analysis = analyze_encryption_status(grow)
+            categorized = categorize_fields(grow)
+            
+            # Show user data fields first (these should be encrypted)
+            if categorized['user_data']:
+                print("  USER DATA FIELDS:")
+                for field in sorted(categorized['user_data']):
+                    value = format_field_value(grow[field])
+                    status = analysis.get(field, "[UNKNOWN]")
+                    print(f"    {field:25}: {status:15} | {value}")
+            
+            # Show system fields (these should be cleartext)
+            if categorized['system']:
+                print("  SYSTEM FIELDS:")
+                for field in sorted(categorized['system']):
+                    value = format_field_value(grow[field])
+                    status = analysis.get(field, "[UNKNOWN]")
+                    print(f"    {field:25}: {status:15} | {value}")
+    
+    # Inspect Flushes
+    print(f"\n--- Flushes for User {user_id} ---")
+    cursor.execute("""
+        SELECT f.* FROM flushes f 
+        JOIN bulk_grows bg ON f.bulk_grow_id = bg.id 
+        WHERE bg.user_id = ? ORDER BY f.id;
+    """, (user_id,))
+    flushes = cursor.fetchall()
+    
+    if not flushes:
+        print("No flushes found for this user.")
+    else:
+        for flush in flushes:
+            print(f"\n** Flush {flush['id']} (Grow {flush['bulk_grow_id']}) **")
+            analysis = analyze_encryption_status(flush)
+            categorized = categorize_fields(flush)
+            
+            # Show user data fields first (these should be encrypted)
+            if categorized['user_data']:
+                print("  USER DATA FIELDS:")
+                for field in sorted(categorized['user_data']):
+                    value = format_field_value(flush[field])
+                    status = analysis.get(field, "[UNKNOWN]")
+                    print(f"    {field:25}: {status:15} | {value}")
+            
+            # Show system fields (these should be cleartext)
+            if categorized['system']:
+                print("  SYSTEM FIELDS:")
+                for field in sorted(categorized['system']):
+                    value = format_field_value(flush[field])
+                    status = analysis.get(field, "[UNKNOWN]")
+                    print(f"    {field:25}: {status:15} | {value}")
+    
+    # Inspect TEKs (Bulk Grow Teks)
+    print(f"\n--- TEKs for User {user_id} ---")
+    cursor.execute("SELECT * FROM bulk_grow_teks WHERE created_by = ? ORDER BY id;", (user_id,))
+    teks = cursor.fetchall()
+    
+    if not teks:
+        print("No TEKs found for this user.")
+    else:
+        for tek in teks:
+            print(f"\n** TEK {tek['id']} **")
+            analysis = analyze_encryption_status(tek)
+            categorized = categorize_fields(tek)
+            
+            # Show user data fields first (these should be encrypted unless is_public=True)
+            if categorized['user_data']:
+                print("  USER DATA FIELDS:")
+                for field in sorted(categorized['user_data']):
+                    value = format_field_value(tek[field])
+                    status = analysis.get(field, "[UNKNOWN]")
+                    # Note if this is a public TEK
+                    try:
+                        public_note = " (PUBLIC TEK)" if tek['is_public'] else ""
+                    except (KeyError, IndexError):
+                        public_note = ""
+                    print(f"    {field:25}: {status:15} | {value}{public_note}")
+            
+            # Show system fields (these should be cleartext)
+            if categorized['system']:
+                print("  SYSTEM FIELDS:")
+                for field in sorted(categorized['system']):
+                    value = format_field_value(tek[field])
+                    status = analysis.get(field, "[UNKNOWN]")
+                    print(f"    {field:25}: {status:15} | {value}")
+    
+    # Inspect IoT Gateways
+    print(f"\n--- IoT Gateways for User {user_id} ---")
+    cursor.execute("SELECT * FROM iot_gateways WHERE user_id = ? ORDER BY id;", (user_id,))
+    gateways = cursor.fetchall()
+    
+    if not gateways:
+        print("No IoT Gateways found for this user.")
+    else:
+        for gateway in gateways:
+            print(f"\n** IoT Gateway {gateway['id']} **")
+            analysis = analyze_encryption_status(gateway)
+            categorized = categorize_fields(gateway)
+            
+            # Show user data fields first (these should be encrypted)
+            if categorized['user_data']:
+                print("  USER DATA FIELDS:")
+                for field in sorted(categorized['user_data']):
+                    value = format_field_value(gateway[field])
+                    status = analysis.get(field, "[UNKNOWN]")
+                    print(f"    {field:25}: {status:15} | {value}")
+            
+            # Show system fields (these should be cleartext)
+            if categorized['system']:
+                print("  SYSTEM FIELDS:")
+                for field in sorted(categorized['system']):
+                    value = format_field_value(gateway[field])
+                    status = analysis.get(field, "[UNKNOWN]")
+                    print(f"    {field:25}: {status:15} | {value}")
+    
+    # Inspect IoT Entities
+    print(f"\n--- IoT Entities for User {user_id} ---")
+    cursor.execute("""
+        SELECT e.* FROM iot_entities e 
+        JOIN iot_gateways g ON e.gateway_id = g.id 
+        WHERE g.user_id = ? ORDER BY e.id;
+    """, (user_id,))
+    entities = cursor.fetchall()
+    
+    if not entities:
+        print("No IoT Entities found for this user.")
+    else:
+        for entity in entities:
+            print(f"\n** IoT Entity {entity['id']} (Gateway {entity['gateway_id']}) **")
+            analysis = analyze_encryption_status(entity)
+            categorized = categorize_fields(entity)
+            
+            # Show user data fields first (these should be encrypted)
+            if categorized['user_data']:
+                print("  USER DATA FIELDS:")
+                for field in sorted(categorized['user_data']):
+                    value = format_field_value(entity[field])
+                    status = analysis.get(field, "[UNKNOWN]")
+                    print(f"    {field:25}: {status:15} | {value}")
+            
+            # Show system fields (these should be cleartext)
+            if categorized['system']:
+                print("  SYSTEM FIELDS:")
+                for field in sorted(categorized['system']):
+                    value = format_field_value(entity[field])
+                    status = analysis.get(field, "[UNKNOWN]")
+                    print(f"    {field:25}: {status:15} | {value}")
+
+def inspect_table_raw(conn: sqlite3.Connection, table_name: str, limit: int = 10) -> None:
+    """Show raw data from a table."""
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT * FROM {table_name} LIMIT {limit};")
+    rows = cursor.fetchall()
+    
+    if not rows:
+        print(f"No data found in table '{table_name}'.")
+        return
+    
+    print(f"\n=== RAW DATA: {table_name.upper()} (showing {len(rows)} rows) ===")
+    
+    # Get column names
+    columns = [description[0] for description in cursor.description]
+    
+    for i, row in enumerate(rows):
+        print(f"\n** Row {i + 1} **")
+        analysis = analyze_encryption_status(row)
+        
+        for col_name in columns:
+            value = format_field_value(row[col_name], max_length=80)
+            status = analysis.get(col_name, "[UNKNOWN]")
+            print(f"  {col_name:20}: {status:15} | {value}")
+
+def show_encryption_summary(conn: sqlite3.Connection) -> None:
+    """Show a summary of encryption status across all tables."""
+    print("\n=== ENCRYPTION SUMMARY ===")
+    
+    tables_to_check = ['users', 'bulk_grows', 'flushes', 'bulk_grow_teks', 'iot_gateways', 'iot_entities']
+    
+    for table_name in tables_to_check:
+        cursor = conn.cursor()
+        try:
+            cursor.execute(f"SELECT * FROM {table_name} LIMIT 5;")
+            rows = cursor.fetchall()
+            
+            if not rows:
+                print(f"{table_name}: No data")
+                continue
+            
+            print(f"\n{table_name.upper()}:")
+            
+            # Analyze first row to get field encryption status
+            if rows:
+                analysis = analyze_encryption_status(rows[0])
+                encrypted_fields = [k for k, v in analysis.items() if "ENCRYPTED" in v]
+                cleartext_fields = [k for k, v in analysis.items() if "CLEARTEXT" in v]
+                
+                print(f"  [ENCRYPTED] fields: {', '.join(encrypted_fields) if encrypted_fields else 'None'}")
+                print(f"  [CLEARTEXT] fields: {', '.join(cleartext_fields) if cleartext_fields else 'None'}")
+                print(f"  [ROWS] Total rows: {len(rows)}")
+                
+                # Special note for TEKs about public vs private
+                if table_name == 'bulk_grow_teks':
+                    try:
+                        if 'is_public' in rows[0].keys():
+                            public_count = cursor.execute("SELECT COUNT(*) FROM bulk_grow_teks WHERE is_public = 1").fetchone()[0]
+                            private_count = cursor.execute("SELECT COUNT(*) FROM bulk_grow_teks WHERE is_public = 0").fetchone()[0]
+                            print(f"  [TEKS] Public TEKs: {public_count}, Private TEKs: {private_count}")
+                    except (KeyError, IndexError):
+                        pass
+        
+        except sqlite3.Error as e:
+            print(f"{table_name}: Error - {e}")
+
+def main():
+    parser = argparse.ArgumentParser(description="Inspect Mycomize SQLite database for encryption verification")
+    parser.add_argument("--db", default="./backend/data/mycomize.db", help="Path to SQLite database file")
+    parser.add_argument("--list-users", action="store_true", help="List all users")
+    parser.add_argument("--user", type=int, help="Inspect data for specific user ID")
+    parser.add_argument("--table", help="Show raw data from specific table")
+    parser.add_argument("--limit", type=int, default=10, help="Limit number of rows to show")
+    parser.add_argument("--summary", action="store_true", help="Show encryption summary")
+    parser.add_argument("--tables", action="store_true", help="List all tables")
+    
+    args = parser.parse_args()
+    
+    # Connect to database
+    conn = connect_to_database(args.db)
+    
+    try:
+        if args.tables:
+            tables = get_table_names(conn)
+            print("Available tables:")
+            for table in tables:
+                print(f"  - {table}")
+        
+        elif args.list_users:
+            list_users(conn)
+        
+        elif args.user:
+            inspect_user_data(conn, args.user)
+        
+        elif args.table:
+            inspect_table_raw(conn, args.table, args.limit)
+        
+        elif args.summary:
+            show_encryption_summary(conn)
+        
+        else:
+            # Default: show summary and list users
+            print("Mycomize Database Inspector")
+            print("=" * 50)
+            show_encryption_summary(conn)
+            list_users(conn)
+            print("\nUsage examples:")
+            print(f"  python {sys.argv[0]} --user 1                    # Inspect user 1 data")
+            print(f"  python {sys.argv[0]} --table bulk_grows          # Show bulk_grows table")
+            print(f"  python {sys.argv[0]} --summary                   # Show encryption summary")
+            print(f"  python {sys.argv[0]} --list-users                # List all users")
+    
+    finally:
+        conn.close()
+
+if __name__ == "__main__":
+    main()

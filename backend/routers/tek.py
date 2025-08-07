@@ -51,6 +51,44 @@ def sanitize_stages_datetime_fields(stages_data):
 
 router = APIRouter(prefix="/bulk-grow-tek", tags=["bulk-grow-teks"])
 
+@router.get("/", response_model=List[BulkGrowTekListItem])
+async def get_all_teks(
+    limit: int = Query(50, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_mycomize_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all teks (public teks + current user's private teks)"""
+    # Get public teks and user's own teks in one query
+    teks = db.query(BulkGrowTek).filter(
+        or_(
+            BulkGrowTek.is_public == True,
+            BulkGrowTek.created_by == current_user.id
+        )
+    ).options(joinedload(BulkGrowTek.creator)).order_by(
+        desc(BulkGrowTek.updated_at)
+    ).offset(offset).limit(limit).all()
+
+    result = []
+    for tek in teks:
+        tek_dict = {
+            "id": tek.id,
+            "name": tek.name,
+            "description": tek.description,
+            "species": tek.species,
+            "variant": tek.variant,
+            "tags": tek.tags,
+            "is_public": tek.is_public,
+            "created_by": tek.created_by,
+            "created_at": tek.created_at,
+            "usage_count": tek.usage_count,
+            "creator_name": tek.creator.username if tek.creator else "Unknown",
+            "creator_profile_image": tek.creator.profile_image if tek.creator else None
+        }
+        result.append(BulkGrowTekListItem(**tek_dict))
+
+    return result
+
 @router.get("/public", response_model=List[BulkGrowTekListItem])
 async def get_public_templates(
     species: Optional[str] = Query(None),
