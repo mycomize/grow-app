@@ -361,6 +361,12 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
 
   return (
     <VStack space="lg" className="bg-background-0 p-2">
+      {/* Instructions */}
+      <Text className="text-md mb-2 text-typography-500">
+        Track your grow's progress through each stage. Press Complete to move to the next stage when
+        the current stage is completed.
+      </Text>
+
       {/* Timeline */}
       <VStack space="xs">
         {stages.map((stage, index) => {
@@ -574,14 +580,6 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
             </VStack>
           );
         })}
-      </VStack>
-
-      {/* Instructions */}
-      <VStack className="rounded-lg bg-background-50 p-3">
-        <Text className="text-sm text-typography-500">
-          Track your grow's progress through each stage. Press "Complete" to move to the next stage
-          when ready. Each stage will record its start date automatically.
-        </Text>
       </VStack>
     </VStack>
   );
