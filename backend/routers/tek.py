@@ -236,6 +236,7 @@ async def get_tek(
         "description": tek.description,
         "species": tek.species,
         "variant": tek.variant,
+        "tags": tek.tags,
         "is_public": tek.is_public,
         "stages": stages_data,
         "created_by": tek.created_by,

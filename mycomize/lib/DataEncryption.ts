@@ -237,22 +237,33 @@ export async function decryptData<T extends Record<string, any>>(
     }
   }
 
-  // Special handling for BulkGrowTek public teks - parse JSON strings back to objects
-  if (dataType === 'BulkGrowTek' && data.is_public) {
-    // Convert JSON strings back to objects for public teks
+  // Special handling for BulkGrowTek - parse JSON strings back to objects for both public and private teks
+  if (dataType === 'BulkGrowTek') {
+    // Parse stages JSON string to object
     if (decryptedData.stages && typeof decryptedData.stages === 'string') {
       try {
         decryptedData.stages = JSON.parse(decryptedData.stages);
       } catch (error) {
-        console.warn('Failed to parse stages JSON for public tek:', error);
+        console.warn('Failed to parse stages JSON for tek:', error);
       }
     }
+
+    // Parse tags JSON string to array
     if (decryptedData.tags && typeof decryptedData.tags === 'string') {
       try {
-        decryptedData.tags = JSON.parse(decryptedData.tags);
+        const parsedTags = JSON.parse(decryptedData.tags);
+        // Ensure tags is always an array
+        decryptedData.tags = Array.isArray(parsedTags) ? parsedTags : [];
       } catch (error) {
-        console.warn('Failed to parse tags JSON for public tek:', error);
+        console.warn('Failed to parse tags JSON for tek:', error);
+        // Fallback to empty array if parsing fails
+        decryptedData.tags = [];
       }
+    }
+
+    // Ensure tags is an array even if it comes as null/undefined
+    if (!decryptedData.tags || !Array.isArray(decryptedData.tags)) {
+      decryptedData.tags = [];
     }
   }
 

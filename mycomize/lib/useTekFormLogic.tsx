@@ -17,6 +17,7 @@ export function useTekFormLogic({ initialData, tekId }: UseTekFormLogicProps = {
   const { showError, showSuccess } = useUnifiedToast();
 
   const [tekData, setTekData] = useState<BulkGrowTekData>(initialData || createEmptyTekData());
+  const [isInitialized, setIsInitialized] = useState(!!initialData);
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,12 +27,15 @@ export function useTekFormLogic({ initialData, tekId }: UseTekFormLogicProps = {
   const [tempSelectedType, setTempSelectedType] = useState('Bulk Grow');
   const [showMakePublicModal, setShowMakePublicModal] = useState(false);
 
-  // Update tek data when initialData changes
+  // Update tek data when initialData changes, but only if not yet initialized
+  // This prevents overwriting user changes when editing
   useEffect(() => {
-    if (initialData) {
+    if (initialData && !isInitialized) {
+      console.log('Initializing tek data with:', initialData);
       setTekData(initialData);
+      setIsInitialized(true);
     }
-  }, [initialData]);
+  }, [initialData, isInitialized]);
 
   // Update tek data field
   const updateField = (field: keyof BulkGrowTekData, value: any) => {
@@ -107,13 +111,9 @@ export function useTekFormLogic({ initialData, tekId }: UseTekFormLogicProps = {
       const successMessage = isEdit ? 'Tek updated successfully!' : 'Tek saved successfully!';
       setSuccess(successMessage);
 
-      // Navigate after save
+      // Navigate after save - always go to tek library
       setTimeout(() => {
-        if (isEdit) {
-          router.replace(`/teks/${tekId}`);
-        } else {
-          router.replace('/teks');
-        }
+        router.replace('/teks');
       }, 1500);
     } catch (err) {
       console.log('Save tek error:', err);

@@ -191,11 +191,22 @@ export default function TekLibraryScreen() {
     });
   };
 
-  const handleCopyToNewTek = (tek: BulkGrowTek) => {
-    router.push({
-      pathname: '/teks/new',
-      params: { copyFromTek: tek.id.toString() },
-    });
+  const handleCopyToNewTek = async (tek: BulkGrowTek) => {
+    try {
+      // Fetch the full tek data including stages
+      const fullTek = await apiClient.getBulkGrowTek(tek.id.toString(), token!);
+
+      router.push({
+        pathname: '/teks/new',
+        params: { tekToCopy: JSON.stringify(fullTek) },
+      });
+    } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
+      showError(err instanceof Error ? err.message : 'Failed to load tek for copying');
+    }
   };
 
   const handleTagPress = (tag: string) => {

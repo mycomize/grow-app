@@ -35,7 +35,7 @@ export default function TekEditScreen() {
         species: tek.species,
         variant: tek.variant || '',
         is_public: tek.is_public,
-        tags: tek.tags || [],
+        tags: Array.isArray(tek.tags) ? [...tek.tags] : [], // Ensure we get a proper array copy
         stages: tek.stages || {
           inoculation: { items: [], environmental_conditions: [], tasks: [], notes: '' },
           spawn_colonization: { items: [], environmental_conditions: [], tasks: [], notes: '' },
