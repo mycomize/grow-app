@@ -31,7 +31,6 @@ export function useTekFormLogic({ initialData, tekId }: UseTekFormLogicProps = {
   // This prevents overwriting user changes when editing
   useEffect(() => {
     if (initialData && !isInitialized) {
-      console.log('Initializing tek data with:', initialData);
       setTekData(initialData);
       setIsInitialized(true);
     }
@@ -94,11 +93,6 @@ export function useTekFormLogic({ initialData, tekId }: UseTekFormLogicProps = {
 
     try {
       const isEdit = !!tekId;
-
-      // Debug logging
-      console.log('Saving tek data:', tekData);
-      console.log('is_public value:', tekData.is_public);
-      console.log('Method:', isEdit ? 'PUT' : 'POST');
 
       if (isEdit) {
         // Update existing tek

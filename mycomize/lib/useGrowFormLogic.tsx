@@ -105,7 +105,7 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
         try {
           const tekData = await apiClient.getBulkGrowTek(fromTek, token!);
 
-          // Populate grow data from tek - copy all basic tek fields
+          // Populate grow data from tek - copy all basic tek fields AND stage data
           setGrowData((prev) => ({
             ...prev,
             name: `${tekData.name} Grow`,
@@ -114,6 +114,14 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
             variant: tekData.variant || '',
             tags: tekData.tags || [],
             tek: tekData.type === 'Bulk Grow' ? 'BulkGrow' : tekData.type || 'BulkGrow',
+            // Copy all stages data from tek including items, environmental_conditions, tasks, and notes
+            stages: tekData.stages || {
+              inoculation: { items: [], environmental_conditions: [], tasks: [], notes: '' },
+              spawn_colonization: { items: [], environmental_conditions: [], tasks: [], notes: '' },
+              bulk_colonization: { items: [], environmental_conditions: [], tasks: [], notes: '' },
+              fruiting: { items: [], environmental_conditions: [], tasks: [], notes: '' },
+              harvest: { items: [], environmental_conditions: [], tasks: [], notes: '' },
+            },
             // Keep space empty for user input
             space: '',
           }));
