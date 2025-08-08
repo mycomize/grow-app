@@ -18,6 +18,7 @@ import { useToast, Toast, ToastTitle, ToastDescription } from '~/components/ui/t
 import { Pressable } from '~/components/ui/pressable';
 import { Textarea, TextareaInput } from '~/components/ui/textarea';
 import { Link, LinkText } from '~/components/ui/link';
+import { Divider } from '~/components/ui/divider';
 import {
   Home,
   Settings,
@@ -45,15 +46,24 @@ import {
   ZapOff,
   Thermometer,
   Droplet,
+  Filter,
+  ChevronDown,
+  SlidersHorizontal,
+  ListX,
 } from 'lucide-react-native';
 
 import { CountBadge } from '~/components/ui/count-badge';
 import { AuthContext } from '~/lib/AuthContext';
 import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
-import { IoTGateway, IoTGatewayUpdate, IoTEntity, HAState } from '~/lib/iot';
+import { IoTGateway, IoTGatewayUpdate, IoTEntity, IoTEntityCreate, HAState } from '~/lib/iot';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import { getSwitchColors } from '~/lib/switchUtils';
 import { ConnectionStatusBadge, ConnectionStatus } from '~/components/ui/connection-status-badge';
+import {
+  getUserPreferences,
+  updateIoTFilterPreferences,
+  IoTFilterPreferences,
+} from '~/lib/userPreferences';
 
 interface ConnectionInfo {
   status: ConnectionStatus;
@@ -97,6 +107,18 @@ export default function IoTIntegrationDetailScreen() {
     api_key: '',
   });
 
+  // Control selection state
+  const [states, setStates] = useState<HAState[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [enabledEntities, setEnabledEntities] = useState<IoTEntity[]>([]);
+  const [enabledEntitiesSet, setEnabledEntitiesSet] = useState<Set<string>>(new Set());
+  const [filterEnabled, setFilterEnabled] = useState(false);
+  const [filterPreferences, setFilterPreferences] = useState<IoTFilterPreferences>({
+    domains: ['switch', 'automation', 'sensor', 'number'],
+    showAllDomains: false,
+  });
+  const [showFilters, setShowFilters] = useState(false);
+
   // Fetch enabled entities from backend
   const fetchEnabledEntities = useCallback(
     async (gatewayData?: IoTGateway) => {
@@ -104,7 +126,11 @@ export default function IoTIntegrationDetailScreen() {
 
       try {
         const entities: IoTEntity[] = await apiClient.getIoTEntities(id as string, token);
-        setEnabledStates(entities.filter((e) => e.is_enabled).map((e) => e.entity_id));
+        const enabledEntityIds = entities.filter((e) => e.is_enabled).map((e) => e.entity_id);
+
+        setEnabledEntities(entities);
+        setEnabledStates(enabledEntityIds);
+        setEnabledEntitiesSet(new Set(enabledEntityIds));
 
         // Fetch current states for enabled entities
         if (gatewayData && gatewayData.is_active) {
@@ -267,14 +293,9 @@ export default function IoTIntegrationDetailScreen() {
     if (!gateway || !token) return;
 
     try {
-      const endpoint = gateway.is_active
-        ? `/iot-gateways/${id}/disable`
-        : `/iot-gateways/${id}/enable`;
-
-      const updatedGateway: IoTGateway = await apiClient.call({
-        endpoint,
-        config: { method: 'PUT', token },
-      });
+      const updatedGateway: IoTGateway = gateway.is_active
+        ? await apiClient.disableIoTGateway(id as string, token)
+        : await apiClient.enableIoTGateway(id as string, token);
 
       setGateway({
         ...updatedGateway,
@@ -452,14 +473,122 @@ export default function IoTIntegrationDetailScreen() {
     }
   };
 
-  // Navigate to state search/selection
-  const navigateToEntitySearch = () => {
-    const gatewayId = Array.isArray(id) ? id[0] : id;
-    router.push({
-      pathname: `/iot/[id]/states`,
-      params: { id: gatewayId },
-    });
+  // Fetch states from Home Assistant for control selection
+  const fetchStates = async (gateway: IoTGateway) => {
+    try {
+      const response = await fetch(`${gateway.api_url}/api/states`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${gateway.api_key}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data: HAState[] = await response.json();
+        setStates(data);
+      } else {
+        if (response.status === 401) {
+          setError('Invalid API token');
+        } else {
+          setError('Failed to fetch states');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch states:', err);
+      setError('Failed to connect to Home Assistant');
+    }
   };
+
+  // Add entity to gateway
+  const addEntityToGateway = async (
+    entityId: string,
+    entityType: string,
+    friendlyName?: string
+  ) => {
+    if (!gateway || !token) return;
+
+    try {
+      const entityData: IoTEntityCreate = {
+        gateway_id: gateway.id,
+        entity_id: entityId,
+        entity_type: entityType,
+        friendly_name: friendlyName,
+        is_enabled: true,
+      };
+
+      await apiClient.createIoTEntity(gateway.id.toString(), entityData, token);
+      await fetchEnabledEntities(gateway);
+    } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
+      console.error('Failed to add entity:', err);
+      setError('Failed to add entity: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  };
+
+  // Remove entity from gateway
+  const removeEntityFromGateway = async (entityId: string) => {
+    if (!gateway || !token) return;
+
+    try {
+      const entity = enabledEntities.find((e) => e.entity_id === entityId);
+      if (!entity) return;
+
+      await apiClient.deleteIoTEntity(gateway.id.toString(), entity.id.toString(), token);
+      await fetchEnabledEntities(gateway);
+    } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
+      console.error('Failed to remove entity:', err);
+      setError(
+        'Failed to remove entity: ' + (err instanceof Error ? err.message : 'Unknown error')
+      );
+    }
+  };
+
+  // Handle entity toggle for control selection
+  const handleEntityToggle = async (
+    entityId: string,
+    entityType: string,
+    friendlyName: string,
+    enabled: boolean
+  ) => {
+    if (enabled) {
+      await addEntityToGateway(entityId, entityType, friendlyName);
+    } else {
+      await removeEntityFromGateway(entityId);
+    }
+  };
+
+  // Toggle domain filter
+  const toggleDomainFilter = async (domain: string) => {
+    const newDomains = filterPreferences.domains.includes(domain)
+      ? filterPreferences.domains.filter((d) => d !== domain)
+      : [...filterPreferences.domains, domain];
+
+    const newPrefs = { ...filterPreferences, domains: newDomains };
+    setFilterPreferences(newPrefs);
+    await updateIoTFilterPreferences(newPrefs);
+  };
+
+  // Toggle show all domains
+  const toggleShowAllDomains = async () => {
+    const newPrefs = { ...filterPreferences, showAllDomains: !filterPreferences.showAllDomains };
+    setFilterPreferences(newPrefs);
+    await updateIoTFilterPreferences(newPrefs);
+  };
+
+  // Load states when gateway becomes active
+  useEffect(() => {
+    if (gateway && gateway.is_active && states.length === 0) {
+      fetchStates(gateway);
+    }
+  }, [gateway]);
 
   // Toast functions
   const showErrorToast = (message: string) => {
@@ -513,6 +642,15 @@ export default function IoTIntegrationDetailScreen() {
       });
     }
   };
+
+  // Load user preferences
+  useEffect(() => {
+    const loadPreferences = async () => {
+      const prefs = await getUserPreferences();
+      setFilterPreferences(prefs.iotFilters);
+    };
+    loadPreferences();
+  }, []);
 
   useEffect(() => {
     fetchGateway();
@@ -755,45 +893,49 @@ export default function IoTIntegrationDetailScreen() {
             </VStack>
           </Card>
 
-          {/* Enabled States Section */}
+          {/* Control Panel Section */}
           <Card className="bg-background-0">
             <VStack className="p-2" space="md">
               <HStack className="items-center justify-between">
                 <Heading size="lg">Control Panel</Heading>
-                <CountBadge
-                  count={enabledStates.length}
-                  label="ENABLED"
-                  variant="green-dark"
-                  size="md"
-                />
+                <HStack className="gap-2">
+                  <CountBadge
+                    count={enabledStates.length}
+                    label="ASSIGNED"
+                    variant="green-dark"
+                    size="md"
+                  />
+                  <CountBadge
+                    count={
+                      states.filter((state) => {
+                        const domain = state.entity_id.split('.')[0];
+                        const friendlyName = state.attributes.friendly_name || '';
+                        const searchLower = searchQuery.toLowerCase();
+                        const matchesDomain =
+                          filterPreferences.showAllDomains ||
+                          filterPreferences.domains.includes(domain);
+                        const matchesSearch =
+                          searchQuery === '' ||
+                          state.entity_id.toLowerCase().includes(searchLower) ||
+                          friendlyName.toLowerCase().includes(searchLower) ||
+                          (state.attributes.device_class &&
+                            state.attributes.device_class.toLowerCase().includes(searchLower));
+                        const matchesEnabledFilter =
+                          !filterEnabled || enabledEntitiesSet.has(state.entity_id);
+                        return matchesDomain && matchesSearch && matchesEnabledFilter;
+                      }).length
+                    }
+                    label="ENTITIES"
+                    variant="success"
+                    size="md"
+                  />
+                </HStack>
               </HStack>
-              {enabledStates.length > 0 && (
-                <>
-                  <Text>
-                    The controls below are currently assigned to Grow #{gateway.grow_id || 'N/A'}.
-                  </Text>
-                  <Text>
-                    Enable, disable, and change them using the interface below. You can add or
-                    remove controls using the "Manage Controls" button below.
-                  </Text>
-                </>
-              )}
 
               {enabledStates.length === 0 ? (
-                <VStack className="items-center pb-2 pt-6" space="md">
-                  <Text className="text-center text-typography-500">
-                    No controls enabled yet.{'\n'}
-                    Browse and select controls to assign to the grow.
-                  </Text>
-                  <Button
-                    variant="solid"
-                    action="positive"
-                    className="mt-4"
-                    onPress={navigateToEntitySearch}
-                    isDisabled={!gateway.is_active || connectionInfo.status !== 'connected'}>
-                    <ButtonIcon as={Search} className="text-white" />
-                    <ButtonText className="text-white">Browse Controls</ButtonText>
-                  </Button>
+                <VStack className="items-center  pt-6" space="md">
+                  <Text className="text-center text-typography-500">No controls assigned yet.</Text>
+                  <Icon as={ListX} className="text-typography-500" />
                 </VStack>
               ) : (
                 <VStack space="sm">
@@ -953,13 +1095,187 @@ export default function IoTIntegrationDetailScreen() {
                       })}
                     </VStack>
                   ))}
-
-                  <Button variant="outline" onPress={navigateToEntitySearch} className="mt-4">
-                    <ButtonIcon as={Settings} />
-                    <ButtonText>Manage Controls</ButtonText>
-                  </Button>
                 </VStack>
               )}
+
+              {/* Control Selection Interface - Always Visible */}
+              <VStack space="xl" className="mt-8">
+                <Divider />
+
+                {/* Search and Filter Controls */}
+                <VStack space="sm">
+                  <Input className="mb-4 mt-2">
+                    <Icon as={Search} className="ml-3 text-typography-500" />
+                    <InputField
+                      placeholder="Search controls..."
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                    />
+                    {searchQuery && (
+                      <InputSlot className="pr-3">
+                        <Pressable onPress={() => setSearchQuery('')}>
+                          <Icon as={X} size="sm" className="text-typography-500" />
+                        </Pressable>
+                      </InputSlot>
+                    )}
+                  </Input>
+
+                  <HStack className="items-center">
+                    <Icon as={Filter} size="lg" className="text-typography-500" />
+                    <Text className="ml-2">Show assigned only</Text>
+                    <Switch
+                      trackColor={{ false: trackFalse, true: trackTrue }}
+                      thumbColor={thumbColor}
+                      ios_backgroundColor={trackFalse}
+                      value={filterEnabled}
+                      onValueChange={setFilterEnabled}
+                      className="ml-auto"
+                    />
+                  </HStack>
+
+                  {/* Domain Filters */}
+                  <VStack space="sm">
+                    <HStack className="mt-1 items-center">
+                      <Icon as={Filter} size="lg" className="text-typography-500" />
+                      <Text className="ml-2">Domain Filters</Text>
+                      <Button
+                        className="ml-auto"
+                        variant="solid"
+                        action="primary"
+                        size="sm"
+                        onPress={() => setShowFilters(!showFilters)}>
+                        <ButtonText>Configure</ButtonText>
+                        <ButtonIcon as={showFilters ? ChevronDown : SlidersHorizontal} size="sm" />
+                      </Button>
+                    </HStack>
+
+                    {showFilters && (
+                      <VStack space="sm">
+                        <VStack space="xs">
+                          <Text className="text-typography-500">Select domains to display:</Text>
+                          <VStack space="xs">
+                            {Array.from(
+                              new Set(states.map((state) => state.entity_id.split('.')[0]))
+                            )
+                              .sort()
+                              .map((domain) => (
+                                <HStack
+                                  key={domain}
+                                  className="my-1 ml-5 items-center justify-between border-b border-background-200">
+                                  <Text className="text-md mb-2 capitalize">{domain}</Text>
+                                  <Switch
+                                    trackColor={{ false: trackFalse, true: trackTrue }}
+                                    thumbColor={thumbColor}
+                                    ios_backgroundColor={trackFalse}
+                                    value={filterPreferences.domains.includes(domain)}
+                                    onValueChange={() => toggleDomainFilter(domain)}
+                                    className="mb-2"
+                                  />
+                                </HStack>
+                              ))}
+                          </VStack>
+                        </VStack>
+                      </VStack>
+                    )}
+                  </VStack>
+                </VStack>
+
+                {/* Grouped States */}
+                {Object.entries(
+                  states
+                    .filter((state) => {
+                      const domain = state.entity_id.split('.')[0];
+                      const friendlyName = state.attributes.friendly_name || '';
+                      const searchLower = searchQuery.toLowerCase();
+                      const matchesDomain =
+                        filterPreferences.showAllDomains ||
+                        filterPreferences.domains.includes(domain);
+                      const matchesSearch =
+                        searchQuery === '' ||
+                        state.entity_id.toLowerCase().includes(searchLower) ||
+                        friendlyName.toLowerCase().includes(searchLower) ||
+                        (state.attributes.device_class &&
+                          state.attributes.device_class.toLowerCase().includes(searchLower));
+                      const matchesEnabledFilter =
+                        !filterEnabled || enabledEntitiesSet.has(state.entity_id);
+                      return matchesDomain && matchesSearch && matchesEnabledFilter;
+                    })
+                    .reduce(
+                      (acc, state) => {
+                        const domain = state.entity_id.split('.')[0];
+                        if (!acc[domain]) acc[domain] = [];
+                        acc[domain].push(state);
+                        return acc;
+                      },
+                      {} as Record<string, HAState[]>
+                    )
+                ).map(([domain, domainStates]) => (
+                  <VStack key={domain} className="p-0" space="sm">
+                    <Divider className="mb-3" />
+                    <HStack className="mb-2 items-center">
+                      {domain === 'sensor' && (
+                        <Icon as={Activity} size="lg" className="text-typography-500" />
+                      )}
+                      {domain === 'automation' && (
+                        <Icon as={Bot} size="xl" className="text-typography-500" />
+                      )}
+                      {domain === 'number' && (
+                        <Icon as={Calculator} size="lg" className="text-typography-500" />
+                      )}
+                      {domain === 'switch' && (
+                        <Icon as={ToggleRight} size="lg" className="text-typography-500" />
+                      )}
+                      <Heading size="md" className="ml-2 capitalize">
+                        {domain}
+                      </Heading>
+                      <Badge className="ml-auto" variant="outline" action="muted">
+                        <Text size="xs">{domainStates.length}</Text>
+                      </Badge>
+                    </HStack>
+
+                    {domainStates.map((state) => {
+                      const isEnabled = enabledEntitiesSet.has(state.entity_id);
+                      const friendlyName = state.attributes.friendly_name || state.entity_id;
+
+                      return (
+                        <Card key={state.entity_id} className="bg-background-0 p-2">
+                          <VStack space="sm">
+                            <HStack className="items-center justify-between">
+                              <VStack className="mr-2 flex-1">
+                                <Text className="font-semibold">{friendlyName}</Text>
+                                {state.attributes.device_class && (
+                                  <HStack>
+                                    <Text className="ml-2 text-typography-400">Device Class: </Text>
+                                    <Text className="capitalize italic text-typography-400">
+                                      {state.attributes.device_class}
+                                    </Text>
+                                  </HStack>
+                                )}
+                              </VStack>
+                              <VStack className="items-end" space="xs">
+                                <Switch
+                                  trackColor={{ false: trackFalse, true: trackTrue }}
+                                  thumbColor={thumbColor}
+                                  ios_backgroundColor={trackFalse}
+                                  value={isEnabled}
+                                  onValueChange={(value) => {
+                                    handleEntityToggle(
+                                      state.entity_id,
+                                      domain,
+                                      friendlyName,
+                                      value
+                                    );
+                                  }}
+                                />
+                              </VStack>
+                            </HStack>
+                          </VStack>
+                        </Card>
+                      );
+                    })}
+                  </VStack>
+                ))}
+              </VStack>
             </VStack>
           </Card>
         </VStack>

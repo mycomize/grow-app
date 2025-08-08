@@ -81,6 +81,26 @@ class ApiClient {
       throw new Error(errorMessage);
     }
 
+    // Handle responses with no content (204, etc.)
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+      return null as TResponse;
+    }
+
+    // Check if response has content before trying to parse JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      if (!text.trim()) {
+        return null as TResponse;
+      }
+      // If there's text but it's not JSON, try to parse it anyway for backward compatibility
+      try {
+        return JSON.parse(text);
+      } catch {
+        return text as TResponse;
+      }
+    }
+
     return await response.json();
   }
 
