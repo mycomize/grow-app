@@ -7,6 +7,7 @@ import { Textarea, TextareaInput } from '~/components/ui/textarea';
 import { Pressable } from '~/components/ui/pressable';
 import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
+import { Spinner } from '~/components/ui/spinner';
 import {
   Eye,
   EyeOff,
@@ -14,19 +15,30 @@ import {
   Power,
   PowerOff,
   ChevronsLeftRightEllipsis,
+  QrCode,
+  RadioTower,
+  Gauge,
+  Wifi,
+  WifiOff,
 } from 'lucide-react-native';
 import { IoTGateway, IoTGatewayUpdate } from '~/lib/iot';
-import { ConnectionStatusBadge, ConnectionStatus } from '~/components/ui/connection-status-badge';
+import { ConnectionStatus } from '~/components/ui/connection-status-badge';
+import { InfoBadge, InfoBadgeVariant } from '~/components/ui/info-badge';
+import { CountBadge } from '~/components/ui/count-badge';
 import { IoTTypeSelectionModal } from '~/components/modals/IoTTypeSelectionModal';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCallback } from 'react';
 
 interface ConnectionInfo {
   status: ConnectionStatus;
   version?: string;
   config?: any;
+  latency?: number;
 }
 
-interface DetailsSectionProps {
+interface BasicsSectionProps {
   gateway: IoTGateway | null;
   formData: IoTGatewayUpdate;
   isEditing: boolean;
@@ -39,7 +51,7 @@ interface DetailsSectionProps {
   onTestConnection: () => void;
 }
 
-export function DetailsSection({
+export function BasicsSection({
   gateway,
   formData,
   isEditing,
@@ -50,9 +62,59 @@ export function DetailsSection({
   onToggleApiKeyVisibility,
   onToggleGatewayStatus,
   onTestConnection,
-}: DetailsSectionProps) {
+}: BasicsSectionProps) {
   const [showTypeModal, setShowTypeModal] = useState(false);
   const [gatewayType, setGatewayType] = useState('home_assistant');
+
+  // Helper function to get InfoBadge props from connection status
+  const getConnectionBadgeProps = (status: ConnectionStatus) => {
+    switch (status) {
+      case 'connected':
+        return {
+          text: 'CONNECTED',
+          icon: Wifi,
+          variant: 'success' as InfoBadgeVariant,
+        };
+      case 'connecting':
+        return {
+          text: 'CONNECTING',
+          icon: RadioTower,
+          variant: 'purple' as InfoBadgeVariant,
+        };
+      case 'disconnected':
+        return {
+          text: 'DISCONNECTED',
+          icon: PowerOff,
+          variant: 'error' as InfoBadgeVariant,
+        };
+      default:
+        return {
+          text: 'UNKNOWN',
+          icon: WifiOff,
+          variant: 'error' as InfoBadgeVariant,
+        };
+    }
+  };
+
+  // Handle scanned data when returning from scanner
+  useFocusEffect(
+    useCallback(() => {
+      const checkForScannedData = async () => {
+        try {
+          const scannedData = await AsyncStorage.getItem('qr_scanned_data');
+          if (scannedData) {
+            onUpdateField('api_key', scannedData);
+            // Clear the stored data after using it
+            await AsyncStorage.removeItem('qr_scanned_data');
+          }
+        } catch (error) {
+          console.error('Error reading scanned data:', error);
+        }
+      };
+
+      checkForScannedData();
+    }, [onUpdateField])
+  );
 
   const getTypeDisplayName = (type: string) => {
     switch (type) {
@@ -62,9 +124,14 @@ export function DetailsSection({
         return 'Unknown Type';
     }
   };
+
+  const handleQRCodeScan = () => {
+    router.push('/qrscanner' as any);
+  };
+
   if (isEditing) {
     return (
-      <VStack space="lg" className="p-4">
+      <VStack space="lg" className="p-2">
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText>Name</FormControlLabelText>
@@ -114,7 +181,6 @@ export function DetailsSection({
               value={formData.api_url}
               onChangeText={(text) => onUpdateField('api_url', text)}
               autoCapitalize="none"
-              keyboardType="url"
               placeholder="http://homeassistant.local:8123"
             />
           </Input>
@@ -131,7 +197,10 @@ export function DetailsSection({
               autoCapitalize="none"
               secureTextEntry={!showApiKey}
             />
-            <InputSlot className="pr-3">
+            <InputSlot className="flex-row items-center pr-3">
+              <Pressable onPress={handleQRCodeScan} className="mr-2">
+                <InputIcon as={QrCode} className="text-primary-600" />
+              </Pressable>
               <Pressable onPress={onToggleApiKeyVisibility}>
                 <InputIcon as={showApiKey ? EyeOff : Eye} className="text-background-500" />
               </Pressable>
@@ -141,41 +210,96 @@ export function DetailsSection({
 
         {/* Connection Status and Controls */}
         <VStack space="md" className="mt-4 rounded-md p-0">
-          <HStack className="mb-2 items-center justify-between">
-            <Text className="text-lg font-semibold">Connection Status</Text>
-            <ConnectionStatusBadge
-              status={isTestingConnection ? 'connecting' : connectionInfo.status}
-            />
+          <HStack className="mb-0 items-center">
+            <Icon as={RadioTower} className="mr-2 text-typography-400" />
+            <Text className="flex-1 text-lg font-semibold">Link Status</Text>
+            <HStack className="items-center" space="xs">
+              <InfoBadge
+                {...getConnectionBadgeProps(
+                  isTestingConnection ? 'connecting' : connectionInfo.status
+                )}
+              />
+              {connectionInfo.latency !== undefined && connectionInfo.status === 'connected' && (
+                <CountBadge
+                  count={connectionInfo.latency}
+                  label="ms"
+                  variant="green-dark"
+                  icon={Gauge}
+                />
+              )}
+            </HStack>
           </HStack>
 
           {connectionInfo.status === 'connected' && connectionInfo.version && (
             <Text className="text-sm text-typography-500">
-              Home Assistant Version: {connectionInfo.version}
+              HA Version: {connectionInfo.version}
             </Text>
           )}
 
           {/* Connection Controls */}
-          <HStack space="sm">
-            <Button
-              onPress={onToggleGatewayStatus}
-              className={gateway?.is_active ? 'flex-1 bg-error-200' : 'flex-1 bg-success-300'}>
-              <ButtonIcon
-                as={gateway?.is_active ? PowerOff : Power}
-                className={gateway?.is_active ? 'text-typography-700' : 'text-white'}
-              />
-              <ButtonText className={gateway?.is_active ? 'text-typography-700' : 'text-white'}>
-                {gateway?.is_active ? 'Disconnect' : 'Connect'}
-              </ButtonText>
-            </Button>
+          <HStack space="sm" className="mt-3">
+            {gateway ? (
+              // Existing gateway - button logic based on connection state
+              <Button
+                variant="solid"
+                action="primary"
+                onPress={() => {
+                  // Don't execute if in connecting/testing state
+                  if (isTestingConnection || connectionInfo.status === 'connecting') return;
 
-            <Button
-              variant="outline"
-              onPress={onTestConnection}
-              isDisabled={isTestingConnection || !gateway?.is_active}
-              className="flex-1">
-              <ButtonIcon as={ChevronsLeftRightEllipsis} />
-              <ButtonText>{isTestingConnection ? 'Testing...' : 'Test'}</ButtonText>
-            </Button>
+                  if (gateway.is_active && connectionInfo.status === 'connected') {
+                    onTestConnection();
+                  } else {
+                    onToggleGatewayStatus();
+                  }
+                }}
+                className="flex-1">
+                {(isTestingConnection || connectionInfo.status === 'connecting') && (
+                  <Spinner size="small" className="mr-2 text-background-0" />
+                )}
+                {!(isTestingConnection || connectionInfo.status === 'connecting') && (
+                  <ButtonIcon as={ChevronsLeftRightEllipsis} />
+                )}
+                <ButtonText>
+                  {(isTestingConnection || connectionInfo.status === 'connecting') && 'Connecting'}
+                  {connectionInfo.status === 'connected' && !isTestingConnection && 'Test'}
+                  {connectionInfo.status === 'disconnected' && !isTestingConnection && 'Connect'}
+                </ButtonText>
+              </Button>
+            ) : (
+              // New gateway - button logic based on connection state
+              <Button
+                variant="solid"
+                action="primary"
+                onPress={() => {
+                  // Don't execute if in connecting/testing state or missing required fields
+                  if (
+                    isTestingConnection ||
+                    connectionInfo.status === 'connecting' ||
+                    !formData.api_url?.trim() ||
+                    !formData.api_key?.trim()
+                  )
+                    return;
+
+                  onTestConnection();
+                }}
+                className="flex-1">
+                {(isTestingConnection || connectionInfo.status === 'connecting') && (
+                  <Spinner size="small" className="mr-2 text-background-0" />
+                )}
+                {!(isTestingConnection || connectionInfo.status === 'connecting') && (
+                  <ButtonIcon as={ChevronsLeftRightEllipsis} />
+                )}
+                <ButtonText>
+                  {(isTestingConnection || connectionInfo.status === 'connecting') && 'Connecting'}
+                  {connectionInfo.status === 'connected' && !isTestingConnection && 'Test'}
+                  {(connectionInfo.status === 'disconnected' ||
+                    connectionInfo.status === 'unknown') &&
+                    !isTestingConnection &&
+                    'Connect'}
+                </ButtonText>
+              </Button>
+            )}
           </HStack>
         </VStack>
 
@@ -197,88 +321,4 @@ export function DetailsSection({
       </VStack>
     );
   }
-
-  return (
-    <VStack space="md" className="p-4">
-      <HStack className="justify-between">
-        <Text className="font-medium">Name:</Text>
-        <Text className="flex-1 text-right" numberOfLines={1} ellipsizeMode="middle">
-          {gateway.name}
-        </Text>
-      </HStack>
-
-      {gateway.description && (
-        <HStack className="justify-between">
-          <Text className="font-medium">Description:</Text>
-          <Text className="flex-1 text-right" numberOfLines={2} ellipsizeMode="tail">
-            {gateway.description}
-          </Text>
-        </HStack>
-      )}
-
-      <HStack className="justify-between">
-        <Text className="font-medium">URL:</Text>
-        <Text className="flex-1 text-right" numberOfLines={1} ellipsizeMode="middle">
-          {gateway.api_url}
-        </Text>
-      </HStack>
-
-      <HStack className="justify-between">
-        <Text className="font-medium">Type:</Text>
-        <Text className="flex-1 text-right">{getTypeDisplayName(gatewayType)}</Text>
-      </HStack>
-
-      <HStack className="justify-between">
-        <Text className="font-medium">API Token:</Text>
-        <Text>••••••••••••••••</Text>
-      </HStack>
-
-      {gateway.grow_id && (
-        <HStack className="justify-between">
-          <Text className="font-medium">Linked Grow:</Text>
-          <Text className="font-medium text-primary-600">Grow #{gateway.grow_id}</Text>
-        </HStack>
-      )}
-
-      {/* Connection Status and Controls */}
-      <VStack space="md" className="mt-4 rounded-md  p-0">
-        <HStack className="mb-2 items-center justify-between">
-          <Text className="text-lg font-semibold">Connection Status</Text>
-          <ConnectionStatusBadge
-            status={isTestingConnection ? 'connecting' : connectionInfo.status}
-          />
-        </HStack>
-
-        {connectionInfo.status === 'connected' && connectionInfo.version && (
-          <Text className="text-sm text-typography-500">
-            Home Assistant Version: {connectionInfo.version}
-          </Text>
-        )}
-
-        {/* Connection Controls */}
-        <HStack space="sm">
-          <Button
-            onPress={onToggleGatewayStatus}
-            className={gateway.is_active ? 'flex-1 bg-error-200' : 'flex-1 bg-success-300'}>
-            <ButtonIcon
-              as={gateway.is_active ? PowerOff : Power}
-              className={gateway.is_active ? 'text-typography-700' : 'text-white'}
-            />
-            <ButtonText className={gateway.is_active ? 'text-typography-700' : 'text-white'}>
-              {gateway.is_active ? 'Disconnect' : 'Connect'}
-            </ButtonText>
-          </Button>
-
-          <Button
-            variant="outline"
-            onPress={onTestConnection}
-            isDisabled={isTestingConnection || !gateway.is_active}
-            className="flex-1">
-            <ButtonIcon as={ChevronsLeftRightEllipsis} />
-            <ButtonText>{isTestingConnection ? 'Testing...' : 'Test'}</ButtonText>
-          </Button>
-        </HStack>
-      </VStack>
-    </VStack>
-  );
 }

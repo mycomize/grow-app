@@ -11,7 +11,14 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from '~/components/ui/accordion';
-import { Save, ChevronDown, ChevronRight, FileText, Bot, Trash2 } from 'lucide-react-native';
+import {
+  Save,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  CircuitBoard,
+  Trash2,
+} from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import MushroomIcon from '~/components/icons/MushroomIcon';
 import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
@@ -145,7 +152,7 @@ export function GrowForm({
                   {({ isExpanded }: { isExpanded: boolean }) => (
                     <HStack className="flex-1 items-center justify-between">
                       <HStack className="items-center" space="md">
-                        <Icon as={Bot} size="xl" className="text-typography-400" />
+                        <Icon as={CircuitBoard} size="xl" className="text-typography-400" />
                         <Text className="text-lg font-semibold">IoT Gateway</Text>
                       </HStack>
                       <Icon

@@ -24,6 +24,7 @@ interface ConnectionInfo {
   status: 'connected' | 'connecting' | 'disconnected';
   version?: string;
   config?: any;
+  latency?: number;
 }
 
 const createEmptyGateway = (): IoTGatewayUpdate => ({
@@ -170,35 +171,55 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
   };
 
   // Check Home Assistant connection via REST API
-  const checkHomeAssistantConnection = async (gateway: IoTGateway) => {
+  const checkHomeAssistantConnection = async (gatewayOrFormData: IoTGateway | IoTGatewayUpdate) => {
     try {
-      // Try to get basic info from Home Assistant
-      const response = await fetch(`${gateway.api_url}/api/`, {
+      const apiUrl = gatewayOrFormData.api_url;
+      const apiKey = gatewayOrFormData.api_key;
+
+      if (!apiUrl || !apiKey) {
+        setConnectionInfo({ status: 'disconnected' });
+        showError('URL and API token are required');
+        return;
+      }
+
+      // Measure latency
+      const startTime = Date.now();
+
+      // Try to get config info from Home Assistant
+      const response = await fetch(`${apiUrl}/api/config`, {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${gateway.api_key}`,
+          Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
       });
+
+      const endTime = Date.now();
+      const latency = endTime - startTime;
 
       if (response.ok) {
         const data = await response.json();
         setConnectionInfo({
           status: 'connected',
           version: data.version,
+          config: data,
+          latency: latency,
         });
 
         // Get state count
-        await getEntityCount(gateway);
+        await getEntityCount({ api_url: apiUrl, api_key: apiKey } as IoTGateway);
       } else {
         setConnectionInfo({ status: 'disconnected' });
         if (response.status === 401) {
           showError('Invalid API token');
+        } else {
+          showError('Failed to connect to Home Assistant');
         }
       }
     } catch (err) {
       console.error('Connection check failed:', err);
       setConnectionInfo({ status: 'disconnected' });
+      showError('Connection failed. Please check your URL and network connection.');
     }
   };
 
@@ -223,12 +244,12 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
   };
 
   // Fetch states from Home Assistant for control selection
-  const fetchStates = async (gateway: IoTGateway) => {
+  const fetchStates = async (gatewayOrFormData: IoTGateway | IoTGatewayUpdate) => {
     try {
-      const response = await fetch(`${gateway.api_url}/api/states`, {
+      const response = await fetch(`${gatewayOrFormData.api_url}/api/states`, {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${gateway.api_key}`,
+          Authorization: `Bearer ${gatewayOrFormData.api_key}`,
           'Content-Type': 'application/json',
         },
       });
@@ -292,12 +313,24 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
     }
   }, [gatewayId, token, router, fetchEnabledEntities]);
 
-  // Load states when gateway becomes active
+  // Load states when gateway becomes active OR when connection is established
   useEffect(() => {
     if (gateway && gateway.is_active && states.length === 0) {
       fetchStates(gateway);
     }
   }, [gateway]);
+
+  // Fetch states when connected, even for new gateways
+  useEffect(() => {
+    if (connectionInfo.status === 'connected' && states.length === 0) {
+      if (gateway) {
+        fetchStates(gateway);
+      } else if (formData.api_url && formData.api_key) {
+        // For new gateways, use form data
+        fetchStates(formData);
+      }
+    }
+  }, [connectionInfo.status, gateway, formData, states.length]);
 
   useEffect(() => {
     fetchGateway();
@@ -324,20 +357,28 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
 
   // Test connection manually
   const testConnection = async () => {
-    if (!gateway) return;
+    if (!formData.api_url?.trim() || !formData.api_key?.trim()) {
+      showError('URL and API token are required for connection test');
+      return;
+    }
 
     setIsTestingConnection(true);
 
     try {
       setConnectionInfo({ status: 'connecting' });
-      await checkHomeAssistantConnection(gateway);
-      if (connectionInfo.status === 'connected') {
-        showSuccess('Connection test successful!');
-      } else {
-        showError('Connection test failed. Please check your settings.');
-      }
+      // Use form data if no gateway exists yet, otherwise use gateway
+      const connectionData = gateway || formData;
+      await checkHomeAssistantConnection(connectionData);
+
+      // Check the updated connection status
+      setTimeout(() => {
+        if (connectionInfo.status === 'connected') {
+          showSuccess('Connection test successful!');
+        }
+      }, 100);
     } catch (err) {
       showError('Connection test failed. Please check your settings.');
+      setConnectionInfo({ status: 'disconnected' });
     } finally {
       setIsTestingConnection(false);
     }

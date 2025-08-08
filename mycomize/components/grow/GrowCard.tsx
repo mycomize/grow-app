@@ -370,7 +370,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
           </VStack>
 
           {/* Last row: Grow tags */}
-          {grow.tags && grow.tags.length > 0 && (
+          {Array.isArray(grow.tags) && grow.tags.length > 0 && (
             <VStack className="mb-4" space="xs">
               <HStack space="xs" className="flex-wrap">
                 {grow.tags.slice(0, 3).map((tag, index) => (

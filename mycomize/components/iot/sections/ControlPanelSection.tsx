@@ -38,6 +38,7 @@ import { IoTFilterPreferences } from '~/lib/userPreferences';
 
 interface ControlPanelSectionProps {
   gateway: IoTGateway | null;
+  connectionStatus: 'connected' | 'connecting' | 'disconnected' | 'unknown';
   enabledStates: string[];
   currentStates: HAState[];
   states: HAState[];
@@ -67,6 +68,7 @@ interface ControlPanelSectionProps {
 
 export function ControlPanelSection({
   gateway,
+  connectionStatus,
   enabledStates,
   currentStates,
   states,
@@ -91,10 +93,12 @@ export function ControlPanelSection({
   const { theme } = useTheme();
   const { trackFalse, trackTrue, thumbColor } = getSwitchColors(theme);
 
-  if (!gateway) {
+  // Show content if connected, even without a saved gateway
+  if (!gateway && connectionStatus !== 'connected') {
     return (
-      <VStack className="p-4">
-        <Text className="text-typography-500">Gateway data not available</Text>
+      <VStack className="items-center justify-center p-8" space="md">
+        <Text className="text-center text-typography-500">Gateway data not available</Text>
+        <Icon as={ListX} size="xl" className="text-typography-400" />
       </VStack>
     );
   }
@@ -128,20 +132,17 @@ export function ControlPanelSection({
   });
 
   return (
-    <VStack space="md" className="p-4">
-      <HStack className="items-center justify-between">
-        <Text className="text-lg font-semibold">Control Panel</Text>
-        <HStack className="gap-2">
-          <CountBadge count={enabledStates.length} label="ENABLED" variant="green-dark" size="md" />
-          <CountBadge count={filteredStates.length} label="ENTITIES" variant="success" size="md" />
-        </HStack>
+    <VStack space="md" className="p-2">
+      <HStack className="gap-2">
+        <CountBadge count={enabledStates.length} label="ASSIGNED" variant="green-dark" size="md" />
+        <CountBadge count={filteredStates.length} label="CONTROLS" variant="success" size="md" />
       </HStack>
 
       {/* Enabled Controls Section */}
       {enabledStates.length === 0 ? (
         <VStack className="items-center pt-6" space="md">
-          <Text className="text-center text-typography-500">No controls assigned yet.</Text>
-          <Icon as={ListX} className="text-typography-500" />
+          <Text className="text-center text-typography-500">No controls assigned yet</Text>
+          <Icon as={ListX} size="xl" className="text-typography-500" />
         </VStack>
       ) : (
         <VStack space="sm">
@@ -286,7 +287,7 @@ export function ControlPanelSection({
       )}
 
       {/* Control Selection Interface - Always Visible */}
-      <VStack space="xl" className="mt-8">
+      <VStack space="xl" className="mt-4">
         <Divider />
 
         {/* Search and Filter Controls */}
@@ -324,7 +325,7 @@ export function ControlPanelSection({
           <VStack space="sm">
             <HStack className="mt-1 items-center">
               <Icon as={Filter} size="lg" className="text-typography-500" />
-              <Text className="ml-2">Domain Filters</Text>
+              <Text className="ml-2">Domain Filter</Text>
               <Button
                 className="ml-auto"
                 variant="solid"

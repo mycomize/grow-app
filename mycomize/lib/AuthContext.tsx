@@ -107,15 +107,43 @@ export function AuthProvider({ children }: PropsWithChildren) {
       router.replace('/login');
       return null; // No error
     } catch (error) {
-      console.error('Failed to register user: ', error);
       const errorMessage = (error as Error).message;
+
+      // Handle specific error cases
       if (
         errorMessage.includes('already registered') ||
         errorMessage.includes('Username already registered')
       ) {
         return 'This username is already taken. Please choose another one.';
       }
-      return 'Network error. Please check your connection and try again.';
+
+      // For validation errors, return the parsed message directly from ApiClient
+      if (
+        errorMessage.includes('Password must be at least') ||
+        errorMessage.includes('Username must be at least') ||
+        errorMessage.includes('characters long')
+      ) {
+        return errorMessage;
+      }
+
+      // Handle network/connection errors
+      if (errorMessage === 'UNAUTHORIZED') {
+        return 'Invalid credentials. Please try again.';
+      }
+
+      if (
+        errorMessage.includes('fetch') ||
+        errorMessage.includes('network') ||
+        errorMessage === 'Request failed'
+      ) {
+        return 'Network error. Please check your connection and try again.';
+      }
+
+      // Log unexpected errors only (not validation errors)
+      console.error('Unexpected registration error:', error);
+
+      // Return the specific error message for other cases
+      return errorMessage;
     }
   };
 

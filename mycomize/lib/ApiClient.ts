@@ -74,7 +74,19 @@ class ApiClient {
       let errorMessage = 'Request failed';
       try {
         const errorData = await response.json();
-        errorMessage = errorData.detail || errorData.message || errorMessage;
+
+        // Handle FastAPI validation errors (422)
+        if (response.status === 422 && Array.isArray(errorData.detail)) {
+          // Extract validation error messages and clean them up
+          const validationErrors = errorData.detail
+            .map((error: any) => error.msg.replace(/^Value error,?\s*/i, ''))
+            .join(', ');
+          errorMessage = validationErrors;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
       } catch {
         errorMessage = `HTTP ${response.status}: ${response.statusText}`;
       }

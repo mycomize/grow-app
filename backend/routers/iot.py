@@ -229,10 +229,10 @@ async def delete_iot_gateway(
         raise HTTPException(status_code=404, detail="IoT gateway not found")
     
     # Check if any grow is using this gateway
-    if db_gateway.grow_id is not None:
+    if db_gateway.bulk_grow_id is not None:
         raise HTTPException(
             status_code=400, 
-            detail=f"Cannot delete IoT gateway that is in use by a grow. Remove it from grow ID {db_gateway.grow_id} first."
+            detail=f"Cannot delete IoT gateway that is in use by a grow. Remove it from grow ID {db_gateway.bulk_grow_id} first."
         )
     
     db.delete(db_gateway)
@@ -255,19 +255,19 @@ async def link_gateway_with_grow(
         raise HTTPException(status_code=404, detail="IoT gateway not found")
     
     # Check if already linked with another grow
-    if gateway.grow_id is not None and gateway.grow_id != grow_id:
+    if gateway.bulk_grow_id is not None and gateway.bulk_grow_id != grow_id:
         raise HTTPException(
             status_code=400, 
-            detail=f"This gateway is already linked with grow ID {gateway.grow_id}. Please unlink it first."
+            detail=f"This gateway is already linked with grow ID {gateway.bulk_grow_id}. Please unlink it first."
         )
     
     # Verify grow exists and belongs to user
-    grow = db.query(Grow).filter(Grow.id == grow_id, Grow.user_id == current_user.id).first()
+    grow = db.query(BulkGrow).filter(BulkGrow.id == grow_id, BulkGrow.user_id == current_user.id).first()
     if grow is None:
         raise HTTPException(status_code=404, detail="Grow not found")
     
     # Link gateway with grow
-    gateway.grow_id = grow_id
+    gateway.bulk_grow_id = grow_id
     db.commit()
     db.refresh(gateway)
     
@@ -286,11 +286,11 @@ async def unlink_gateway_from_grow(
         raise HTTPException(status_code=404, detail="IoT gateway not found")
     
     # Check if not linked with any grow
-    if gateway.grow_id is None:
+    if gateway.bulk_grow_id is None:
         raise HTTPException(status_code=400, detail="This gateway is not linked with any grow")
     
     # Unlink gateway from grow
-    gateway.grow_id = None
+    gateway.bulk_grow_id = None
     db.commit()
     db.refresh(gateway)
     

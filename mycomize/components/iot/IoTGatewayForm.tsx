@@ -11,7 +11,7 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from '~/components/ui/accordion';
-import { Save, ChevronDown, ChevronRight, FileText, Activity, Trash2 } from 'lucide-react-native';
+import { Save, ChevronDown, ChevronRight, FileText, ServerCog, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
 
@@ -19,13 +19,14 @@ import { IoTGateway, IoTGatewayUpdate, IoTEntity, HAState } from '~/lib/iot';
 import { IoTFilterPreferences } from '~/lib/userPreferences';
 
 // Import modular sections
-import { DetailsSection } from '~/components/iot/sections/BasicsSection';
+import { BasicsSection } from '~/components/iot/sections/BasicsSection';
 import { ControlPanelSection } from '~/components/iot/sections/ControlPanelSection';
 
 interface ConnectionInfo {
   status: 'connected' | 'connecting' | 'disconnected';
   version?: string;
   config?: any;
+  latency?: number;
 }
 
 interface IoTGatewayFormProps {
@@ -150,7 +151,7 @@ export function IoTGatewayForm({
                 </AccordionTrigger>
               </AccordionHeader>
               <AccordionContent>
-                <DetailsSection
+                <BasicsSection
                   gateway={gateway}
                   formData={formData}
                   isEditing={isEditing}
@@ -172,7 +173,7 @@ export function IoTGatewayForm({
                   {({ isExpanded }: { isExpanded: boolean }) => (
                     <HStack className="flex-1 items-center justify-between">
                       <HStack className="items-center" space="md">
-                        <Icon as={Activity} size="xl" className="text-typography-400" />
+                        <Icon as={ServerCog} size="xl" className="text-typography-400" />
                         <Text className="text-lg font-semibold">Control Panel</Text>
                       </HStack>
                       <Icon
@@ -187,6 +188,7 @@ export function IoTGatewayForm({
               <AccordionContent>
                 <ControlPanelSection
                   gateway={gateway}
+                  connectionStatus={connectionInfo.status}
                   enabledStates={enabledStates}
                   currentStates={currentStates}
                   states={states}

@@ -27,6 +27,10 @@ import {
   Filter,
   Check,
   Gauge,
+  Wifi,
+  WifiOff,
+  PowerOff,
+  RadioTower,
 } from 'lucide-react-native';
 import { Pressable } from '~/components/ui/pressable';
 import { View } from '~/components/ui/view';
@@ -36,7 +40,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '~/lib/AuthContext';
 import { IoTGateway, gatewayTypeLabels } from '~/lib/iot';
 import { IntegrationCardSkeleton } from '~/components/iot/IntegrationCardSkeleton';
-import { ConnectionStatusBadge, ConnectionStatus } from '~/components/ui/connection-status-badge';
+import { ConnectionStatus } from '~/components/ui/connection-status-badge';
+import { InfoBadge, InfoBadgeVariant } from '~/components/ui/info-badge';
 import { CountBadge } from '~/components/ui/count-badge';
 
 interface AddIntegrationButtonProps {
@@ -79,6 +84,36 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
 }) => {
   const router = useRouter();
 
+  // Helper function to get InfoBadge props from connection status
+  const getConnectionBadgeProps = (status: ConnectionStatus) => {
+    switch (status) {
+      case 'connected':
+        return {
+          text: 'CONNECTED',
+          icon: Wifi,
+          variant: 'success' as InfoBadgeVariant,
+        };
+      case 'connecting':
+        return {
+          text: 'CONNECTING',
+          icon: RadioTower,
+          variant: 'info' as InfoBadgeVariant,
+        };
+      case 'disconnected':
+        return {
+          text: 'DISCONNECTED',
+          icon: PowerOff,
+          variant: 'error' as InfoBadgeVariant,
+        };
+      default:
+        return {
+          text: 'UNKNOWN',
+          icon: WifiOff,
+          variant: 'error' as InfoBadgeVariant,
+        };
+    }
+  };
+
   return (
     <>
       <Card className="w-11/12 rounded-xl bg-background-0">
@@ -101,7 +136,7 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
                 </Text>
               </VStack>
               <HStack className="ml-auto items-center" space="xs">
-                <ConnectionStatusBadge status={connectionStatus as ConnectionStatus} />
+                <InfoBadge {...getConnectionBadgeProps(connectionStatus)} />
                 {latency !== undefined && connectionStatus === 'connected' && (
                   <CountBadge count={latency} label="ms" variant="green-dark" icon={Gauge} />
                 )}
@@ -357,7 +392,7 @@ export default function IoTScreen() {
   return gateways.length == 0 ? (
     <VStack className="flex-1 items-center justify-center gap-2 bg-background-50">
       <Text className="mb-4 text-center text-lg text-typography-600">
-        Add your first Home Assistant integration!
+        Add your first IoT Gateway integration!
       </Text>
       <AddIntegrationButton title="Add Integration" initial={true} />
     </VStack>
