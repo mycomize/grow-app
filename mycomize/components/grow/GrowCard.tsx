@@ -10,7 +10,7 @@ import { View } from '~/components/ui/view';
 import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
 import { useRouter } from 'expo-router';
 import {
-  Bot,
+  CircuitBoard,
   CheckCircle,
   Circle,
   Disc2,
@@ -199,7 +199,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
   const healthInfo = getHealthStatusInfo();
 
   return (
-    <Card className="w-11/12 rounded-xl bg-background-0">
+    <Card className="w-11/12 rounded-xl bg-background-0 p-2">
       <VStack className="p-2">
         <View>
           {/* First row: Grow name and strain */}
@@ -351,7 +351,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
           {/* Fifth row: IoT Gateways */}
           <VStack className="mb-4" space="xs">
             <HStack className="items-center gap-2">
-              <Icon as={Bot} className="text-typography-400" size="xl" />
+              <Icon as={CircuitBoard} className="text-typography-400" size="lg" />
               <Text className="text-lg font-medium text-typography-600">IoT Gateways</Text>
             </HStack>
             {(() => {
