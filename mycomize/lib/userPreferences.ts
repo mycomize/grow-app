@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-export interface IoTFilterPreferences {
-  domains: string[];
-  showAllDomains: boolean;
-}
+import {
+  IoTFilterPreferences,
+  DEFAULT_IOT_DOMAINS,
+  DEFAULT_GROW_DEVICE_CLASSES,
+} from '~/lib/iotTypes';
 
 export interface TaskFilterPreferences {
   growName: string;
@@ -17,8 +17,10 @@ export interface UserPreferences {
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   iotFilters: {
-    domains: ['switch', 'automation', 'sensor', 'number'],
+    domains: DEFAULT_IOT_DOMAINS,
     showAllDomains: false,
+    deviceClasses: DEFAULT_GROW_DEVICE_CLASSES,
+    showAllDeviceClasses: false,
   },
   taskFilters: {
     growName: '',

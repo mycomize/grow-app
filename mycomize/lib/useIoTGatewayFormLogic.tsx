@@ -14,18 +14,8 @@ import {
   HAState,
   gatewayTypes,
 } from '~/lib/iot';
-import {
-  getUserPreferences,
-  updateIoTFilterPreferences,
-  IoTFilterPreferences,
-} from '~/lib/userPreferences';
-
-interface ConnectionInfo {
-  status: 'connected' | 'connecting' | 'disconnected';
-  version?: string;
-  config?: any;
-  latency?: number;
-}
+import { getUserPreferences, updateIoTFilterPreferences } from '~/lib/userPreferences';
+import { IoTFilterPreferences, DEFAULT_GROW_DEVICE_CLASSES, ConnectionInfo } from '~/lib/iotTypes';
 
 const createEmptyGateway = (): IoTGatewayUpdate => ({
   name: '',
@@ -85,11 +75,17 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
   const [enabledEntities, setEnabledEntities] = useState<IoTEntity[]>([]);
   const [enabledEntitiesSet, setEnabledEntitiesSet] = useState<Set<string>>(new Set());
   const [filterEnabled, setFilterEnabled] = useState(false);
+
+  // Local state for new gateway entity selections (before gateway is saved)
+  const [pendingEntitySelections, setPendingEntitySelections] = useState<Set<string>>(new Set());
   const [filterPreferences, setFilterPreferences] = useState<IoTFilterPreferences>({
     domains: ['switch', 'automation', 'sensor', 'number'],
     showAllDomains: false,
+    deviceClasses: DEFAULT_GROW_DEVICE_CLASSES,
+    showAllDeviceClasses: false,
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [showDeviceClassFilters, setShowDeviceClassFilters] = useState(false);
 
   // Keyboard visibility tracking
   useEffect(() => {
@@ -414,19 +410,26 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
     }
   };
 
-  // Control entity functions
+  // Control entity functions - works for both existing and new gateways
   const controlEntity = async (
     entityId: string,
     domain: string,
     service: string,
     serviceData?: Record<string, any>
   ) => {
-    if (!gateway) return;
+    // For new gateways, use formData; for existing gateways, use gateway
+    const apiUrl = gateway ? gateway.api_url : formData.api_url;
+    const apiKey = gateway ? gateway.api_key : formData.api_key;
+
+    if (!apiUrl || !apiKey) {
+      showError('Gateway connection information is required');
+      return;
+    }
 
     setIsControlling((prev) => new Set(prev).add(entityId));
 
     try {
-      const serviceUrl = `${gateway.api_url}/api/services/${domain}/${service}`;
+      const serviceUrl = `${apiUrl}/api/services/${domain}/${service}`;
       const payload = {
         entity_id: entityId,
         ...serviceData,
@@ -436,14 +439,15 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${gateway.api_key}`,
+          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify(payload),
       });
 
       if (response.ok) {
         // Refresh states to get updated values
-        if (gateway.is_active && token) {
+        if (gateway && gateway.is_active && token) {
+          // For existing gateways, refresh through backend
           try {
             const entities: IoTEntity[] = await apiClient.getIoTEntities(
               gateway.id.toString(),
@@ -459,6 +463,31 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
               return;
             }
             console.error('Failed to refresh entity states:', err);
+          }
+        } else {
+          // For new gateways, refresh states directly from Home Assistant
+          try {
+            const statesResponse = await fetch(`${apiUrl}/api/states`, {
+              method: 'GET',
+              headers: {
+                Authorization: `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (statesResponse.ok) {
+              const allStates: HAState[] = await statesResponse.json();
+              setStates(allStates);
+
+              // Update display states for pending selections
+              const selectedStates = allStates.filter((state) =>
+                pendingEntitySelections.has(state.entity_id)
+              );
+              // Note: For new gateways, the displayStates are derived from states and pendingEntitySelections
+              // in the ControlPanelSection component, so updating states will update the display
+            }
+          } catch (err) {
+            console.error('Failed to refresh states for new gateway:', err);
           }
         }
       } else {
@@ -575,6 +604,21 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
     friendlyName: string,
     enabled: boolean
   ) => {
+    // For new gateways (not yet saved), use local state
+    if (!gateway || gatewayId === 'new') {
+      setPendingEntitySelections((prev) => {
+        const newSet = new Set(prev);
+        if (enabled) {
+          newSet.add(entityId);
+        } else {
+          newSet.delete(entityId);
+        }
+        return newSet;
+      });
+      return;
+    }
+
+    // For existing gateways, use the API
     if (enabled) {
       await addEntityToGateway(entityId, entityType, friendlyName);
     } else {
@@ -585,7 +629,7 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
   // Toggle domain filter
   const toggleDomainFilter = async (domain: string) => {
     const newDomains = filterPreferences.domains.includes(domain)
-      ? filterPreferences.domains.filter((d) => d !== domain)
+      ? filterPreferences.domains.filter((d: string) => d !== domain)
       : [...filterPreferences.domains, domain];
 
     const newPrefs = { ...filterPreferences, domains: newDomains };
@@ -596,6 +640,27 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
   // Toggle show all domains
   const toggleShowAllDomains = async () => {
     const newPrefs = { ...filterPreferences, showAllDomains: !filterPreferences.showAllDomains };
+    setFilterPreferences(newPrefs);
+    await updateIoTFilterPreferences(newPrefs);
+  };
+
+  // Toggle device class filter
+  const toggleDeviceClassFilter = async (deviceClass: string) => {
+    const newDeviceClasses = filterPreferences.deviceClasses.includes(deviceClass)
+      ? filterPreferences.deviceClasses.filter((dc: string) => dc !== deviceClass)
+      : [...filterPreferences.deviceClasses, deviceClass];
+
+    const newPrefs = { ...filterPreferences, deviceClasses: newDeviceClasses };
+    setFilterPreferences(newPrefs);
+    await updateIoTFilterPreferences(newPrefs);
+  };
+
+  // Toggle show all device classes
+  const toggleShowAllDeviceClasses = async () => {
+    const newPrefs = {
+      ...filterPreferences,
+      showAllDeviceClasses: !filterPreferences.showAllDeviceClasses,
+    };
     setFilterPreferences(newPrefs);
     await updateIoTFilterPreferences(newPrefs);
   };
@@ -684,7 +749,35 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
           is_active: true,
         };
 
-        await apiClient.createIoTGateway(createData, token);
+        const createdGateway: IoTGateway = await apiClient.createIoTGateway(createData, token);
+
+        // Create entities from pending selections
+        if (pendingEntitySelections.size > 0) {
+          const selectedStates = states.filter((state) =>
+            pendingEntitySelections.has(state.entity_id)
+          );
+
+          for (const state of selectedStates) {
+            const domain = state.entity_id.split('.')[0];
+            const friendlyName = state.attributes.friendly_name;
+
+            try {
+              const entityData: IoTEntityCreate = {
+                gateway_id: createdGateway.id,
+                entity_id: state.entity_id,
+                entity_type: domain,
+                friendly_name: friendlyName,
+                is_enabled: true,
+              };
+
+              await apiClient.createIoTEntity(createdGateway.id.toString(), entityData, token);
+            } catch (err) {
+              console.error(`Failed to create entity ${state.entity_id}:`, err);
+              // Continue with other entities even if one fails
+            }
+          }
+        }
+
         showSuccess('IoT Gateway created successfully!');
 
         // Navigate back to IoT list after a brief delay
@@ -737,6 +830,8 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
     filterEnabled,
     filterPreferences,
     showFilters,
+    showDeviceClassFilters,
+    pendingEntitySelections,
 
     // Functions
     updateFormField,
@@ -750,6 +845,8 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
     handleEntityToggle,
     toggleDomainFilter,
     toggleShowAllDomains,
+    toggleDeviceClassFilter,
+    toggleShowAllDeviceClasses,
     deleteGateway,
     saveGateway,
 
@@ -757,6 +854,7 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
     setSearchQuery: setSearchQuery,
     setFilterEnabled,
     setShowFilters,
+    setShowDeviceClassFilters,
     setShowDeleteModal,
   };
 }

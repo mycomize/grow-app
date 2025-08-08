@@ -26,17 +26,11 @@ import { ConnectionStatus } from '~/components/ui/connection-status-badge';
 import { InfoBadge, InfoBadgeVariant } from '~/components/ui/info-badge';
 import { CountBadge } from '~/components/ui/count-badge';
 import { IoTTypeSelectionModal } from '~/components/modals/IoTTypeSelectionModal';
+import { ConnectionInfo } from '~/lib/iotTypes';
 import { useState, useEffect } from 'react';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback } from 'react';
-
-interface ConnectionInfo {
-  status: ConnectionStatus;
-  version?: string;
-  config?: any;
-  latency?: number;
-}
 
 interface BasicsSectionProps {
   gateway: IoTGateway | null;
@@ -317,7 +311,9 @@ export function BasicsSection({
   if (!gateway) {
     return (
       <VStack className="p-4">
-        <Text className="text-typography-500">IoT Gateway data not available</Text>
+        <Text className="text-typography-500">
+          IoT Gateway data not available. Connect your gateway to get started
+        </Text>
       </VStack>
     );
   }

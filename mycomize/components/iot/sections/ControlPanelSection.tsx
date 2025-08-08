@@ -34,7 +34,7 @@ import { CountBadge } from '~/components/ui/count-badge';
 import { IoTGateway, IoTEntity, HAState } from '~/lib/iot';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import { getSwitchColors } from '~/lib/switchUtils';
-import { IoTFilterPreferences } from '~/lib/userPreferences';
+import { IoTFilterPreferences } from '~/lib/iotTypes';
 
 interface ControlPanelSectionProps {
   gateway: IoTGateway | null;
@@ -50,10 +50,15 @@ interface ControlPanelSectionProps {
   filterEnabled: boolean;
   filterPreferences: IoTFilterPreferences;
   showFilters: boolean;
+  showDeviceClassFilters: boolean;
+  pendingEntitySelections: Set<string>;
   onSearchQueryChange: (query: string) => void;
   onFilterEnabledChange: (enabled: boolean) => void;
   onToggleShowFilters: () => void;
+  onToggleShowDeviceClassFilters: () => void;
   onToggleDomainFilter: (domain: string) => void;
+  onToggleDeviceClassFilter: (deviceClass: string) => void;
+  onToggleShowAllDeviceClasses: () => void;
   onHandleToggle: (entityId: string, domain: string, currentState: string) => void;
   onHandleNumberChange: (entityId: string, value: string) => void;
   onAdjustNumberValue: (entityId: string, increment: boolean, currentValue: string) => void;
@@ -80,10 +85,15 @@ export function ControlPanelSection({
   filterEnabled,
   filterPreferences,
   showFilters,
+  showDeviceClassFilters,
+  pendingEntitySelections,
   onSearchQueryChange,
   onFilterEnabledChange,
   onToggleShowFilters,
+  onToggleShowDeviceClassFilters,
   onToggleDomainFilter,
+  onToggleDeviceClassFilter,
+  onToggleShowAllDeviceClasses,
   onHandleToggle,
   onHandleNumberChange,
   onAdjustNumberValue,
@@ -103,8 +113,13 @@ export function ControlPanelSection({
     );
   }
 
-  // Group current states by domain for display
-  const groupedStates = currentStates.reduce(
+  // For new gateways, show pending selections; for existing gateways, show current states
+  const displayStates = gateway
+    ? currentStates
+    : states.filter((state) => pendingEntitySelections.has(state.entity_id));
+
+  // Group display states by domain
+  const groupedStates = displayStates.reduce(
     (acc, state) => {
       const domain = state.entity_id.split('.')[0];
       if (!acc[domain]) acc[domain] = [];
@@ -118,28 +133,39 @@ export function ControlPanelSection({
   const filteredStates = states.filter((state) => {
     const domain = state.entity_id.split('.')[0];
     const friendlyName = state.attributes.friendly_name || '';
+    const deviceClass = state.attributes.device_class;
     const searchLower = searchQuery.toLowerCase();
+
     const matchesDomain =
       filterPreferences.showAllDomains || filterPreferences.domains.includes(domain);
+    const matchesDeviceClass =
+      filterPreferences.showAllDeviceClasses ||
+      !deviceClass ||
+      filterPreferences.deviceClasses.includes(deviceClass);
     const matchesSearch =
       searchQuery === '' ||
       state.entity_id.toLowerCase().includes(searchLower) ||
       friendlyName.toLowerCase().includes(searchLower) ||
-      (state.attributes.device_class &&
-        state.attributes.device_class.toLowerCase().includes(searchLower));
+      (deviceClass && deviceClass.toLowerCase().includes(searchLower));
     const matchesEnabledFilter = !filterEnabled || enabledEntitiesSet.has(state.entity_id);
-    return matchesDomain && matchesSearch && matchesEnabledFilter;
+
+    return matchesDomain && matchesDeviceClass && matchesSearch && matchesEnabledFilter;
   });
 
   return (
     <VStack space="md" className="p-2">
       <HStack className="gap-2">
-        <CountBadge count={enabledStates.length} label="ASSIGNED" variant="green-dark" size="md" />
+        <CountBadge
+          count={gateway ? enabledStates.length : pendingEntitySelections.size}
+          label="ASSIGNED"
+          variant="green-dark"
+          size="md"
+        />
         <CountBadge count={filteredStates.length} label="CONTROLS" variant="success" size="md" />
       </HStack>
 
       {/* Enabled Controls Section */}
-      {enabledStates.length === 0 ? (
+      {(gateway ? enabledStates.length : pendingEntitySelections.size) === 0 ? (
         <VStack className="items-center pt-6" space="md">
           <Text className="text-center text-typography-500">No controls assigned yet</Text>
           <Icon as={ListX} size="xl" className="text-typography-500" />
@@ -308,7 +334,7 @@ export function ControlPanelSection({
             )}
           </Input>
 
-          <HStack className="items-center">
+          <HStack className="mb-1 items-center">
             <Icon as={Filter} size="lg" className="text-typography-500" />
             <Text className="ml-2">Show assigned only</Text>
             <Switch
@@ -322,48 +348,82 @@ export function ControlPanelSection({
           </HStack>
 
           {/* Domain Filters */}
-          <VStack space="sm">
-            <HStack className="mt-1 items-center">
-              <Icon as={Filter} size="lg" className="text-typography-500" />
-              <Text className="ml-2">Domain Filter</Text>
-              <Button
-                className="ml-auto"
-                variant="solid"
-                action="primary"
-                size="sm"
-                onPress={onToggleShowFilters}>
-                <ButtonText>Configure</ButtonText>
-                <ButtonIcon as={showFilters ? ChevronDown : SlidersHorizontal} size="sm" />
-              </Button>
-            </HStack>
+          <HStack className="mt-1 items-center">
+            <Icon as={Filter} size="lg" className="text-typography-500" />
+            <Text className="ml-2">Domain Filter</Text>
+            <Button
+              className="ml-auto"
+              variant="solid"
+              action="primary"
+              size="sm"
+              onPress={onToggleShowFilters}>
+              <ButtonText>Configure</ButtonText>
+              <ButtonIcon as={showFilters ? ChevronDown : SlidersHorizontal} size="sm" />
+            </Button>
+          </HStack>
 
-            {showFilters && (
-              <VStack space="sm">
-                <VStack space="xs">
-                  <Text className="text-typography-500">Select domains to display:</Text>
-                  <VStack space="xs">
-                    {Array.from(new Set(states.map((state) => state.entity_id.split('.')[0])))
-                      .sort()
-                      .map((domain) => (
-                        <HStack
-                          key={domain}
-                          className="my-1 ml-5 items-center justify-between border-b border-background-200">
-                          <Text className="text-md mb-2 capitalize">{domain}</Text>
-                          <Switch
-                            trackColor={{ false: trackFalse, true: trackTrue }}
-                            thumbColor={thumbColor}
-                            ios_backgroundColor={trackFalse}
-                            value={filterPreferences.domains.includes(domain)}
-                            onValueChange={() => onToggleDomainFilter(domain)}
-                            className="mb-2"
-                          />
-                        </HStack>
-                      ))}
-                  </VStack>
-                </VStack>
+          {showFilters && (
+            <VStack space="xs">
+              <Text className="text-typography-500">Select domains to display:</Text>
+              <VStack space="xs" className="ml-4">
+                {Array.from(new Set(states.map((state) => state.entity_id.split('.')[0])))
+                  .sort()
+                  .map((domain) => (
+                    <HStack key={domain} className="my-1 items-center justify-between">
+                      <Text className="text-md mb-2 capitalize">{domain}</Text>
+                      <Switch
+                        trackColor={{ false: trackFalse, true: trackTrue }}
+                        thumbColor={thumbColor}
+                        ios_backgroundColor={trackFalse}
+                        value={filterPreferences.domains.includes(domain)}
+                        onValueChange={() => onToggleDomainFilter(domain)}
+                        className="mb-2"
+                      />
+                    </HStack>
+                  ))}
               </VStack>
-            )}
-          </VStack>
+            </VStack>
+          )}
+
+          {/* Device Class Filters */}
+          <HStack className="mt-3 items-center">
+            <Icon as={Filter} size="lg" className="text-typography-500" />
+            <Text className="ml-2">Device Class Filter</Text>
+            <Button
+              className="ml-auto"
+              variant="solid"
+              action="primary"
+              size="sm"
+              onPress={onToggleShowDeviceClassFilters}>
+              <ButtonText>Configure</ButtonText>
+              <ButtonIcon as={showDeviceClassFilters ? ChevronDown : SlidersHorizontal} size="sm" />
+            </Button>
+          </HStack>
+
+          {showDeviceClassFilters && (
+            <VStack space="xs">
+              <Text className="text-typography-500">Select device classes to display:</Text>
+              <VStack space="xs" className="ml-4">
+                {Array.from(
+                  new Set(states.map((state) => state.attributes.device_class).filter(Boolean))
+                )
+                  .sort()
+                  .map((deviceClass) => (
+                    <HStack key={deviceClass} className="my-1 items-center justify-between ">
+                      <Text className="text-md mb-2 capitalize">{deviceClass}</Text>
+                      <Switch
+                        trackColor={{ false: trackFalse, true: trackTrue }}
+                        thumbColor={thumbColor}
+                        ios_backgroundColor={trackFalse}
+                        value={filterPreferences.deviceClasses.includes(deviceClass)}
+                        onValueChange={() => onToggleDeviceClassFilter(deviceClass)}
+                        className="mb-2"
+                      />
+                    </HStack>
+                  ))}
+              </VStack>
+            </VStack>
+          )}
         </VStack>
 
         {/* Grouped States for Selection */}
@@ -400,7 +460,10 @@ export function ControlPanelSection({
             </HStack>
 
             {domainStates.map((state) => {
-              const isEnabled = enabledEntitiesSet.has(state.entity_id);
+              // For new gateways, check pendingEntitySelections; for existing, check enabledEntitiesSet
+              const isEnabled = gateway
+                ? enabledEntitiesSet.has(state.entity_id)
+                : pendingEntitySelections.has(state.entity_id);
               const friendlyName = state.attributes.friendly_name || state.entity_id;
 
               return (

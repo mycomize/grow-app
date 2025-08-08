@@ -36,6 +36,8 @@ export default function NewIoTIntegrationScreen() {
     filterEnabled,
     filterPreferences,
     showFilters,
+    showDeviceClassFilters,
+    pendingEntitySelections,
 
     // Functions
     updateFormField,
@@ -48,6 +50,8 @@ export default function NewIoTIntegrationScreen() {
     saveNumberValue,
     handleEntityToggle,
     toggleDomainFilter,
+    toggleDeviceClassFilter,
+    toggleShowAllDeviceClasses,
     deleteGateway,
     saveGateway,
 
@@ -55,6 +59,7 @@ export default function NewIoTIntegrationScreen() {
     setSearchQuery,
     setFilterEnabled,
     setShowFilters,
+    setShowDeviceClassFilters,
     setShowDeleteModal,
   } = useIoTGatewayFormLogic({ gatewayId: 'new' });
 
@@ -90,6 +95,8 @@ export default function NewIoTIntegrationScreen() {
       filterEnabled={filterEnabled}
       filterPreferences={filterPreferences}
       showFilters={showFilters}
+      showDeviceClassFilters={showDeviceClassFilters}
+      pendingEntitySelections={pendingEntitySelections}
       onUpdateFormField={updateFormField}
       onToggleApiKeyVisibility={toggleApiKeyVisibility}
       onToggleGatewayStatus={toggleGatewayStatus}
@@ -97,7 +104,10 @@ export default function NewIoTIntegrationScreen() {
       onSearchQueryChange={setSearchQuery}
       onFilterEnabledChange={setFilterEnabled}
       onToggleShowFilters={() => setShowFilters(!showFilters)}
+      onToggleShowDeviceClassFilters={() => setShowDeviceClassFilters(!showDeviceClassFilters)}
       onToggleDomainFilter={toggleDomainFilter}
+      onToggleDeviceClassFilter={toggleDeviceClassFilter}
+      onToggleShowAllDeviceClasses={toggleShowAllDeviceClasses}
       onHandleToggle={handleToggle}
       onHandleNumberChange={handleNumberChange}
       onAdjustNumberValue={adjustNumberValue}

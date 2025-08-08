@@ -16,18 +16,11 @@ import { useRouter } from 'expo-router';
 import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
 
 import { IoTGateway, IoTGatewayUpdate, IoTEntity, HAState } from '~/lib/iot';
-import { IoTFilterPreferences } from '~/lib/userPreferences';
+import { IoTFilterPreferences, ConnectionInfo } from '~/lib/iotTypes';
 
 // Import modular sections
 import { BasicsSection } from '~/components/iot/sections/BasicsSection';
 import { ControlPanelSection } from '~/components/iot/sections/ControlPanelSection';
-
-interface ConnectionInfo {
-  status: 'connected' | 'connecting' | 'disconnected';
-  version?: string;
-  config?: any;
-  latency?: number;
-}
 
 interface IoTGatewayFormProps {
   gateway: IoTGateway | null;
@@ -56,6 +49,8 @@ interface IoTGatewayFormProps {
   filterEnabled: boolean;
   filterPreferences: IoTFilterPreferences;
   showFilters: boolean;
+  showDeviceClassFilters: boolean;
+  pendingEntitySelections: Set<string>;
 
   // Event handlers
   onUpdateFormField: (field: keyof IoTGatewayUpdate, value: any) => void;
@@ -65,7 +60,10 @@ interface IoTGatewayFormProps {
   onSearchQueryChange: (query: string) => void;
   onFilterEnabledChange: (enabled: boolean) => void;
   onToggleShowFilters: () => void;
+  onToggleShowDeviceClassFilters: () => void;
   onToggleDomainFilter: (domain: string) => void;
+  onToggleDeviceClassFilter: (deviceClass: string) => void;
+  onToggleShowAllDeviceClasses: () => void;
   onHandleToggle: (entityId: string, domain: string, currentState: string) => void;
   onHandleNumberChange: (entityId: string, value: string) => void;
   onAdjustNumberValue: (entityId: string, increment: boolean, currentValue: string) => void;
@@ -105,6 +103,8 @@ export function IoTGatewayForm({
   filterEnabled,
   filterPreferences,
   showFilters,
+  showDeviceClassFilters,
+  pendingEntitySelections,
   onUpdateFormField,
   onToggleApiKeyVisibility,
   onToggleGatewayStatus,
@@ -112,7 +112,10 @@ export function IoTGatewayForm({
   onSearchQueryChange,
   onFilterEnabledChange,
   onToggleShowFilters,
+  onToggleShowDeviceClassFilters,
   onToggleDomainFilter,
+  onToggleDeviceClassFilter,
+  onToggleShowAllDeviceClasses,
   onHandleToggle,
   onHandleNumberChange,
   onAdjustNumberValue,
@@ -200,10 +203,15 @@ export function IoTGatewayForm({
                   filterEnabled={filterEnabled}
                   filterPreferences={filterPreferences}
                   showFilters={showFilters}
+                  showDeviceClassFilters={showDeviceClassFilters}
+                  pendingEntitySelections={pendingEntitySelections}
                   onSearchQueryChange={onSearchQueryChange}
                   onFilterEnabledChange={onFilterEnabledChange}
                   onToggleShowFilters={onToggleShowFilters}
+                  onToggleShowDeviceClassFilters={onToggleShowDeviceClassFilters}
                   onToggleDomainFilter={onToggleDomainFilter}
+                  onToggleDeviceClassFilter={onToggleDeviceClassFilter}
+                  onToggleShowAllDeviceClasses={onToggleShowAllDeviceClasses}
                   onHandleToggle={onHandleToggle}
                   onHandleNumberChange={onHandleNumberChange}
                   onAdjustNumberValue={onAdjustNumberValue}
