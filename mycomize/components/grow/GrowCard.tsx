@@ -377,7 +377,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
                   <Pressable
                     key={index}
                     onPress={() => onTagPress?.(tag)}
-                    className="rounded-md px-2 py-1">
+                    className="rounded-md px-0 py-0.5">
                     <Text className="text-md text-blue-400">#{tag}</Text>
                   </Pressable>
                 ))}
