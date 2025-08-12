@@ -2,9 +2,9 @@ import { VStack } from '~/components/ui/vstack';
 import { Spinner } from '~/components/ui/spinner';
 
 import { IoTGatewayForm } from '~/components/iot/IoTGatewayForm';
-import { useIoTGatewayFormLogic } from '~/lib/useIoTGatewayFormLogic';
+import { useIoTGatewayFormLogic } from '~/lib/iot-gateway';
 
-export default function NewIoTIntegrationScreen() {
+export default function NewIoTGatewayScreen() {
   const {
     // Basic gateway state
     gateway,
@@ -22,43 +22,35 @@ export default function NewIoTIntegrationScreen() {
     // Connection state
     connectionInfo,
 
-    // Control state
-    enabledStates,
-    currentStates,
-    isControlling,
-    pendingValues,
+    // Linked/linkable entity sets
+    linkableEntities,
+    linkedEntities,
 
     // Control selection state
-    states,
-    searchQuery,
-    enabledEntities,
-    enabledEntitiesSet,
-    filterEnabled,
     filterPreferences,
-    showFilters,
+    showDomainFilters,
     showDeviceClassFilters,
-    pendingEntitySelections,
+
+    // Assignment fields for grow/stage association
+    grows,
 
     // Functions
     updateFormField,
     toggleApiKeyVisibility,
     testConnection,
-    toggleGatewayStatus,
-    handleToggle,
-    handleNumberChange,
-    adjustNumberValue,
-    saveNumberValue,
-    handleEntityToggle,
     toggleDomainFilter,
     toggleDeviceClassFilter,
     toggleShowAllDeviceClasses,
+    handleBulkLink,
+    handleIndividualLink,
+    handleBulkUnlink,
+    handleIndividualUnlink,
     deleteGateway,
     saveGateway,
 
     // State setters
-    setSearchQuery,
     setFilterEnabled,
-    setShowFilters,
+    setShowDomainFilters,
     setShowDeviceClassFilters,
     setShowDeleteModal,
   } = useIoTGatewayFormLogic({ gatewayId: 'new' });
@@ -76,47 +68,37 @@ export default function NewIoTIntegrationScreen() {
       gateway={gateway}
       formData={formData}
       isEditing={true} // Always in editing mode in this form pattern
-      isSaving={isSaving}
       isDeleting={isDeleting}
+      isSaving={isSaving}
       showDeleteModal={showDeleteModal}
       showApiKey={showApiKey}
       keyboardVisible={keyboardVisible}
       gatewayId="new"
       connectionInfo={connectionInfo}
       isTestingConnection={isTestingConnection}
-      enabledStates={enabledStates}
-      currentStates={currentStates}
-      states={states}
-      enabledEntities={enabledEntities}
-      enabledEntitiesSet={enabledEntitiesSet}
-      isControlling={isControlling}
-      pendingValues={pendingValues}
-      searchQuery={searchQuery}
-      filterEnabled={filterEnabled}
+      linkableEntities={linkableEntities}
+      linkedEntities={linkedEntities}
       filterPreferences={filterPreferences}
-      showFilters={showFilters}
+      showDomainFilters={showDomainFilters}
       showDeviceClassFilters={showDeviceClassFilters}
-      pendingEntitySelections={pendingEntitySelections}
+      grows={grows}
+      saveButtonText="Add IoT Gateway"
       onUpdateFormField={updateFormField}
       onToggleApiKeyVisibility={toggleApiKeyVisibility}
-      onToggleGatewayStatus={toggleGatewayStatus}
       onTestConnection={testConnection}
-      onSearchQueryChange={setSearchQuery}
       onFilterEnabledChange={setFilterEnabled}
-      onToggleShowFilters={() => setShowFilters(!showFilters)}
+      onToggleShowDomainFilters={() => setShowDomainFilters(!showDomainFilters)}
       onToggleShowDeviceClassFilters={() => setShowDeviceClassFilters(!showDeviceClassFilters)}
       onToggleDomainFilter={toggleDomainFilter}
       onToggleDeviceClassFilter={toggleDeviceClassFilter}
       onToggleShowAllDeviceClasses={toggleShowAllDeviceClasses}
-      onHandleToggle={handleToggle}
-      onHandleNumberChange={handleNumberChange}
-      onAdjustNumberValue={adjustNumberValue}
-      onSaveNumberValue={saveNumberValue}
-      onHandleEntityToggle={handleEntityToggle}
+      onBulkLink={handleBulkLink}
+      onIndividualLink={handleIndividualLink}
+      onBulkUnlink={handleBulkUnlink}
+      onIndividualUnlink={handleIndividualUnlink}
       onShowDeleteModal={setShowDeleteModal}
       onDeleteGateway={deleteGateway}
       onSaveGateway={saveGateway}
-      saveButtonText="Add IoT Gateway"
     />
   );
 }

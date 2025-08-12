@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
@@ -12,7 +13,6 @@ import {
   Eye,
   EyeOff,
   ChevronDown,
-  Power,
   PowerOff,
   ChevronsLeftRightEllipsis,
   QrCode,
@@ -27,8 +27,7 @@ import { InfoBadge, InfoBadgeVariant } from '~/components/ui/info-badge';
 import { CountBadge } from '~/components/ui/count-badge';
 import { IoTTypeSelectionModal } from '~/components/modals/IoTTypeSelectionModal';
 import { ConnectionInfo } from '~/lib/iotTypes';
-import { useState, useEffect } from 'react';
-import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback } from 'react';
 
@@ -41,7 +40,6 @@ interface BasicsSectionProps {
   isTestingConnection: boolean;
   onUpdateField: (field: keyof IoTGatewayUpdate, value: any) => void;
   onToggleApiKeyVisibility: () => void;
-  onToggleGatewayStatus: () => void;
   onTestConnection: () => void;
 }
 
@@ -54,7 +52,6 @@ export function BasicsSection({
   isTestingConnection,
   onUpdateField,
   onToggleApiKeyVisibility,
-  onToggleGatewayStatus,
   onTestConnection,
 }: BasicsSectionProps) {
   const [showTypeModal, setShowTypeModal] = useState(false);
@@ -110,7 +107,7 @@ export function BasicsSection({
     }, [onUpdateField])
   );
 
-  const getTypeDisplayName = (type: string) => {
+  const getIoTGatewayTypeDisplayName = (type: string) => {
     switch (type) {
       case 'home_assistant':
         return 'Home Assistant';
@@ -134,7 +131,6 @@ export function BasicsSection({
             <InputField
               value={formData.name}
               onChangeText={(text) => onUpdateField('name', text)}
-              placeholder="My Home Assistant"
             />
           </Input>
         </FormControl>
@@ -145,7 +141,7 @@ export function BasicsSection({
           </FormControlLabel>
           <Pressable onPress={() => setShowTypeModal(true)}>
             <Input pointerEvents="none">
-              <InputField value={getTypeDisplayName(gatewayType)} editable={false} />
+              <InputField value={getIoTGatewayTypeDisplayName(gatewayType)} editable={false} />
               <InputSlot className="pr-3">
                 <InputIcon as={ChevronDown} className="text-background-500" />
               </InputSlot>
@@ -193,7 +189,7 @@ export function BasicsSection({
             />
             <InputSlot className="flex-row items-center pr-3">
               <Pressable onPress={handleQRCodeScan} className="mr-2">
-                <InputIcon as={QrCode} className="text-primary-600" />
+                <InputIcon as={QrCode} className="text-typography-700" />
               </Pressable>
               <Pressable onPress={onToggleApiKeyVisibility}>
                 <InputIcon as={showApiKey ? EyeOff : Eye} className="text-background-500" />
@@ -241,10 +237,8 @@ export function BasicsSection({
                   // Don't execute if in connecting/testing state
                   if (isTestingConnection || connectionInfo.status === 'connecting') return;
 
-                  if (gateway.is_active && connectionInfo.status === 'connected') {
+                  if (connectionInfo.status === 'connected') {
                     onTestConnection();
-                  } else {
-                    onToggleGatewayStatus();
                   }
                 }}
                 className="flex-1">

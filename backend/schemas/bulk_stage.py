@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 
 # Lists of these objects are present in each bulk grow stage.
 # Lists, items, environmental conditions, and tasks are included
@@ -14,29 +14,31 @@ from typing import Optional, List, Dict, Any
 #    "harvest": BulkStageData,
 # }
 
-# All user data fields converted to strings to support encryption
 class Item(BaseModel):
+    # All these are encrypted
     id: str
     description: str
     vendor: str
     quantity: str
     cost: Optional[str] = None
     url: str
-    created_date: Optional[str] = None  # Changed from datetime to str for encryption
-    expiration_date: Optional[str] = None  # Changed from datetime to str for encryption
+    created_date: Optional[str] = None
+    expiration_date: Optional[str] = None
 
 class Task(BaseModel):
+    # All these are encrypted
     id: str
     action: str
     frequency: str
-    days_after_stage_start: str  # Changed from int to str for encryption
+    days_after_stage_start: str
 
 class EnvironmentalCondition(BaseModel):
+    # All these are encrypted
     id: str
     name: str
     type: str
-    lower_bound: str  # Changed from float to str for encryption
-    upper_bound: str  # Changed from float to str for encryption
+    lower_bound: str
+    upper_bound: str
     unit: str
 
 class BulkStageData(BaseModel):

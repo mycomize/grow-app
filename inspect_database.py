@@ -111,13 +111,109 @@ def list_users(conn: sqlite3.Connection) -> None:
         print(f"{row[0]:<5} {row[1]:<20} {row[2]:<8} {row[3]:<20}")
 
 def get_system_fields() -> List[str]:
-    """Get list of fields that should be system fields (not encrypted)."""
+    """Get list of fields that should be system fields (not encrypted).
+    
+    These are fields defined with specific SQLAlchemy types (Integer, Boolean, DateTime, String)
+    rather than Text type. Fields defined as Text are encrypted user data.
+    """
     return [
-        'id', 'user_id', 'created_at', 'updated_at', 'last_updated',
-        'bulk_grow_id', 'gateway_id', 'created_by', 'is_active', 
-        'is_public', 'is_enabled', 'usage_count', 'type', 'entity_type',
+        # Primary keys
+        'id',
+        # Foreign keys  
+        'user_id', 'bulk_grow_id', 'gateway_id', 'created_by', 'linked_grow_id',
+        # System timestamps
+        'created_at', 'updated_at',
+        # System flags and counters
+        'is_active', 'is_public', 'usage_count',
+        # Authentication fields
         'username', 'hashed_password'
     ]
+
+def get_expected_model_fields() -> Dict[str, Dict[str, List[str]]]:
+    """Get expected field categorization for each model based on current backend models.
+    
+    Returns:
+        Dict mapping table names to dict of field categories (system vs user_data)
+    """
+    return {
+        'users': {
+            'system': ['id', 'username', 'hashed_password', 'is_active', 'created_at', 'updated_at'],
+            'user_data': ['profile_image']  # Text field, encrypted
+        },
+        'bulk_grows': {
+            'system': ['id', 'user_id'],
+            'user_data': [
+                'name', 'description', 'species', 'variant', 'location', 'tags',
+                'inoculation_date', 'inoculation_status', 'spawn_start_date', 
+                'spawn_colonization_status', 'bulk_start_date', 'bulk_colonization_status',
+                'fruiting_start_date', 'fruiting_status', 'full_spawn_colonization_date',
+                'full_bulk_colonization_date', 'fruiting_pin_date', 's2b_ratio', 
+                'current_stage', 'status', 'total_cost', 'stages'
+            ]
+        },
+        'flushes': {
+            'system': ['id', 'bulk_grow_id'],
+            'user_data': ['harvest_date', 'wet_yield_grams', 'dry_yield_grams', 'concentration_mg_per_gram']
+        },
+        'bulk_grow_teks': {
+            'system': ['id', 'created_by', 'created_at', 'updated_at', 'is_public'],
+            'user_data': ['name', 'description', 'species', 'variant', 'tags', 'stages']
+        },
+        'iot_gateways': {
+            'system': ['id', 'user_id', 'created_at'],
+            'user_data': ['name', 'type', 'description', 'api_url', 'api_key', 'linked_entities_count', 'linkable_entities_count']
+        },
+        'iot_entities': {
+            'system': ['id', 'gateway_id', 'linked_grow_id'],
+            'user_data': ['entity_name', 'entity_type', 'friendly_name', 'domain', 'device_class', 'linked_stage']
+        }
+    }
+
+def validate_model_synchronization(conn: sqlite3.Connection) -> None:
+    """Validate that the database schema matches expected model structure."""
+    print("\n=== MODEL SYNCHRONIZATION VALIDATION ===")
+    
+    expected_fields = get_expected_model_fields()
+    
+    for table_name, expected in expected_fields.items():
+        try:
+            schema = get_table_schema(conn, table_name)
+            if not schema:
+                print(f"[ERROR] {table_name.upper()}: Table not found")
+                continue
+                
+            actual_fields = [col['name'] for col in schema]
+            all_expected_fields = set(expected['system'] + expected['user_data'])
+            actual_fields_set = set(actual_fields)
+            
+            # Check for missing fields
+            missing = all_expected_fields - actual_fields_set
+            # Check for unexpected fields  
+            unexpected = actual_fields_set - all_expected_fields
+            
+            if not missing and not unexpected:
+                print(f"[OK] {table_name.upper()}: Schema synchronized")
+            else:
+                print(f"[WARNING] {table_name.upper()}: Schema differences detected")
+                if missing:
+                    print(f"   Missing fields: {', '.join(sorted(missing))}")
+                if unexpected:
+                    print(f"   Unexpected fields: {', '.join(sorted(unexpected))}")
+            
+            # Check field types for user data (should be TEXT for encryption)
+            text_fields = [col['name'] for col in schema if col['type'].upper() == 'TEXT']
+            non_text_user_fields = [f for f in expected['user_data'] if f not in text_fields and f in actual_fields_set]
+            
+            if non_text_user_fields:
+                print(f"   [WARNING] Non-TEXT user data fields: {', '.join(non_text_user_fields)} (encryption may not work)")
+            
+            # Report field counts
+            system_count = len([f for f in expected['system'] if f in actual_fields_set])
+            user_data_count = len([f for f in expected['user_data'] if f in actual_fields_set])
+            print(f"   System fields: {system_count}, User data fields: {user_data_count}")
+            
+        except sqlite3.Error as e:
+            print(f"[ERROR] {table_name.upper()}: Database error - {e}")
 
 def categorize_fields(row: sqlite3.Row) -> Dict[str, List[str]]:
     """Categorize fields into system vs user data fields."""
@@ -382,6 +478,7 @@ def main():
     parser.add_argument("--limit", type=int, default=10, help="Limit number of rows to show")
     parser.add_argument("--summary", action="store_true", help="Show encryption summary")
     parser.add_argument("--tables", action="store_true", help="List all tables")
+    parser.add_argument("--validate", action="store_true", help="Validate database schema against expected models")
     
     args = parser.parse_args()
     
@@ -407,16 +504,21 @@ def main():
         elif args.summary:
             show_encryption_summary(conn)
         
+        elif args.validate:
+            validate_model_synchronization(conn)
+        
         else:
-            # Default: show summary and list users
+            # Default: show validation and summary
             print("Mycomize Database Inspector")
             print("=" * 50)
+            validate_model_synchronization(conn)
             show_encryption_summary(conn)
             list_users(conn)
             print("\nUsage examples:")
             print(f"  python {sys.argv[0]} --user 1                    # Inspect user 1 data")
             print(f"  python {sys.argv[0]} --table bulk_grows          # Show bulk_grows table")
             print(f"  python {sys.argv[0]} --summary                   # Show encryption summary")
+            print(f"  python {sys.argv[0]} --validate                  # Validate model synchronization")
             print(f"  python {sys.argv[0]} --list-users                # List all users")
     
     finally:

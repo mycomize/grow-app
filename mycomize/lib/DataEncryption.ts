@@ -1,48 +1,92 @@
 import { getEncryptionService } from './EncryptionService';
 
 /**
- * ALLOWLIST APPROACH: Explicit list of fields that should NEVER be encrypted
- * All other fields are encrypted by default unless explicitly allowed
- */
-const SYSTEM_FIELDS_ALLOWLIST = [
-  // Core system identifiers
-  'id',
-  'created_at',
-  'updated_at',
-  'last_updated',
-
-  // Relationship foreign keys
-  'user_id',
-  'created_by',
-  'bulk_grow_id',
-  'gateway_id',
-
-  // System flags and metadata
-  'is_active',
-  'is_public',
-  'is_enabled',
-  'usage_count',
-
-  // Entity type identifiers
-  'type',
-  'entity_type',
-
-  // Authentication fields (must remain unencrypted for system to function)
-  'username',
-  'hashed_password',
-] as const;
-
-/**
- * Model-specific allowlists for fields that should never be encrypted
- * These extend the global SYSTEM_FIELDS_ALLOWLIST
+ * Allowlist approach here is that each data type specifies exactly which fields should remain unencrypted.
+ * Everything else is encrypted on the client
+ *
+ * This prevents accidental exposure if new fields are added with similar names.
+ * Each data type only includes fields that are actually present in that specific data structure.
+ *
+ * IMPORTANT: When adding new data types or fields, be explicit about what should remain unencrypted.
+ * Only include fields generated in the backend itself - (IDs, timestamps, foreign keys) and SQLAlchemy
+ * relationships in the allowlist. _All_ other fields will be encrypted.
  */
 const MODEL_SPECIFIC_ALLOWLISTS = {
-  User: ['bulk_grows', 'bulk_grow_teks', 'iot_gateways'] as const, // SQLAlchemy relationships
-  BulkGrow: ['flushes', 'iot_gateways', 'user'] as const, // SQLAlchemy relationships
-  BulkGrowFlush: ['bulk_grow'] as const, // SQLAlchemy relationships
-  BulkGrowTek: ['creator'] as const, // SQLAlchemy relationships
-  IoTGateway: ['user', 'bulk_grow', 'entities'] as const, // SQLAlchemy relationships
-  IoTEntity: ['gateway'] as const, // SQLAlchemy relationships
+  User: [
+    // Backend-generated fields present in User model
+    'id',
+    'created_at',
+    'updated_at',
+    'is_active',
+    // Authentication fields (must remain unencrypted for system to function)
+    'username',
+    'hashed_password',
+    // SQLAlchemy relationships present in User model
+    'bulk_grows',
+    'bulk_grow_teks',
+    'iot_gateways',
+  ] as const,
+
+  BulkGrow: [
+    // Backend-generated fields present in BulkGrow model
+    'id',
+    'user_id',
+    // SQLAlchemy relationships present in BulkGrow model
+    'flushes',
+    'user',
+    'linked_entities',
+  ] as const,
+
+  BulkGrowFlush: [
+    // Backend-generated fields present in BulkGrowFlush model
+    'id',
+    'bulk_grow_id',
+    // SQLAlchemy relationships present in BulkGrowFlush model
+    'bulk_grow',
+  ] as const,
+
+  BulkGrowTek: [
+    // Backend-generated fields present in BulkGrowTek model
+    'id',
+    'created_at',
+    'updated_at',
+    'is_public',
+    'usage_count',
+    // SQLAlchemy relationships present in BulkGrowTek model
+    'creator',
+  ] as const,
+
+  IoTGateway: [
+    // Backend-generated fields present in IoTGateway model
+    'id',
+    'user_id',
+    'created_at',
+    // SQLAlchemy relationships present in IoTGateway model
+    'user',
+    'entities',
+  ] as const,
+
+  IoTEntity: [
+    // Backend-generated fields present in IoTEntity model
+    'id',
+    'gateway_id',
+    'linked_grow_id',
+    'created_at',
+    // SQLAlchemy relationships present in IoTEntity model
+    'gateway',
+    'linked_grow',
+  ] as const,
+
+  IoTAssignmentRequest: [
+    // Backend-generated fields present in assignment request - foreign keys should remain unencrypted
+    'entity_ids', // Array of foreign keys for entity assignments
+    'grow_id', // Foreign key for grow assignment
+  ] as const,
+
+  BulkEntityCreateRequest: [
+    // The entities field itself should remain as a list structure, but individual entities will be encrypted
+    'entities',
+  ] as const,
 } as const;
 
 /**
@@ -52,39 +96,43 @@ const MODEL_SPECIFIC_ALLOWLISTS = {
 export const ENCRYPTION_CONFIG = {
   User: {
     encryptionStrategy: 'encrypt_all_except_allowlist' as const,
-    allowedUnencryptedFields: [...SYSTEM_FIELDS_ALLOWLIST, ...MODEL_SPECIFIC_ALLOWLISTS.User],
+    allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.User,
   },
 
   BulkGrow: {
     encryptionStrategy: 'encrypt_all_except_allowlist' as const,
-    allowedUnencryptedFields: [...SYSTEM_FIELDS_ALLOWLIST, ...MODEL_SPECIFIC_ALLOWLISTS.BulkGrow],
+    allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.BulkGrow,
   },
 
   BulkGrowFlush: {
     encryptionStrategy: 'encrypt_all_except_allowlist' as const,
-    allowedUnencryptedFields: [
-      ...SYSTEM_FIELDS_ALLOWLIST,
-      ...MODEL_SPECIFIC_ALLOWLISTS.BulkGrowFlush,
-    ],
+    allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.BulkGrowFlush,
   },
 
   BulkGrowTek: {
     encryptionStrategy: 'conditional_on_public_flag' as const,
-    allowedUnencryptedFields: [
-      ...SYSTEM_FIELDS_ALLOWLIST,
-      ...MODEL_SPECIFIC_ALLOWLISTS.BulkGrowTek,
-    ],
+    allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.BulkGrowTek,
     conditionalField: 'is_public', // If true, store in cleartext; if false, encrypt
   },
 
   IoTGateway: {
     encryptionStrategy: 'encrypt_all_except_allowlist' as const,
-    allowedUnencryptedFields: [...SYSTEM_FIELDS_ALLOWLIST, ...MODEL_SPECIFIC_ALLOWLISTS.IoTGateway],
+    allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.IoTGateway,
   },
 
   IoTEntity: {
     encryptionStrategy: 'encrypt_all_except_allowlist' as const,
-    allowedUnencryptedFields: [...SYSTEM_FIELDS_ALLOWLIST, ...MODEL_SPECIFIC_ALLOWLISTS.IoTEntity],
+    allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.IoTEntity,
+  },
+
+  IoTAssignmentRequest: {
+    encryptionStrategy: 'encrypt_all_except_allowlist' as const,
+    allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.IoTAssignmentRequest,
+  },
+
+  BulkEntityCreateRequest: {
+    encryptionStrategy: 'encrypt_all_except_allowlist' as const,
+    allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.BulkEntityCreateRequest,
   },
 } as const;
 
@@ -137,7 +185,7 @@ function shouldEncryptField(dataType: DataType, fieldName: string, data: any): b
   const config = ENCRYPTION_CONFIG[dataType];
 
   // Check if field is in allowlist (should NOT be encrypted)
-  if (config.allowedUnencryptedFields.includes(fieldName as any)) {
+  if ((config.allowedUnencryptedFields as readonly string[]).includes(fieldName)) {
     return false;
   }
 
@@ -196,6 +244,17 @@ export async function encryptData<T extends Record<string, any>>(
     );
   }
 
+  // Handle nested arrays for bulk entity creation
+  if (
+    dataType === 'BulkEntityCreateRequest' &&
+    encryptedData.entities &&
+    Array.isArray(encryptedData.entities)
+  ) {
+    encryptedData.entities = await Promise.all(
+      encryptedData.entities.map(async (entity: any) => await encryptData('IoTEntity', entity))
+    );
+  }
+
   return encryptedData as T;
 }
 
@@ -224,11 +283,20 @@ export async function decryptData<T extends Record<string, any>>(
         if (dataType === 'BulkGrow' && field === 'total_cost') {
           decryptedData[field] = parseFloat(decryptedData[field]) || 0;
         }
+
         if (
           dataType === 'BulkGrowFlush' &&
           ['wet_yield_grams', 'dry_yield_grams', 'concentration_mg_per_gram'].includes(field)
         ) {
           decryptedData[field] = parseFloat(decryptedData[field]) || 0;
+        }
+
+        // Ensure integer fields remain as integers for IoTEntity
+        if (dataType === 'IoTEntity' && ['id', 'gateway_id', 'linked_grow_id'].includes(field)) {
+          const numValue = parseInt(decryptedData[field], 10);
+          if (!isNaN(numValue)) {
+            decryptedData[field] = numValue;
+          }
         }
       } catch (error) {
         console.warn(`Failed to decrypt field ${field} for ${dataType}:`, error);
@@ -384,7 +452,6 @@ export function validateEncryptionConfig(
   fieldsToEncrypt: string[];
   fieldsToKeepUnencrypted: string[];
 } {
-  const config = ENCRYPTION_CONFIG[dataType];
   const allFields = Object.keys(sampleData);
 
   const fieldsToKeepUnencrypted: string[] = [];
@@ -410,6 +477,6 @@ export function validateEncryptionConfig(
 export function getEncryptionPlan(dataType: DataType, sampleData: Record<string, any>): void {
   const plan = validateEncryptionConfig(dataType, sampleData);
   console.log(`Encryption plan for ${dataType}:`);
-  console.log('✅ Fields to encrypt:', plan.fieldsToEncrypt);
-  console.log('🔓 Fields to keep unencrypted:', plan.fieldsToKeepUnencrypted);
+  console.log('  + Fields to encrypt:', plan.fieldsToEncrypt);
+  console.log('  - Fields to keep unencrypted:', plan.fieldsToKeepUnencrypted);
 }

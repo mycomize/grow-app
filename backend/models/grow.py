@@ -31,18 +31,21 @@ class BulkGrow(Base):
     """Model for bulk mushroom grows"""
     __tablename__ = "bulk_grows"
 
+    # Backend generated fields are unencrypted
     id = Column(Integer, primary_key=True, index=True)
-    # All user data fields converted to TEXT to support encryption
+    user_id = Column(Integer, ForeignKey("users.id")) # Foreign key to user
+
+    # All user data fields encrypted
     name = Column(Text, nullable=True)
     description = Column(Text, nullable=True)
-    species = Column(Text, nullable=True)  # Removed index - can't index encrypted data
-    variant = Column(Text, nullable=True)  # Removed index - can't index encrypted data
+    species = Column(Text, nullable=True)
+    variant = Column(Text, nullable=True)
     location = Column(Text, nullable=True)
-    tags = Column(Text, nullable=True) # JSON stored as encrypted string
+    tags = Column(Text, nullable=True)
 
     # Stage specific fields that are above and beyond what is included
     # in each stage's lists (items, env conditions, tasks) and notes
-    # All date fields converted to TEXT to support encryption
+    # All are encrypted
     inoculation_date = Column(Text, nullable=True)
     inoculation_status = Column(Text, nullable=True)
     spawn_start_date = Column(Text, nullable=True)
@@ -55,36 +58,36 @@ class BulkGrow(Base):
     full_bulk_colonization_date = Column(Text, nullable=True)
     fruiting_pin_date = Column(Text, nullable=True)
     s2b_ratio = Column(Text, nullable=True)
-
     current_stage = Column(Text, nullable=True)  # Track current stage in timeline
     status = Column(Text, nullable=True)
-    total_cost = Column(Text, nullable=True)  # Converted from Float to support encryption
+    total_cost = Column(Text, nullable=True)
 
     # Stage-based data structure (JSON for flexibility)
     # Stages include: inoculation, spawn colonization, bulk colonization, fruiting, and harvest
     # Each stage has: Item list, EnvironmentalConditions list, Task list, and notes. These
     # lists and notes are optional though. See backend/schemas/bulk_stage.py for definitions.
-    stages = Column(Text, nullable=True)  # JSON stored as encrypted string
+    # Always encrypted
+    stages = Column(Text, nullable=True)
 
-    # Foreign key to user
-    user_id = Column(Integer, ForeignKey("users.id"))
 
     # Relationship with User (back reference)
     user = relationship("User", back_populates="bulk_grows")
 
-    # One-to-many relationship with IoT gateways
-    iot_gateways = relationship("IoTGateway", back_populates="bulk_grow")
-
     # One-to-many relationship with flushes
     flushes = relationship("BulkGrowFlush", back_populates="bulk_grow", cascade="all, delete-orphan")
+    
+    # One-to-many relationship with linked IoT entities
+    iot_entities = relationship("IoTEntity", foreign_keys="IoTEntity.linked_grow_id", back_populates="linked_grow")
 
 class BulkGrowFlush(Base):
     """Model for individual flushes within a bulk grow"""
     __tablename__ = "flushes"
 
+    # Backend generated fields are unencrypted
     id = Column(Integer, primary_key=True, index=True)
     bulk_grow_id = Column(Integer, ForeignKey("bulk_grows.id"), nullable=False)
-    # All user data fields converted to TEXT to support encryption
+
+    # All user data fields encrypted
     harvest_date = Column(Text, nullable=True)
     wet_yield_grams = Column(Text, nullable=True)
     dry_yield_grams = Column(Text, nullable=True)

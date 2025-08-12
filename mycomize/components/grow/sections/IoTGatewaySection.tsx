@@ -34,7 +34,7 @@ import {
 
 import { AuthContext } from '~/lib/AuthContext';
 import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
-import { IoTGateway, gatewayTypeLabels, IoTEntity, HAState } from '~/lib/iot';
+import { IoTGateway, gatewayTypeLabels, IoTEntity, HAEntity } from '~/lib/iot';
 
 interface IoTGatewaySectionProps {
   growId?: number;
@@ -57,7 +57,7 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [enabledSensors, setEnabledSensors] = useState<IoTEntity[]>([]);
-  const [sensorStates, setSensorStates] = useState<HAState[]>([]);
+  const [sensorStates, setSensorStates] = useState<HAEntity[]>([]);
   const [isLoadingSensors, setIsLoadingSensors] = useState(false);
 
   // Get icon based on device class
@@ -104,7 +104,7 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({
         });
 
         if (statesResponse.ok) {
-          const allStates: HAState[] = await statesResponse.json();
+          const allStates: HAEntity[] = await statesResponse.json();
           const enabledEntityIds = enabledSensorEntities.map((e) => e.entity_id);
           const filteredStates = allStates.filter((state) =>
             enabledEntityIds.includes(state.entity_id)

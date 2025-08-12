@@ -15,6 +15,10 @@ from backend.schemas.iot_entity import (
     IoTEntity as IoTEntitySchema,
     IoTEntityCreate,
     IoTEntityUpdate,
+    EntityLinkingRequest,
+    BulkEntityLinkingRequest,
+    BulkEntityCreateRequest,
+    BulkEntityDeleteRequest,
 )
 from backend.database import get_mycomize_db, engine
 from backend.security import get_current_active_user
@@ -33,8 +37,6 @@ router = APIRouter(
 
 # === IoT GATEWAY ROUTES ===
 
-# --- Basic CRUD operations ---
-
 @router.post("/", response_model=IoTGatewaySchema, status_code=status.HTTP_201_CREATED)
 async def create_iot_gateway(
     gateway: IoTGatewayCreate, 
@@ -49,7 +51,6 @@ async def create_iot_gateway(
         description=gateway.description,
         api_url=gateway.api_url,
         api_key=gateway.api_key,
-        is_active=gateway.is_active,
     )
     
     db.add(db_gateway)
@@ -77,8 +78,10 @@ async def read_iot_gateway(
 ):
     """Get a specific IoT gateway by ID"""
     gateway = db.query(IoTGateway).filter(IoTGateway.id == gateway_id, IoTGateway.user_id == current_user.id).first()
+
     if gateway is None:
         raise HTTPException(status_code=404, detail="IoT gateway not found")
+
     return gateway
 
 # === IoT ENTITY ROUTES ===
@@ -96,6 +99,7 @@ async def get_gateway_entities(
         raise HTTPException(status_code=404, detail="IoT gateway not found")
     
     entities = db.query(IoTEntity).filter(IoTEntity.gateway_id == gateway_id).all()
+
     return entities
 
 @router.post("/{gateway_id}/entities", response_model=IoTEntitySchema, status_code=status.HTTP_201_CREATED)
@@ -111,22 +115,16 @@ async def add_entity_to_gateway(
     if gateway is None:
         raise HTTPException(status_code=404, detail="IoT gateway not found")
     
-    # Check if entity already exists
-    existing_entity = db.query(IoTEntity).filter(
-        IoTEntity.gateway_id == gateway_id,
-        IoTEntity.entity_id == entity.entity_id
-    ).first()
-    
-    if existing_entity:
-        raise HTTPException(status_code=400, detail="Entity already exists for this gateway")
-    
-    # Create new entity
+    # Create new entity as linkable (linked_grow_id = NULL, linked_stage = NULL)
     db_entity = IoTEntity(
         gateway_id=gateway_id,
-        entity_id=entity.entity_id,
+        entity_name=entity.entity_name,
         entity_type=entity.entity_type,
         friendly_name=entity.friendly_name,
-        is_enabled=entity.is_enabled
+        domain=entity.domain,
+        device_class=entity.device_class,
+        linked_grow_id=None,
+        linked_stage=None
     )
     
     db.add(db_entity)
@@ -134,6 +132,175 @@ async def add_entity_to_gateway(
     db.refresh(db_entity)
     
     return db_entity
+
+@router.post("/{gateway_id}/entities/bulk-create", response_model=List[IoTEntitySchema], status_code=status.HTTP_201_CREATED)
+async def bulk_create_entities(
+    gateway_id: int,
+    bulk_request: BulkEntityCreateRequest,
+    db: Session = Depends(get_mycomize_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Bulk create multiple entities for a gateway"""
+    # Verify gateway exists and belongs to user
+    gateway = db.query(IoTGateway).filter(IoTGateway.id == gateway_id, IoTGateway.user_id == current_user.id).first()
+    if gateway is None:
+        raise HTTPException(status_code=404, detail="IoT gateway not found")
+    
+    created_entities = []
+    
+    for entity_data in bulk_request.entities:
+        # Create new entity as linkable (linked_grow_id = NULL, linked_stage = NULL)
+        db_entity = IoTEntity(
+            gateway_id=gateway_id,
+            entity_name=entity_data.entity_name,
+            entity_type=entity_data.entity_type,
+            friendly_name=entity_data.friendly_name,
+            domain=entity_data.domain,
+            device_class=entity_data.device_class,
+            linked_grow_id=None,
+            linked_stage=None
+        )
+            
+        db.add(db_entity)
+        created_entities.append(db_entity)
+    
+    # Commit all entities at once
+    if created_entities:
+        db.commit()
+        
+        # Refresh all created entities
+        for entity in created_entities:
+            db.refresh(entity)
+    
+    return created_entities
+
+@router.delete("/{gateway_id}/entities/bulk-delete", status_code=status.HTTP_204_NO_CONTENT)
+async def bulk_delete_entities(
+    gateway_id: int,
+    bulk_request: BulkEntityDeleteRequest,
+    db: Session = Depends(get_mycomize_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Bulk delete multiple entities from a gateway"""
+    # Verify gateway exists and belongs to user
+    gateway = db.query(IoTGateway).filter(IoTGateway.id == gateway_id, IoTGateway.user_id == current_user.id).first()
+    if gateway is None:
+        raise HTTPException(status_code=404, detail="IoT gateway not found")
+    
+    # Get entities to delete
+    entities_to_delete = db.query(IoTEntity).filter(
+        IoTEntity.id.in_(bulk_request.entity_ids),
+        IoTEntity.gateway_id == gateway_id
+    ).all()
+    
+    if len(entities_to_delete) != len(bulk_request.entity_ids):
+        raise HTTPException(status_code=404, detail="One or more entities not found")
+    
+    # Delete all entities
+    for entity in entities_to_delete:
+        db.delete(entity)
+    
+    # Commit all deletions at once
+    db.commit()
+    
+    return {"detail": f"Deleted {len(entities_to_delete)} entities"}
+
+@router.put("/{gateway_id}/entities/bulk-link", response_model=List[IoTEntitySchema])
+async def bulk_link_entities_to_grow(
+    gateway_id: int,
+    linking_request: BulkEntityLinkingRequest,
+    db: Session = Depends(get_mycomize_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Bulk link multiple IoT entities to a grow and stage"""
+    # Verify gateway exists and belongs to user
+    gateway = db.query(IoTGateway).filter(IoTGateway.id == gateway_id, IoTGateway.user_id == current_user.id).first()
+    if gateway is None:
+        raise HTTPException(status_code=404, detail="IoT gateway not found")
+    
+    # Verify grow exists and belongs to user
+    grow = db.query(BulkGrow).filter(BulkGrow.id == linking_request.grow_id, BulkGrow.user_id == current_user.id).first()
+    if grow is None:
+        raise HTTPException(status_code=404, detail="Grow not found")
+    
+    # Get entities
+    db_entities = db.query(IoTEntity).filter(
+        IoTEntity.id.in_(linking_request.entity_ids),
+        IoTEntity.gateway_id == gateway_id
+    ).all()
+    
+    if len(db_entities) != len(linking_request.entity_ids):
+        raise HTTPException(status_code=404, detail="One or more entities not found")
+    
+    # Link all entities to grow and stage
+    updated_entities = []
+    for entity in db_entities:
+        entity.linked_grow_id = linking_request.grow_id
+        entity.linked_stage = linking_request.stage
+        updated_entities.append(entity)
+    
+    # Commit the entity changes
+    db.commit()
+    
+    # Refresh all updated entities
+    for entity in updated_entities:
+        db.refresh(entity)
+    
+    db.expire(grow, ["iot_entities"])
+    db.refresh(grow)
+    
+    return updated_entities
+
+@router.delete("/{gateway_id}/entities/bulk-unlink", response_model=List[IoTEntitySchema])
+async def bulk_unlink_entities_from_grow(
+    gateway_id: int,
+    bulk_request: BulkEntityDeleteRequest,
+    db: Session = Depends(get_mycomize_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Bulk unlink multiple IoT entities from their grows (makes them linkable again)"""
+    # Verify gateway exists and belongs to user
+    gateway = db.query(IoTGateway).filter(IoTGateway.id == gateway_id, IoTGateway.user_id == current_user.id).first()
+    if gateway is None:
+        raise HTTPException(status_code=404, detail="IoT gateway not found")
+    
+    # Get entities
+    db_entities = db.query(IoTEntity).filter(
+        IoTEntity.id.in_(bulk_request.entity_ids),
+        IoTEntity.gateway_id == gateway_id
+    ).all()
+    
+    if len(db_entities) != len(bulk_request.entity_ids):
+        raise HTTPException(status_code=404, detail="One or more entities not found")
+    
+    # Get any grows that will be affected for refresh later
+    affected_grow_ids = set()
+    for entity in db_entities:
+        if entity.linked_grow_id:
+            affected_grow_ids.add(entity.linked_grow_id)
+    
+    # Unlink all entities from their grows (makes them linkable again)
+    updated_entities = []
+    for entity in db_entities:
+        entity.linked_grow_id = None
+        entity.linked_stage = None
+        updated_entities.append(entity)
+    
+    # Commit the entity changes
+    db.commit()
+    
+    # Refresh all updated entities
+    for entity in updated_entities:
+        db.refresh(entity)
+    
+    # Refresh affected grows
+    for grow_id in affected_grow_ids:
+        grow = db.query(BulkGrow).filter(BulkGrow.id == grow_id).first()
+        if grow:
+            db.expire(grow, ["iot_entities"])
+            db.refresh(grow)
+    
+    return updated_entities
 
 @router.put("/{gateway_id}/entities/{entity_id}", response_model=IoTEntitySchema)
 async def update_entity(
@@ -165,6 +332,7 @@ async def update_entity(
     
     db.commit()
     db.refresh(db_entity)
+
     return db_entity
 
 @router.delete("/{gateway_id}/entities/{entity_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -214,6 +382,7 @@ async def update_iot_gateway(
     
     db.commit()
     db.refresh(db_gateway)
+
     return db_gateway
 
 @router.delete("/{gateway_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -223,121 +392,98 @@ async def delete_iot_gateway(
     current_user: User = Depends(get_current_active_user)
 ):
     """Delete a IoT gateway"""
-    # First check if this gateway is associated with any grows
     db_gateway = db.query(IoTGateway).filter(IoTGateway.id == gateway_id, IoTGateway.user_id == current_user.id).first()
     if db_gateway is None:
         raise HTTPException(status_code=404, detail="IoT gateway not found")
     
-    # Check if any grow is using this gateway
-    if db_gateway.bulk_grow_id is not None:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Cannot delete IoT gateway that is in use by a grow. Remove it from grow ID {db_gateway.bulk_grow_id} first."
-        )
-    
     db.delete(db_gateway)
     db.commit()
+
     return {"detail": "IoT gateway deleted"}
     
-# --- Gateway Link Operations ---
+# --- Entity Linking Operations ---
 
-@router.put("/{gateway_id}/link/{grow_id}", response_model=IoTGatewaySchema)
-async def link_gateway_with_grow(
+@router.put("/{gateway_id}/entities/{entity_id}/link", response_model=IoTEntitySchema)
+async def link_entity_to_grow(
     gateway_id: int,
-    grow_id: int,
+    entity_id: int,
+    linking_request: EntityLinkingRequest,
     db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Link an IoT gateway with a grow"""
+    """Link an IoT entity to a grow and stage"""
     # Verify gateway exists and belongs to user
     gateway = db.query(IoTGateway).filter(IoTGateway.id == gateway_id, IoTGateway.user_id == current_user.id).first()
     if gateway is None:
         raise HTTPException(status_code=404, detail="IoT gateway not found")
     
-    # Check if already linked with another grow
-    if gateway.bulk_grow_id is not None and gateway.bulk_grow_id != grow_id:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"This gateway is already linked with grow ID {gateway.bulk_grow_id}. Please unlink it first."
-        )
-    
     # Verify grow exists and belongs to user
-    grow = db.query(BulkGrow).filter(BulkGrow.id == grow_id, BulkGrow.user_id == current_user.id).first()
+    grow = db.query(BulkGrow).filter(BulkGrow.id == linking_request.grow_id, BulkGrow.user_id == current_user.id).first()
     if grow is None:
         raise HTTPException(status_code=404, detail="Grow not found")
     
-    # Link gateway with grow
-    gateway.bulk_grow_id = grow_id
-    db.commit()
-    db.refresh(gateway)
+    # Get entity
+    db_entity = db.query(IoTEntity).filter(
+        IoTEntity.id == entity_id,
+        IoTEntity.gateway_id == gateway_id
+    ).first()
     
-    return gateway
+    if not db_entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    
+    # Link entity to grow and stage
+    db_entity.linked_grow_id = linking_request.grow_id
+    db_entity.linked_stage = linking_request.stage
+    
+    # Commit the entity changes
+    db.commit()
+    db.refresh(db_entity)
+    
+    db.expire(grow, ["iot_entities"])
+    db.refresh(grow)
+    
+    return db_entity
 
-@router.put("/{gateway_id}/unlink", response_model=IoTGatewaySchema)
-async def unlink_gateway_from_grow(
+@router.delete("/{gateway_id}/entities/{entity_id}/link", response_model=IoTEntitySchema)
+async def remove_entity_link(
     gateway_id: int,
+    entity_id: int,
     db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Unlink an IoT gateway from its grow"""
+    """Remove an IoT entity's grow/stage link (makes entity linkable again)"""
     # Verify gateway exists and belongs to user
     gateway = db.query(IoTGateway).filter(IoTGateway.id == gateway_id, IoTGateway.user_id == current_user.id).first()
     if gateway is None:
         raise HTTPException(status_code=404, detail="IoT gateway not found")
     
-    # Check if not linked with any grow
-    if gateway.bulk_grow_id is None:
-        raise HTTPException(status_code=400, detail="This gateway is not linked with any grow")
+    # Get entity
+    db_entity = db.query(IoTEntity).filter(
+        IoTEntity.id == entity_id,
+        IoTEntity.gateway_id == gateway_id
+    ).first()
     
-    # Unlink gateway from grow
-    gateway.bulk_grow_id = None
+    if not db_entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    
+    # Get the grow before unlinking (if entity was linked to one)
+    grow = None
+    if db_entity.linked_grow_id:
+        grow = db.query(BulkGrow).filter(
+            BulkGrow.id == db_entity.linked_grow_id, 
+            BulkGrow.user_id == current_user.id
+        ).first()
+    
+    # Remove linking (makes entity linkable again)
+    db_entity.linked_grow_id = None
+    db_entity.linked_stage = None
+    
+    # Commit the entity changes
     db.commit()
-    db.refresh(gateway)
+    db.refresh(db_entity)
     
-    return gateway
-
-@router.put("/{gateway_id}/enable", response_model=IoTGatewaySchema)
-async def enable_gateway(
-    gateway_id: int,
-    db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    """Enable an IoT gateway"""
-    # Verify gateway exists and belongs to user
-    gateway = db.query(IoTGateway).filter(IoTGateway.id == gateway_id, IoTGateway.user_id == current_user.id).first()
-    if gateway is None:
-        raise HTTPException(status_code=404, detail="IoT gateway not found")
+    if grow:
+        db.expire(grow, ["iot_entities"])
+        db.refresh(grow)
     
-    # Check if already enabled
-    if gateway.is_active:
-        return gateway
-        
-    # Enable gateway
-    gateway.is_active = True
-    db.commit()
-    db.refresh(gateway)
-    
-    return gateway
-
-@router.put("/{gateway_id}/disable", response_model=IoTGatewaySchema)
-async def disable_gateway(
-    gateway_id: int,
-    db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    """Disable an IoT gateway"""
-    # Verify gateway exists and belongs to user
-    gateway = db.query(IoTGateway).filter(IoTGateway.id == gateway_id, IoTGateway.user_id == current_user.id).first()
-    if gateway is None:
-        raise HTTPException(status_code=404, detail="IoT gateway not found")
-    
-    # Check if already disabled
-    if not gateway.is_active:
-        return gateway
-        
-    # Disable gateway
-    gateway.is_active = False
-    db.commit()
-    db.refresh(gateway)
-    
-    return gateway
+    return db_entity

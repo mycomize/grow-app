@@ -28,6 +28,8 @@ import {
 import { BulkGrowComplete, bulkGrowStatuses } from '~/lib/growTypes';
 import { GatewayStatus } from './GatewayStatus';
 import { InfoBadge } from '~/components/ui/info-badge';
+import { CountBadge } from '~/components/ui/count-badge';
+import { IoTEntity, IoTGateway } from '~/lib/iot';
 
 interface GrowCardProps {
   grow: BulkGrowComplete;
@@ -348,23 +350,53 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
             />
           </HStack>
 
-          {/* Fifth row: IoT Gateways */}
+          {/* Fifth row: IoT Controls by Gateway */}
           <VStack className="mb-4" space="xs">
             <HStack className="items-center gap-2">
               <Icon as={CircuitBoard} className="text-typography-400" size="lg" />
-              <Text className="text-lg font-medium text-typography-600">IoT Gateways</Text>
+              <Text className="text-lg font-medium text-typography-600">IoT Controls</Text>
             </HStack>
             {(() => {
-              // Get IoT gateways from the grow
-              const gateways = grow.iot_gateways || [];
-              return gateways.length > 0 ? (
+              // Get IoT entities from the grow and group by gateway
+              const entities = grow.iot_entities || [];
+
+              if (entities.length === 0) {
+                return <Text className="text-md text-typography-400">None</Text>;
+              }
+
+              // Group entities by gateway_id
+              const entitiesByGateway = entities.reduce(
+                (acc, entity) => {
+                  const gatewayId = entity.gateway_id;
+                  if (!acc[gatewayId]) {
+                    acc[gatewayId] = [];
+                  }
+                  acc[gatewayId].push(entity);
+                  return acc;
+                },
+                {} as Record<number, IoTEntity[]>
+              );
+
+              // Show gateway names with controls count
+              return (
                 <VStack space="sm">
-                  {gateways.map((gateway) => (
-                    <GatewayStatus key={gateway.id} gateway={gateway} />
-                  ))}
+                  {Object.entries(entitiesByGateway).map(([gatewayId, gatewayEntities]) => {
+                    // Find the gateway info from the first entity's gateway reference
+                    // Note: We'll need to get gateway name from somewhere - for now use ID
+                    const controlCount = gatewayEntities.length;
+                    return (
+                      <HStack key={gatewayId} className="items-center justify-between">
+                        <Text className="text-md text-typography-600">Gateway {gatewayId}</Text>
+                        <CountBadge
+                          count={controlCount}
+                          label={controlCount === 1 ? 'control' : 'controls'}
+                          variant="success"
+                          size="sm"
+                        />
+                      </HStack>
+                    );
+                  })}
                 </VStack>
-              ) : (
-                <Text className="text-md text-typography-400">None</Text>
               );
             })()}
           </VStack>

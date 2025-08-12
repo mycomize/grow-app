@@ -23,7 +23,7 @@ interface ApiCallConfig<TRequest = any, TResponse = any> {
 }
 
 /**
- * Enhanced API client that automatically handles encryption/decryption
+ * Backend API client that automatically handles encryption/decryption.
  * All user data is encrypted before sending to backend and decrypted after receiving
  * Transparent to the rest of the application code
  */
@@ -214,8 +214,6 @@ class ApiClient {
     });
   }
 
-  // Specialized methods for different data types
-
   // BulkGrow operations
   async getBulkGrows(token: string) {
     return this.get('/grows/', token, 'BulkGrow', true);
@@ -312,6 +310,91 @@ class ApiClient {
 
   async deleteIoTEntity(gatewayId: string, entityId: string, token: string) {
     return this.delete(`/iot-gateways/${gatewayId}/entities/${entityId}`, token);
+  }
+
+  async bulkCreateIoTEntities(gatewayId: string, entities: any[], token: string) {
+    return this.call({
+      endpoint: `/iot-gateways/${gatewayId}/entities/bulk-create`,
+      config: {
+        method: 'POST',
+        body: { entities },
+        token,
+      },
+      requestDataType: 'BulkEntityCreateRequest',
+      responseDataType: 'IoTEntity',
+      isArrayResponse: true,
+    });
+  }
+
+  async bulkDeleteIoTEntities(gatewayId: string, entityIds: number[], token: string) {
+    return this.call({
+      endpoint: `/iot-gateways/${gatewayId}/entities/bulk-delete`,
+      config: {
+        method: 'DELETE',
+        body: { entity_ids: entityIds },
+        token,
+      },
+      requestDataType: null,
+    });
+  }
+
+  // IoT Entity Linking operations
+  async linkIoTEntity(
+    gatewayId: string,
+    entityId: string,
+    growId: number,
+    stage: string,
+    token: string
+  ) {
+    return this.put(
+      `/iot-gateways/${gatewayId}/entities/${entityId}/link`,
+      { grow_id: growId, stage: stage },
+      token,
+      'IoTAssignmentRequest',
+      'IoTEntity'
+    );
+  }
+
+  async bulkLinkIoTEntities(
+    gatewayId: string,
+    entityIds: number[],
+    growId: number,
+    stage: string,
+    token: string
+  ) {
+    const requestBody = { entity_ids: entityIds, grow_id: growId, stage: stage };
+
+    return this.call({
+      endpoint: `/iot-gateways/${gatewayId}/entities/bulk-link`,
+      config: {
+        method: 'PUT',
+        body: requestBody,
+        token,
+      },
+      requestDataType: 'IoTAssignmentRequest',
+      responseDataType: 'IoTEntity',
+      isArrayResponse: true,
+    });
+  }
+
+  async unlinkIoTEntity(gatewayId: string, entityId: string, token: string) {
+    return this.delete(`/iot-gateways/${gatewayId}/entities/${entityId}/link`, token);
+  }
+
+  async bulkUnlinkIoTEntities(gatewayId: string, entityIds: number[], token: string) {
+    return this.call({
+      endpoint: `/iot-gateways/${gatewayId}/entities/bulk-unlink`,
+      config: {
+        method: 'DELETE',
+        body: { entity_ids: entityIds },
+        token,
+      },
+      requestDataType: null,
+    });
+  }
+
+  async removeIoTEntityLink(gatewayId: string, entityId: string, token: string) {
+    return this.delete(`/iot-gateways/${gatewayId}/entities/${entityId}/link`, token);
   }
 }
 

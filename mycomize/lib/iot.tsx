@@ -5,9 +5,10 @@ export interface IoTGateway {
   description?: string;
   api_url: string;
   api_key: string;
-  is_active: boolean;
   created_at: Date;
-  grow_id?: number;
+  iot_entities_count?: number;
+  linked_entities_count?: number | string; // Can be number (parsed) or string (encrypted from API)
+  linkable_entities_count?: number | string; // Can be number (parsed) or string (encrypted from API)
 }
 
 export interface IoTGatewayCreate {
@@ -16,7 +17,6 @@ export interface IoTGatewayCreate {
   description?: string;
   api_url: string;
   api_key: string;
-  is_active: boolean;
 }
 
 export interface IoTGatewayUpdate {
@@ -25,7 +25,8 @@ export interface IoTGatewayUpdate {
   description?: string;
   api_url?: string;
   api_key?: string;
-  is_active?: boolean;
+  linked_entities_count?: string;
+  linkable_entities_count?: string;
 }
 
 export const gatewayTypes = {
@@ -37,7 +38,7 @@ export const gatewayTypeLabels = {
 } as const;
 
 // Home Assistant WebSocket API types
-export interface HAState {
+export interface HAEntity {
   entity_id: string;
   state: string;
   attributes: Record<string, any>;
@@ -81,27 +82,29 @@ export interface HAWebSocketCommand {
 
 // IoT Entity management types
 export interface IoTEntity {
-  id: number;
-  gateway_id: number;
-  entity_id: string;
-  entity_type: string;
+  id: number; // backend generated id
+  gateway_id: number; // id that originates from backend
+  entity_name: string; // Home Assistant entity identifier (encrypted) equal to HAEntity.entity_id
+  entity_type: string; // indicates home assistant for home assistant entities
   friendly_name?: string;
-  is_enabled: boolean;
-  last_state?: string;
-  last_attributes?: Record<string, any>;
-  last_updated?: string;
-  created_at: string;
+  domain: string; // Extracted from entity_id (before first '.') (encrypted)
+  device_class: string; // From HA attributes.device_class or empty string (encrypted)
+  // Assignment fields for grow/stage association
+  linked_grow_id?: number;
+  linked_stage?: string;
 }
 
 export interface IoTEntityCreate {
   gateway_id: number;
-  entity_id: string;
+  entity_name: string; // Home Assistant entity identifier (encrypted)
   entity_type: string;
   friendly_name?: string;
-  is_enabled: boolean;
+  domain: string;
+  device_class: string;
 }
 
 export interface IoTEntityUpdate {
   friendly_name?: string;
-  is_enabled?: boolean;
+  linked_grow_id?: number;
+  linked_stage?: string;
 }

@@ -68,16 +68,16 @@ export const TekCard: React.FC<TekCardProps> = ({
   // Load cached image for the tek creator
   useEffect(() => {
     const loadCachedImage = async () => {
-      if (tek.created_by) {
+      if (tek.creator_name) {
         try {
           // First check for cached image
-          const cached = await getCachedProfileImage(tek.created_by.toString());
+          const cached = await getCachedProfileImage(tek.creator_name);
 
           if (cached) {
             setCachedImage(cached);
           } else if (tek.creator_profile_image) {
             // If no cached image but we have a profile image from the API, cache it
-            await cacheProfileImage(tek.created_by.toString(), tek.creator_profile_image);
+            await cacheProfileImage(tek.creator_name, tek.creator_profile_image);
             setCachedImage(tek.creator_profile_image);
           }
         } catch (error) {
@@ -87,7 +87,7 @@ export const TekCard: React.FC<TekCardProps> = ({
     };
 
     loadCachedImage();
-  }, [tek.created_by, tek.creator_profile_image]);
+  }, [tek.creator_name, tek.creator_profile_image]);
 
   // Get the first two letters of creator name for avatar fallback
   const getCreatorInitials = (name: string | undefined) => {

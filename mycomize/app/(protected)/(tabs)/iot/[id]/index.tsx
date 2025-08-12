@@ -4,9 +4,9 @@ import { Spinner } from '~/components/ui/spinner';
 import { Text } from '~/components/ui/text';
 
 import { IoTGatewayForm } from '~/components/iot/IoTGatewayForm';
-import { useIoTGatewayFormLogic } from '~/lib/useIoTGatewayFormLogic';
+import { useIoTGatewayFormLogic } from '~/lib/iot-gateway';
 
-export default function IoTIntegrationDetailScreen() {
+export default function EditIoTGatewayScreen() {
   const { id } = useLocalSearchParams();
   const gatewayId = id as string;
 
@@ -24,46 +24,36 @@ export default function IoTIntegrationDetailScreen() {
     // Edit mode state
     isTestingConnection,
 
+    linkableEntities,
+    linkedEntities,
+
     // Connection state
     connectionInfo,
 
-    // Control state
-    enabledStates,
-    currentStates,
-    isControlling,
-    pendingValues,
-
-    // Control selection state
-    states,
-    searchQuery,
-    enabledEntities,
-    enabledEntitiesSet,
-    filterEnabled,
     filterPreferences,
-    showFilters,
+    showDomainFilters,
     showDeviceClassFilters,
-    pendingEntitySelections,
+
+    // Assignment fields for grow/stage association
+    grows,
 
     // Functions
     updateFormField,
     toggleApiKeyVisibility,
     testConnection,
-    toggleGatewayStatus,
-    handleToggle,
-    handleNumberChange,
-    adjustNumberValue,
-    saveNumberValue,
-    handleEntityToggle,
     toggleDomainFilter,
     toggleDeviceClassFilter,
     toggleShowAllDeviceClasses,
+    handleBulkLink,
+    handleIndividualLink,
+    handleBulkUnlink,
+    handleIndividualUnlink,
     deleteGateway,
     saveGateway,
 
     // State setters
-    setSearchQuery,
     setFilterEnabled,
-    setShowFilters,
+    setShowDomainFilters,
     setShowDeviceClassFilters,
     setShowDeleteModal,
   } = useIoTGatewayFormLogic({ gatewayId });
@@ -97,35 +87,25 @@ export default function IoTIntegrationDetailScreen() {
       gatewayId={gatewayId}
       connectionInfo={connectionInfo}
       isTestingConnection={isTestingConnection}
-      enabledStates={enabledStates}
-      currentStates={currentStates}
-      states={states}
-      enabledEntities={enabledEntities}
-      enabledEntitiesSet={enabledEntitiesSet}
-      isControlling={isControlling}
-      pendingValues={pendingValues}
-      searchQuery={searchQuery}
-      filterEnabled={filterEnabled}
+      linkableEntities={linkableEntities}
+      linkedEntities={linkedEntities}
       filterPreferences={filterPreferences}
-      showFilters={showFilters}
+      showDomainFilters={showDomainFilters}
       showDeviceClassFilters={showDeviceClassFilters}
-      pendingEntitySelections={pendingEntitySelections}
+      grows={grows}
       onUpdateFormField={updateFormField}
       onToggleApiKeyVisibility={toggleApiKeyVisibility}
-      onToggleGatewayStatus={toggleGatewayStatus}
       onTestConnection={testConnection}
-      onSearchQueryChange={setSearchQuery}
       onFilterEnabledChange={setFilterEnabled}
-      onToggleShowFilters={() => setShowFilters(!showFilters)}
+      onToggleShowDomainFilters={() => setShowDomainFilters(!showDomainFilters)}
       onToggleShowDeviceClassFilters={() => setShowDeviceClassFilters(!showDeviceClassFilters)}
       onToggleDomainFilter={toggleDomainFilter}
       onToggleDeviceClassFilter={toggleDeviceClassFilter}
       onToggleShowAllDeviceClasses={toggleShowAllDeviceClasses}
-      onHandleToggle={handleToggle}
-      onHandleNumberChange={handleNumberChange}
-      onAdjustNumberValue={adjustNumberValue}
-      onSaveNumberValue={saveNumberValue}
-      onHandleEntityToggle={handleEntityToggle}
+      onBulkLink={handleBulkLink}
+      onIndividualLink={handleIndividualLink}
+      onBulkUnlink={handleBulkUnlink}
+      onIndividualUnlink={handleIndividualUnlink}
       onShowDeleteModal={setShowDeleteModal}
       onDeleteGateway={deleteGateway}
       onSaveGateway={saveGateway}

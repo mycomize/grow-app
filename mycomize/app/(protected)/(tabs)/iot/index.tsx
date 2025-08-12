@@ -1,4 +1,5 @@
 import React, { useState, useContext, useCallback } from 'react';
+import { Alert } from 'react-native';
 import { Button, ButtonIcon, ButtonText } from '~/components/ui/button';
 import { Text } from '~/components/ui/text';
 import { VStack } from '~/components/ui/vstack';
@@ -31,6 +32,12 @@ import {
   WifiOff,
   PowerOff,
   RadioTower,
+  CircuitBoard,
+  Trash2,
+  CirclePlus,
+  Home,
+  HouseWifi,
+  Bug,
 } from 'lucide-react-native';
 import { Pressable } from '~/components/ui/pressable';
 import { View } from '~/components/ui/view';
@@ -74,6 +81,7 @@ interface IntegrationCardProps {
   token: string | null | undefined;
   connectionStatus: ConnectionStatus;
   latency?: number;
+  onDelete: (gateway: IoTGateway) => void;
 }
 
 const IntegrationCard: React.FC<IntegrationCardProps> = ({
@@ -81,6 +89,7 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
   token,
   connectionStatus,
   latency,
+  onDelete,
 }) => {
   const router = useRouter();
 
@@ -117,7 +126,7 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
   return (
     <>
       <Card className="w-11/12 rounded-xl bg-background-0">
-        <VStack className="flex p-2">
+        <VStack className="flex p-0">
           <Pressable
             onPress={() => {
               router.push({
@@ -126,19 +135,18 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
               });
             }}>
             <HStack className="mb-2 items-center">
-              <VStack className="flex-1">
-                <Heading size="lg">{gateway.name || 'Unnamed Integration'}</Heading>
+              <Heading size="lg" className="flex-1">
+                {gateway.name || 'Unnamed Integration'}
+              </Heading>
+              <HStack className="items-center" space="xs">
                 <Text size="sm" className="text-typography-500">
                   {gateway.type
                     ? gatewayTypeLabels[gateway.type as keyof typeof gatewayTypeLabels] ||
                       gateway.type
                     : 'Unknown Type'}
                 </Text>
-              </VStack>
-              <HStack className="ml-auto items-center" space="xs">
-                <InfoBadge {...getConnectionBadgeProps(connectionStatus)} />
-                {latency !== undefined && connectionStatus === 'connected' && (
-                  <CountBadge count={latency} label="ms" variant="green-dark" icon={Gauge} />
+                {gateway.type === 'home_assistant' && (
+                  <Icon as={HouseWifi} size="md" className="text-typography-500" />
                 )}
               </HStack>
             </HStack>
@@ -154,31 +162,41 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
               </Text>
             </HStack>
 
-            {gateway.grow_id && (
-              <HStack className="mb-1 mt-1">
-                <Text className="text-base">Grow ID</Text>
-                <Text className="ml-auto">ID: {gateway.grow_id}</Text>
+            <HStack className="mb-1 mt-1 items-center">
+              <Text className="text-base">Link Status</Text>
+              <HStack className="ml-auto items-center" space="xs">
+                <InfoBadge {...getConnectionBadgeProps(connectionStatus)} />
+                {latency !== undefined && connectionStatus === 'connected' && (
+                  <CountBadge count={latency} label="ms" variant="green-dark" icon={Gauge} />
+                )}
               </HStack>
-            )}
+            </HStack>
 
-            {!gateway.grow_id && (
-              <HStack className="mb-1 mt-1">
-                <Text className="text-base">Grow ID</Text>
-                <Text className="ml-auto text-base">None</Text>
-              </HStack>
-            )}
+            <HStack className="mb-1 mt-1 items-center">
+              <Text className="text-base">IoT Controls</Text>
+              <InfoBadge
+                text={`${gateway.linked_entities_count || 0} LINKED`}
+                variant="default"
+                className="ml-auto"
+              />
+            </HStack>
+          </Pressable>
 
+          {/* Action controls */}
+          <HStack className="mt-4 justify-around" space="md">
             <Pressable
-              className="ml-auto mt-2"
               onPress={() => {
                 router.push({
                   pathname: `/iot/[id]`,
                   params: { id: gateway.id },
                 });
               }}>
-              <Icon as={SquarePen} size="xl" />
+              <Icon className="text-typography-300" as={SquarePen} size="md" />
             </Pressable>
-          </Pressable>
+            <Pressable onPress={() => onDelete(gateway)}>
+              <Icon className="text-typography-300" as={Trash2} size="md" />
+            </Pressable>
+          </HStack>
         </VStack>
       </Card>
     </>
@@ -212,12 +230,30 @@ export default function IoTScreen() {
       setGateways([]);
 
       const data: IoTGateway[] = await apiClient.get('/iot-gateways/', token, 'IoTGateway', true);
-      const formattedGateways = data.map((gateway) => ({
-        ...gateway,
-        created_at: new Date(gateway.created_at),
-      }));
 
-      setGateways(formattedGateways);
+      // Parse entity counts and convert encrypted string values to numbers
+      const gatewaysWithCounts = data.map((gateway) => {
+        // Parse encrypted count values - they come as strings and need to be parsed to integers
+        const linkedCount = gateway.linked_entities_count
+          ? typeof gateway.linked_entities_count === 'string'
+            ? parseInt(gateway.linked_entities_count, 10)
+            : gateway.linked_entities_count
+          : 0;
+        const linkableCount = gateway.linkable_entities_count
+          ? typeof gateway.linkable_entities_count === 'string'
+            ? parseInt(gateway.linkable_entities_count, 10)
+            : gateway.linkable_entities_count
+          : 0;
+
+        return {
+          ...gateway,
+          created_at: new Date(gateway.created_at),
+          linked_entities_count: linkedCount,
+          linkable_entities_count: linkableCount,
+        };
+      });
+
+      setGateways(gatewaysWithCounts);
       setLoading(false);
     } catch (error) {
       if (isUnauthorizedError(error as Error)) {
@@ -229,16 +265,48 @@ export default function IoTScreen() {
     }
   }, [token, router]);
 
+  // Delete handler function
+  const handleDelete = useCallback(
+    async (gateway: IoTGateway) => {
+      if (!token) return;
+
+      Alert.alert(
+        'Delete Gateway',
+        `Are you sure you want to delete "${gateway.name || 'Unnamed Integration'}"? This action cannot be undone.`,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await apiClient.delete(`/iot-gateways/${gateway.id}`, token);
+                // Refresh the data after deletion
+                fetchData();
+              } catch (error) {
+                if (isUnauthorizedError(error as Error)) {
+                  router.replace('/login');
+                  return;
+                }
+                console.error('Error deleting gateway:', error);
+                Alert.alert('Error', 'Failed to delete the gateway. Please try again.');
+              }
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    },
+    [token, fetchData, router]
+  );
+
   // Check connection status for all gateways
   const checkAllConnections = useCallback(async () => {
     const statusPromises = gateways.map(async (gateway) => {
-      if (!gateway.is_active) {
-        return {
-          id: gateway.id,
-          status: 'disconnected' as ConnectionStatus,
-          latency: undefined,
-        };
-      }
+      // Gateways are always active if they exist
 
       try {
         const startTime = Date.now();
@@ -323,8 +391,8 @@ export default function IoTScreen() {
         case 'created_at':
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); // Most recent first
         case 'status':
-          const statusA = a.is_active ? 'active' : 'inactive';
-          const statusB = b.is_active ? 'active' : 'inactive';
+          const statusA = 'active'; // Gateways are always active if they exist
+          const statusB = 'active'; // Gateways are always active if they exist
           return statusA.localeCompare(statusB);
         default:
           return 0;
@@ -334,14 +402,14 @@ export default function IoTScreen() {
 
   // Calculate connected gateways
   const connectedGateways = gateways.filter((gateway) => {
-    return gateway.is_active && connectionStatuses[gateway.id] === 'connected';
+    return connectionStatuses[gateway.id] === 'connected';
   });
 
   // Filter and sort gateways based on search query and connected filter
   const filteredAndSortedGateways = sortGateways(
     gateways.filter((gateway) => {
       // Connected filter
-      const isConnected = gateway.is_active && connectionStatuses[gateway.id] === 'connected';
+      const isConnected = connectionStatuses[gateway.id] === 'connected';
       const matchesConnectedFilter = !filterConnectedOnly || isConnected;
 
       // Search filter
@@ -404,20 +472,16 @@ export default function IoTScreen() {
         {/* IoT Control Card */}
         <Card className="mx-4 w-11/12 bg-background-0">
           <VStack className="p-2" space="md">
-            <HStack className="">
-              <Heading size="xl" className="">
-                IoT Control
-              </Heading>
-              <HStack className="ml-auto items-center gap-2">
-                <CountBadge count={gateways.length} label="TOTAL" variant="success" />
-                {connectedGateways.length > 0 && (
-                  <CountBadge
-                    count={connectedGateways.length}
-                    label="CONNECTED"
-                    variant="green-dark"
-                  />
-                )}
-              </HStack>
+            <HStack className="items-center" space="sm">
+              <Icon as={CircuitBoard} size="xl" className="text-typography-600" />
+              <CountBadge count={gateways.length} label="TOTAL" variant="success" />
+              {connectedGateways.length > 0 && (
+                <CountBadge
+                  count={connectedGateways.length}
+                  label="CONNECTED"
+                  variant="green-dark"
+                />
+              )}
             </HStack>
 
             <Input className="mt-2">
@@ -429,7 +493,7 @@ export default function IoTScreen() {
               />
               {searchQuery && (
                 <Pressable onPress={() => setSearchQuery('')} className="pr-3">
-                  <Icon as={X} size="sm" className="text-typography-500" />
+                  <Icon as={X} size="sm" className="text-typography-700" />
                 </Pressable>
               )}
             </Input>
@@ -437,16 +501,16 @@ export default function IoTScreen() {
             {/* Action Buttons */}
             <HStack className="mt-2 items-center justify-around gap-2">
               <Pressable onPress={handleSortModalOpen}>
-                <Icon as={ArrowUpDown} size="lg" />
+                <Icon className="text-typography-300" as={ArrowUpDown} size="md" />
               </Pressable>
               <Pressable onPress={handleFilterModalOpen}>
-                <Icon as={Filter} size="lg" />
+                <Icon className="text-typography-300" as={Filter} size="md" />
               </Pressable>
               <Pressable
                 onPress={() => {
                   router.push('/iot/new');
                 }}>
-                <Icon className="text-white" as={PlusIcon} size="lg" />
+                <Icon className="text-typography-300" as={CirclePlus} size="md" />
               </Pressable>
             </HStack>
           </VStack>
@@ -460,6 +524,7 @@ export default function IoTScreen() {
             token={token}
             connectionStatus={connectionStatuses[gateway.id] || 'unknown'}
             latency={connectionLatencies[gateway.id]}
+            onDelete={handleDelete}
           />
         ))}
 

@@ -13,9 +13,9 @@ import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
 import { Button, ButtonText } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
-import { X, AlertTriangle, Globe } from 'lucide-react-native';
+import { X, AlertTriangle, Globe, Unlink } from 'lucide-react-native';
 
-export type ConfirmationType = 'delete' | 'make-public' | 'warning' | 'info';
+export type ConfirmationType = 'delete' | 'make-public' | 'warning' | 'info' | 'unlink';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -58,6 +58,13 @@ const getTypeConfig = (type: ConfirmationType) => {
         iconColor: 'text-info-600',
         confirmAction: 'positive' as const,
         confirmButtonText: 'OK',
+      };
+    case 'unlink':
+      return {
+        icon: Unlink,
+        iconColor: 'text-typography-500',
+        confirmAction: 'negative' as const,
+        confirmButtonText: 'Unlink',
       };
     default:
       return {

@@ -1,29 +1,52 @@
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
-from datetime import datetime
+from typing import Optional, List
 
 class IoTEntityBase(BaseModel):
-    # All user data fields are now strings to support encryption
-    entity_id: Optional[str] = None
-    entity_type: str  # System field - remains unencrypted
+    # User-supplied / encrypted
+    entity_name: Optional[str] = None
+    entity_type: Optional[str] = None
     friendly_name: Optional[str] = None
-    is_enabled: bool = True  # System field - remains unencrypted
+    domain: Optional[str] = None
+    device_class: Optional[str] = None
 
 class IoTEntityCreate(IoTEntityBase):
+    # Backend generated plaintext
     gateway_id: int
 
 class IoTEntityUpdate(BaseModel):
+    # User-supplied / encrypted
     friendly_name: Optional[str] = None
-    is_enabled: Optional[bool] = None
+    linked_grow_id: Optional[int] = None
+    linked_stage: Optional[str] = None
 
 class IoTEntity(IoTEntityBase):
+    # Backend generated plaintext
     id: int
     gateway_id: int
-    # All user data fields are now strings to support encryption
-    last_state: Optional[str] = None
-    last_attributes: Optional[str] = None  # JSON stored as encrypted string
-    last_updated: Optional[datetime] = None  # System field - remains unencrypted
-    created_at: datetime  # System field - remains unencrypted
+    linked_grow_id: Optional[int] = None
+
+    # User-supplied / encrypted
+    linked_stage: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+class EntityLinkingRequest(BaseModel):
+    # Backend generated plaintext
+    grow_id: int
+
+    # User-supplied / encrypted
+    stage: str
+
+class BulkEntityLinkingRequest(BaseModel):
+    # Backend generated plaintext
+    entity_ids: List[int]  # Database entity IDs to link
+    grow_id: int
+
+    # User-supplied / encrypted
+    stage: str
+class BulkEntityCreateRequest(BaseModel):
+    entities: List[IoTEntityCreate]
+
+class BulkEntityDeleteRequest(BaseModel):
+    entity_ids: List[int]  # Database entity IDs to delete

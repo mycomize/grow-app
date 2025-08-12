@@ -23,7 +23,7 @@ import {
 
 import { AuthContext } from '~/lib/AuthContext';
 import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
-import { IoTGateway, HAState } from '~/lib/iot';
+import { IoTGateway, HAEntity } from '~/lib/iot';
 import { SensorGraph } from '~/components/charts/SensorGraph';
 
 export default function SensorDetailScreen() {
@@ -31,7 +31,7 @@ export default function SensorDetailScreen() {
   const router = useRouter();
   const { token } = useContext(AuthContext);
   const [gateway, setGateway] = useState<IoTGateway | null>(null);
-  const [sensorState, setSensorState] = useState<HAState | null>(null);
+  const [sensorState, setSensorState] = useState<HAEntity | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,7 +78,7 @@ export default function SensorDetailScreen() {
         });
 
         if (stateResponse.ok) {
-          const stateData: HAState = await stateResponse.json();
+          const stateData: HAEntity = await stateResponse.json();
           setSensorState(stateData);
         } else {
           throw new Error('Failed to fetch sensor state');

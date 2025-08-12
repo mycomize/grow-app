@@ -11,7 +11,7 @@ from backend.schemas.grow import (
     BulkGrowCreate,
     BulkGrow as BulkGrowSchema,
     BulkGrowUpdate,
-    BulkGrowWithIoTGateways,
+    BulkGrowWithIoTEntities,
     BulkGrowComplete,
     BulkGrowFlushCreate
 )
@@ -21,47 +21,6 @@ from backend.security import get_current_active_user, load_config
 # Create the models
 from backend.models.grow import Base
 Base.metadata.create_all(bind=engine)
-
-def sanitize_stages_datetime_fields(stages_data):
-    """Convert datetime objects to ISO strings and floats to strings in stages data for JSON serialization"""
-    if not isinstance(stages_data, dict):
-        return stages_data
-    
-    expected_stages = ['inoculation', 'spawn_colonization', 'bulk_colonization', 'fruiting', 'harvest']
-    
-    for stage_name, stage_data in stages_data.items():
-        if stage_name not in expected_stages:
-            continue
-            
-        if not isinstance(stage_data, dict):
-            continue
-            
-        # Handle items list - convert datetime and cost fields
-        if 'items' in stage_data and isinstance(stage_data['items'], list):
-            for item in stage_data['items']:
-                if isinstance(item, dict):
-                    # Convert created_date if it's a datetime
-                    if 'created_date' in item and isinstance(item['created_date'], datetime):
-                        item['created_date'] = item['created_date'].isoformat()
-                    # Convert expiration_date if it's a datetime
-                    if 'expiration_date' in item and isinstance(item['expiration_date'], datetime):
-                        item['expiration_date'] = item['expiration_date'].isoformat()
-                    # Convert cost if it's a float (for backward compatibility)
-                    if 'cost' in item and isinstance(item['cost'], (int, float)):
-                        item['cost'] = str(item['cost'])
-    
-    return stages_data
-
-def parse_date_string(date_string):
-    """Convert a date string to Python date object"""
-    if not date_string:
-        return None
-    if isinstance(date_string, str):
-        try:
-            return datetime.strptime(date_string, '%Y-%m-%d').date()
-        except ValueError:
-            return None
-    return date_string
 
 router = APIRouter(
     prefix="/grows",
@@ -143,9 +102,9 @@ async def read_all_grows(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all grows with complete data for the current user"""
-    # Query all grows for the current user with their IoT gateway and flushes relationships loaded
+    # Query all grows for the current user with their IoT entities and flushes relationships loaded
     grows = db.query(BulkGrow).options(
-        joinedload(BulkGrow.iot_gateways),
+        joinedload(BulkGrow.iot_entities),
         joinedload(BulkGrow.flushes)
     ).filter(BulkGrow.user_id == current_user.id).all()
     return grows
@@ -156,9 +115,9 @@ async def read_grow(
     db: Session = Depends(get_mycomize_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get a specific grow by ID with its IoT gateways and flushes"""
+    """Get a specific grow by ID with its IoT entities and flushes"""
     grow = db.query(BulkGrow).options(
-        joinedload(BulkGrow.iot_gateways),
+        joinedload(BulkGrow.iot_entities),
         joinedload(BulkGrow.flushes)
     ).filter(BulkGrow.id == grow_id, BulkGrow.user_id == current_user.id).first()
 
@@ -225,11 +184,12 @@ async def delete_grow(
     if db_grow is None:
         raise HTTPException(status_code=404, detail="Grow not found")
 
-    # Check if any IoT gateways are linked to this grow
-    gateways = db.query(IoTGateway).filter(IoTGateway.bulk_grow_id == grow_id).all()
-    for gateway in gateways:
-        gateway.bulk_grow_id = None
-        gateway.is_active = False
+    # Unassign any IoT entities that are linked to this grow
+    from backend.models.iot_entity import IoTEntity
+    entities = db.query(IoTEntity).filter(IoTEntity.linked_grow_id == grow_id).all()
+    for entity in entities:
+        entity.linked_grow_id = None
+        entity.linked_stage = None
 
 
     db.delete(db_grow)

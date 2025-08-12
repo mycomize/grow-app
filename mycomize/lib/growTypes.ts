@@ -1,5 +1,6 @@
 // Import shared tek structures for reuse between teks and grows
 import type { BulkStageData } from './tekTypes';
+import type { IoTEntity } from './iot';
 
 // Stage structure specific to bulk grows and bulk grow teks
 // This matches the same structure used in bulk grow teks
@@ -66,8 +67,13 @@ export interface BulkGrow {
 }
 
 // Extended interfaces for different API responses - matches backend schemas
+export interface BulkGrowWithIoTEntities extends BulkGrow {
+  iot_entities: IoTEntity[];
+}
+
+// Keep the old interface for backward compatibility during transition
 export interface BulkGrowWithIoTGateways extends BulkGrow {
-  iot_gateways: IoTGateway[];
+  iot_entities: IoTEntity[];
 }
 
 export interface BulkGrowWithFlushes extends BulkGrow {
@@ -75,7 +81,7 @@ export interface BulkGrowWithFlushes extends BulkGrow {
 }
 
 export interface BulkGrowComplete extends BulkGrow {
-  iot_gateways: IoTGateway[];
+  iot_entities: IoTEntity[];
   flushes: BulkGrowFlush[];
 }
 

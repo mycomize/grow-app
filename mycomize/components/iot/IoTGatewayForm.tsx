@@ -15,8 +15,9 @@ import { Save, ChevronDown, ChevronRight, FileText, ServerCog, Trash2 } from 'lu
 import { useRouter } from 'expo-router';
 import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
 
-import { IoTGateway, IoTGatewayUpdate, IoTEntity, HAState } from '~/lib/iot';
+import { IoTGateway, IoTGatewayUpdate, IoTEntity, HAEntity } from '~/lib/iot';
 import { IoTFilterPreferences, ConnectionInfo } from '~/lib/iotTypes';
+import { BulkGrow } from '~/lib/growTypes';
 
 // Import modular sections
 import { BasicsSection } from '~/components/iot/sections/BasicsSection';
@@ -26,8 +27,8 @@ interface IoTGatewayFormProps {
   gateway: IoTGateway | null;
   formData: IoTGatewayUpdate;
   isEditing: boolean;
-  isSaving: boolean;
   isDeleting: boolean;
+  isSaving: boolean;
   showDeleteModal: boolean;
   showApiKey: boolean;
   keyboardVisible: boolean;
@@ -38,46 +39,32 @@ interface IoTGatewayFormProps {
   isTestingConnection: boolean;
 
   // Control panel state
-  enabledStates: string[];
-  currentStates: HAState[];
-  states: HAState[];
-  enabledEntities: IoTEntity[];
-  enabledEntitiesSet: Set<string>;
-  isControlling: Set<string>;
-  pendingValues: Record<string, string>;
-  searchQuery: string;
-  filterEnabled: boolean;
+  linkedEntities: IoTEntity[];
+  linkableEntities: IoTEntity[];
   filterPreferences: IoTFilterPreferences;
-  showFilters: boolean;
+  showDomainFilters: boolean;
   showDeviceClassFilters: boolean;
-  pendingEntitySelections: Set<string>;
+  grows: BulkGrow[];
+
+  saveButtonText?: string;
 
   // Event handlers
   onUpdateFormField: (field: keyof IoTGatewayUpdate, value: any) => void;
   onToggleApiKeyVisibility: () => void;
-  onToggleGatewayStatus: () => void;
   onTestConnection: () => void;
-  onSearchQueryChange: (query: string) => void;
   onFilterEnabledChange: (enabled: boolean) => void;
-  onToggleShowFilters: () => void;
+  onToggleShowDomainFilters: () => void;
   onToggleShowDeviceClassFilters: () => void;
   onToggleDomainFilter: (domain: string) => void;
   onToggleDeviceClassFilter: (deviceClass: string) => void;
   onToggleShowAllDeviceClasses: () => void;
-  onHandleToggle: (entityId: string, domain: string, currentState: string) => void;
-  onHandleNumberChange: (entityId: string, value: string) => void;
-  onAdjustNumberValue: (entityId: string, increment: boolean, currentValue: string) => void;
-  onSaveNumberValue: (entityId: string, pendingValue: string) => void;
-  onHandleEntityToggle: (
-    entityId: string,
-    entityType: string,
-    friendlyName: string,
-    enabled: boolean
-  ) => void;
+  onBulkLink: (entityIds: string[], growId: number, stage: string) => void;
+  onIndividualLink: (entityId: string, growId: number, stage: string) => void;
+  onBulkUnlink: (entityIds: string[]) => void;
+  onIndividualUnlink: (entityId: string) => void;
   onShowDeleteModal: (show: boolean) => void;
   onDeleteGateway: () => void;
   onSaveGateway: () => void;
-  saveButtonText?: string;
 }
 
 export function IoTGatewayForm({
@@ -92,35 +79,23 @@ export function IoTGatewayForm({
   gatewayId,
   connectionInfo,
   isTestingConnection,
-  enabledStates,
-  currentStates,
-  states,
-  enabledEntities,
-  enabledEntitiesSet,
-  isControlling,
-  pendingValues,
-  searchQuery,
-  filterEnabled,
+  linkedEntities,
+  linkableEntities,
   filterPreferences,
-  showFilters,
+  showDomainFilters,
   showDeviceClassFilters,
-  pendingEntitySelections,
+  grows,
   onUpdateFormField,
   onToggleApiKeyVisibility,
-  onToggleGatewayStatus,
   onTestConnection,
-  onSearchQueryChange,
-  onFilterEnabledChange,
-  onToggleShowFilters,
+  onToggleShowDomainFilters,
   onToggleShowDeviceClassFilters,
   onToggleDomainFilter,
   onToggleDeviceClassFilter,
-  onToggleShowAllDeviceClasses,
-  onHandleToggle,
-  onHandleNumberChange,
-  onAdjustNumberValue,
-  onSaveNumberValue,
-  onHandleEntityToggle,
+  onBulkLink,
+  onIndividualLink,
+  onBulkUnlink,
+  onIndividualUnlink,
   onShowDeleteModal,
   onDeleteGateway,
   onSaveGateway,
@@ -163,7 +138,6 @@ export function IoTGatewayForm({
                   isTestingConnection={isTestingConnection}
                   onUpdateField={onUpdateFormField}
                   onToggleApiKeyVisibility={onToggleApiKeyVisibility}
-                  onToggleGatewayStatus={onToggleGatewayStatus}
                   onTestConnection={onTestConnection}
                 />
               </AccordionContent>
@@ -192,31 +166,20 @@ export function IoTGatewayForm({
                 <ControlPanelSection
                   gateway={gateway}
                   connectionStatus={connectionInfo.status}
-                  enabledStates={enabledStates}
-                  currentStates={currentStates}
-                  states={states}
-                  enabledEntities={enabledEntities}
-                  enabledEntitiesSet={enabledEntitiesSet}
-                  isControlling={isControlling}
-                  pendingValues={pendingValues}
-                  searchQuery={searchQuery}
-                  filterEnabled={filterEnabled}
+                  linkedEntities={linkedEntities}
+                  linkableEntities={linkableEntities}
                   filterPreferences={filterPreferences}
-                  showFilters={showFilters}
+                  showDomainFilters={showDomainFilters}
                   showDeviceClassFilters={showDeviceClassFilters}
-                  pendingEntitySelections={pendingEntitySelections}
-                  onSearchQueryChange={onSearchQueryChange}
-                  onFilterEnabledChange={onFilterEnabledChange}
-                  onToggleShowFilters={onToggleShowFilters}
+                  grows={grows}
+                  onToggleShowDomainFilters={onToggleShowDomainFilters}
                   onToggleShowDeviceClassFilters={onToggleShowDeviceClassFilters}
                   onToggleDomainFilter={onToggleDomainFilter}
                   onToggleDeviceClassFilter={onToggleDeviceClassFilter}
-                  onToggleShowAllDeviceClasses={onToggleShowAllDeviceClasses}
-                  onHandleToggle={onHandleToggle}
-                  onHandleNumberChange={onHandleNumberChange}
-                  onAdjustNumberValue={onAdjustNumberValue}
-                  onSaveNumberValue={onSaveNumberValue}
-                  onHandleEntityToggle={onHandleEntityToggle}
+                  onBulkLink={onBulkLink}
+                  onIndividualLink={onIndividualLink}
+                  onBulkUnlink={onBulkUnlink}
+                  onIndividualUnlink={onIndividualUnlink}
                 />
               </AccordionContent>
             </AccordionItem>
@@ -230,7 +193,7 @@ export function IoTGatewayForm({
           <Button
             variant="outline"
             className="h-12 flex-1 border border-outline-300"
-            onPress={() => router.back()}>
+            onPress={() => router.replace('/iot')}>
             <ButtonText>Cancel</ButtonText>
           </Button>
 

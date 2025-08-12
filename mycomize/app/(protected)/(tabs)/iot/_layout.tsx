@@ -30,14 +30,6 @@ export default function IoTGatewayLayout() {
         }}
       />
       <Stack.Screen
-        name="[id]/states/index"
-        options={{
-          title: 'IoT States',
-          headerShown: true,
-          headerLeft: () => <BackButton />,
-        }}
-      />
-      <Stack.Screen
         name="[id]/sensor/[sensorId]"
         options={{
           title: 'Sensor Details',

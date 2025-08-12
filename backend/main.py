@@ -1,4 +1,5 @@
 import uvicorn
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +11,12 @@ from .routers.iot import router as iot_router
 from .routers.tek import router as tek_router
 
 app = FastAPI(title="Mycomize Grow API")
+
+# Conditionally add debug middleware for bulk-assign endpoint
+if os.getenv("DEBUG_BULK_ASSIGN", "false").lower() == "true":
+    from .debug_middleware import BulkAssignDebugMiddleware
+    app.add_middleware(BulkAssignDebugMiddleware)
+    print("DEBUG: BulkAssignDebugMiddleware enabled")
 
 # Configure CORS
 origins = [

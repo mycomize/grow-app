@@ -2,9 +2,8 @@ from pydantic import BaseModel, Field, validator
 from typing import Optional, List
 from datetime import date, datetime
 from backend.schemas.iot import IoTGateway
+from backend.schemas.iot_entity import IoTEntity
 from backend.schemas.bulk_stage import BulkGrowStages
-
-# Note: Removed Field validators for encrypted fields since they cannot validate encrypted strings
 
 # BulkGrowFlush schemas
 class BulkGrowFlushBase(BaseModel):
@@ -28,14 +27,12 @@ class BulkGrowFlush(BulkGrowFlushBase):
         from_attributes = True
 
 class BulkGrowBase(BaseModel):
-    # All user data fields are now strings to support encryption
-    # Removed Field constraints (min_length, max_length) as they don't work with encrypted data
     name: Optional[str] = None
     description: Optional[str] = None
     species: Optional[str] = None
     variant: Optional[str] = None
     location: Optional[str] = None
-    tags: Optional[str] = None  # JSON stored as encrypted string
+    tags: Optional[str] = None
 
     inoculation_date: Optional[str] = None
     inoculation_status: Optional[str] = None
@@ -52,8 +49,8 @@ class BulkGrowBase(BaseModel):
 
     current_stage: Optional[str] = None
     status: Optional[str] = None
-    total_cost: Optional[str] = None  # Converted from float to support encryption
-    stages: Optional[str] = None  # JSON stored as encrypted string
+    total_cost: Optional[str] = None
+    stages: Optional[str] = None
 
 class BulkGrowCreate(BulkGrowBase):
     """Schema for creating a new grow"""
@@ -67,9 +64,9 @@ class BulkGrow(BulkGrowBase):
     class Config:
         from_attributes = True
 
-class BulkGrowWithIoTGateways(BulkGrow):
-    """Schema for returning a grow with its IoT gateways"""
-    iot_gateways: List[IoTGateway] = []
+class BulkGrowWithIoTEntities(BulkGrow):
+    """Schema for returning a grow with its IoT entities"""
+    iot_entities: List[IoTEntity] = []
 
 class BulkGrowWithFlushes(BulkGrow):
     """Schema for returning a grow with its flushes"""
@@ -77,18 +74,17 @@ class BulkGrowWithFlushes(BulkGrow):
 
 class BulkGrowComplete(BulkGrow):
     """Schema for returning a complete grow with all related data"""
-    iot_gateways: List[IoTGateway] = []
+    iot_entities: List[IoTEntity] = []
     flushes: List[BulkGrowFlush] = []
 
 class BulkGrowUpdate(BaseModel):
     """Schema for updating a grow"""
-    # All user data fields are now strings to support encryption
     name: Optional[str] = None
     description: Optional[str] = None
     species: Optional[str] = None
     variant: Optional[str] = None
     location: Optional[str] = None
-    tags: Optional[str] = None  # JSON stored as encrypted string
+    tags: Optional[str] = None
 
     inoculation_date: Optional[str] = None
     inoculation_status: Optional[str] = None
@@ -105,6 +101,6 @@ class BulkGrowUpdate(BaseModel):
 
     current_stage: Optional[str] = None
     status: Optional[str] = None
-    total_cost: Optional[str] = None  # Converted from float to support encryption
+    total_cost: Optional[str] = None
 
-    stages: Optional[str] = None  # JSON stored as encrypted string
+    stages: Optional[str] = None
