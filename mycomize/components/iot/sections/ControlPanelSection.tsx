@@ -10,6 +10,7 @@ import { Switch } from '~/components/ui/switch';
 import { Pressable } from '~/components/ui/pressable';
 import { Divider } from '~/components/ui/divider';
 import { Checkbox, CheckboxIcon, CheckboxIndicator } from '~/components/ui/checkbox';
+import { ScrollView } from '~/components/ui/scroll-view';
 import { getSwitchColors } from '~/lib/switchUtils';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import {
@@ -33,8 +34,8 @@ import { InfoBadge } from '~/components/ui/info-badge';
 import { IoTGateway, IoTEntity } from '~/lib/iot';
 import { IoTFilterPreferences } from '~/lib/iotTypes';
 import { IoTLinkingModal } from '~/components/modals/IoTLinkingModal';
-import { ConfirmationModal } from '~/components/modals/ConfirmationModal';
-import { BulkGrow } from '~/lib/growTypes';
+import { IoTUnlinkConfirmationModal } from '~/components/modals/IoTUnlinkConfirmationModal';
+import { BulkGrow, stageLabels } from '~/lib/growTypes';
 
 // This file uses "Controls" as the name in the UI for entities
 interface ControlPanelSectionProps {
@@ -140,20 +141,59 @@ export function ControlPanelSection({
   }, [linkableEntities, filterPreferences.domains, filterPreferences.deviceClasses, searchQuery]);
 
   /**
-   * Group linked entities by domain for organized display
-   * Converts the linkedEntities array into domain-grouped object
+   * Group linked entities by grow name, then sort by stage within each grow
+   * Converts the linkedEntities array into grow name-grouped object with stage sorting
    */
   const groupedLinkedEntities = useMemo(() => {
-    return linkedEntities.reduce(
+    // Create a mapping from grow ID to grow name for quick lookup
+    const growIdToName = grows.reduce(
+      (acc, grow) => {
+        acc[grow.id] = grow.name;
+        return acc;
+      },
+      {} as Record<number, string>
+    );
+
+    // Group by grow name first
+    const grouped = linkedEntities.reduce(
       (acc, entity) => {
-        const domain = entity.domain;
-        if (!acc[domain]) acc[domain] = [];
-        acc[domain].push(entity);
+        const growName = entity.linked_grow_id
+          ? growIdToName[entity.linked_grow_id] || 'Unknown Grow'
+          : 'No Grow';
+        if (!acc[growName]) acc[growName] = [];
+        acc[growName].push(entity);
         return acc;
       },
       {} as Record<string, IoTEntity[]>
     );
-  }, [linkedEntities]);
+
+    // Sort entities within each grow by stage
+    const stageOrder = [
+      'inoculation',
+      'spawn_colonization',
+      'bulk_colonization',
+      'fruiting',
+      'harvest',
+    ];
+
+    Object.keys(grouped).forEach((growName) => {
+      grouped[growName].sort((a, b) => {
+        const stageA = a.linked_stage || '';
+        const stageB = b.linked_stage || '';
+
+        const indexA = stageOrder.indexOf(stageA);
+        const indexB = stageOrder.indexOf(stageB);
+
+        // If stage not found in order, put it at the end
+        const orderA = indexA === -1 ? 999 : indexA;
+        const orderB = indexB === -1 ? 999 : indexB;
+
+        return orderA - orderB;
+      });
+    });
+
+    return grouped;
+  }, [linkedEntities, grows]);
 
   /**
    * Handler for search query changes
@@ -347,7 +387,7 @@ export function ControlPanelSection({
           {/* Linked Controls Content. Each entry here should have a linked grow id */}
           {linkedEntities.length === 0 ? (
             <VStack
-              className="items-center rounded-lg border border-dashed border-typography-300 p-6"
+              className="mt-2 items-center rounded-lg border border-dashed border-typography-300 p-6"
               space="sm">
               <Icon as={ListX} size="xl" className="text-typography-400" />
               <Text className="text-center text-typography-500">
@@ -357,78 +397,100 @@ export function ControlPanelSection({
               </Text>
             </VStack>
           ) : (
-            <VStack space="sm">
-              {/* Group linked entities by domain */}
-              {Object.entries(groupedLinkedEntities).map(
-                ([domain, linkedDomainEntities], index) => (
-                  <VStack key={domain} space="md">
-                    <HStack className={index === 0 ? 'mt-2' : 'mt-6'}>
-                      {domain === 'sensor' && (
-                        <Icon as={Activity} className="text-typography-500" />
-                      )}
-                      {domain === 'number' && (
-                        <Icon as={Calculator} className="text-typography-500" />
-                      )}
-                      {domain === 'automation' && <Icon as={Bot} className="text-typography-500" />}
-                      {domain === 'switch' && (
-                        <Icon as={ToggleRight} className="text-typography-500" />
-                      )}
-                      <Text className="text-md ml-2 font-semibold capitalize text-typography-600">
-                        {domain}
-                      </Text>
-                    </HStack>
-                    {linkedDomainEntities.map((entity) => {
-                      const friendlyName = entity.friendly_name || entity.entity_name;
+            <ScrollView
+              className="max-h-96"
+              showsVerticalScrollIndicator={true}
+              nestedScrollEnabled={true}>
+              <VStack space="sm" className="pb-4 pr-4">
+                {/* Group linked entities by grow name, then by stage within each grow */}
+                {Object.entries(groupedLinkedEntities).map(
+                  ([growName, linkedGrowEntities], index) => {
+                    // Group entities by stage within this grow
+                    const entitiesByStage = linkedGrowEntities.reduce(
+                      (acc, entity) => {
+                        const stageName = entity.linked_stage
+                          ? stageLabels[entity.linked_stage as keyof typeof stageLabels] ||
+                            entity.linked_stage
+                          : 'Unknown Stage';
+                        if (!acc[stageName]) acc[stageName] = [];
+                        acc[stageName].push(entity);
+                        return acc;
+                      },
+                      {} as Record<string, IoTEntity[]>
+                    );
 
-                      return (
-                        <Card key={entity.entity_name} className="bg-background-0 p-0.5">
-                          <HStack className="items-center" space="sm">
-                            {/* Entity Name */}
-                            <VStack className="flex-1">
-                              <Text className="ml-3">{friendlyName}</Text>
-                            </VStack>
+                    return (
+                      <VStack key={growName} space="sm">
+                        <HStack className={index === 0 ? 'mt-0' : 'mt-4'}>
+                          <Text className="text-md font-semibold italic text-typography-600">
+                            {growName}
+                          </Text>
+                        </HStack>
+                        {Object.entries(entitiesByStage).map(([stageName, stageEntities]) => (
+                          <VStack key={`${growName}-${stageName}`} space="xs">
+                            <Text className="text-typography-500">{stageName}</Text>
+                            {stageEntities.map((entity) => {
+                              const friendlyName = entity.friendly_name || entity.entity_name;
 
-                            {/* Individual Unlink Icon - Show when NOT in bulk unlink mode */}
-                            {!bulkUnlinkMode && (
-                              <Pressable
-                                onPress={() => handleIndividualUnlinkClick(entity.entity_name)}
-                                className="p-1">
-                                <Icon as={Unlink} size="md" className="text-typography-500" />
-                              </Pressable>
-                            )}
+                              return (
+                                <Card key={entity.entity_name} className="bg-background-0 p-0.5">
+                                  <HStack className="items-center" space="sm">
+                                    {/* Entity Name */}
+                                    <VStack className="flex-1">
+                                      <Text className="ml-6">{friendlyName}</Text>
+                                    </VStack>
 
-                            {/* Selection Checkbox - Show when in bulk unlink mode */}
-                            {bulkUnlinkMode && (
-                              <Checkbox
-                                value={
-                                  selectedUnlinkEntities.has(entity.entity_name)
-                                    ? 'checked'
-                                    : 'unchecked'
-                                }
-                                isChecked={selectedUnlinkEntities.has(entity.entity_name)}
-                                onChange={() =>
-                                  handleUnlinkEntityCheckboxToggle(entity.entity_name)
-                                }
-                                isDisabled={false}>
-                                <CheckboxIndicator>
-                                  <CheckboxIcon as={Check} />
-                                </CheckboxIndicator>
-                              </Checkbox>
-                            )}
-                          </HStack>
-                        </Card>
-                      );
-                    })}
-                  </VStack>
-                )
-              )}
-            </VStack>
+                                    {/* Individual Unlink Icon - Show when NOT in bulk unlink mode */}
+                                    {!bulkUnlinkMode && (
+                                      <Pressable
+                                        onPress={() =>
+                                          handleIndividualUnlinkClick(entity.entity_name)
+                                        }
+                                        className="p-1">
+                                        <Icon
+                                          as={Unlink}
+                                          size="sm"
+                                          className="text-typography-500"
+                                        />
+                                      </Pressable>
+                                    )}
+
+                                    {/* Selection Checkbox - Show when in bulk unlink mode */}
+                                    {bulkUnlinkMode && (
+                                      <Checkbox
+                                        value={
+                                          selectedUnlinkEntities.has(entity.entity_name)
+                                            ? 'checked'
+                                            : 'unchecked'
+                                        }
+                                        isChecked={selectedUnlinkEntities.has(entity.entity_name)}
+                                        onChange={() =>
+                                          handleUnlinkEntityCheckboxToggle(entity.entity_name)
+                                        }
+                                        isDisabled={false}>
+                                        <CheckboxIndicator>
+                                          <CheckboxIcon as={Check} />
+                                        </CheckboxIndicator>
+                                      </Checkbox>
+                                    )}
+                                  </HStack>
+                                </Card>
+                              );
+                            })}
+                          </VStack>
+                        ))}
+                      </VStack>
+                    );
+                  }
+                )}
+              </VStack>
+            </ScrollView>
           )}
         </>
       )}
 
       {/* Linkable Controls Section. All of these entries have no linked grow */}
-      <VStack space="xl" className="mt-4">
+      <VStack space="xl" className="mt-3">
         <Divider />
 
         <HStack className="items-center justify-between">
@@ -545,7 +607,7 @@ export function ControlPanelSection({
 
             {/* Enter Bulk Link Mode Button */}
             {!bulkLinkMode && filteredLinkableEntities.length > 0 && (
-              <HStack className="mt-4 justify-end">
+              <HStack className=" justify-end">
                 <Button
                   variant="solid"
                   action="positive"
@@ -559,7 +621,7 @@ export function ControlPanelSection({
 
             {/* Bulk Linking Interface - When in bulk link mode */}
             {bulkLinkMode && (
-              <HStack className="mt-4 items-center justify-end gap-2">
+              <HStack className="mt-0 items-center justify-end gap-2">
                 <Button
                   variant="solid"
                   action="positive"
@@ -590,7 +652,7 @@ export function ControlPanelSection({
               )
             ).map(([domain, linkableDomainEntities]) => (
               <VStack key={domain} className="p-0" space="sm">
-                <HStack className="mt-4 items-center">
+                <HStack className="mt-2 items-center">
                   {domain === 'sensor' && (
                     <Icon as={Activity} size="lg" className="text-typography-500" />
                   )}
@@ -674,23 +736,19 @@ export function ControlPanelSection({
       />
 
       {/* Unlink Confirmation Modal */}
-      <ConfirmationModal
+      <IoTUnlinkConfirmationModal
         isOpen={showUnlinkModal}
         onClose={handleUnlinkModalClose}
         onConfirm={handleUnlinkConfirm}
-        type="unlink"
-        title="Unlink Confirmation"
-        message={
+        mode={unlinkMode}
+        selectedEntities={
           unlinkMode === 'bulk'
-            ? `Are you sure you want to unlink ${selectedUnlinkEntities.size} IoT control${selectedUnlinkEntities.size === 1 ? '' : 's'} from their grow${selectedUnlinkEntities.size === 1 ? '' : 's'}?`
-            : 'Are you sure you want to unlink this IoT control from its grow?'
+            ? linkedEntities.filter((entity) => selectedUnlinkEntities.has(entity.entity_name))
+            : currentUnlinkEntityId
+              ? linkedEntities.filter((entity) => entity.entity_name === currentUnlinkEntityId)
+              : []
         }
-        itemName={
-          unlinkMode === 'individual' && currentUnlinkEntityId
-            ? linkedEntities.find((e) => e.entity_name === currentUnlinkEntityId)?.friendly_name ||
-              currentUnlinkEntityId
-            : undefined
-        }
+        grows={grows}
       />
     </VStack>
   );

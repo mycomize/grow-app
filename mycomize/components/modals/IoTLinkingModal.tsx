@@ -182,9 +182,9 @@ export function IoTLinkingModal({
                 ) : (
                   <ScrollView className="max-h-64">
                     <RadioGroup value={selectedGrowId || ''} onChange={handleGrowSelect}>
-                      <VStack space="sm">
+                      <VStack space="md">
                         {grows.map((grow) => (
-                          <Radio key={grow.id.toString()} value={grow.id.toString()}>
+                          <Radio key={grow.id.toString()} value={grow.id.toString()} size="md">
                             <RadioIndicator>
                               <RadioIcon as={CircleIcon} />
                             </RadioIndicator>
@@ -225,7 +225,7 @@ export function IoTLinkingModal({
                 <Text className="font-semibold text-typography-600">Select a Stage</Text>
                 <ScrollView className="max-h-64">
                   <RadioGroup value={selectedStage || ''} onChange={handleStageSelect}>
-                    <VStack space="sm">
+                    <VStack space="md">
                       {stages.map((stage) => (
                         <Radio key={stage.value} value={stage.value}>
                           <RadioIndicator>
