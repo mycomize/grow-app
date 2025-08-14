@@ -79,7 +79,7 @@ export function useHAGatewayOperations(appAuthToken: string | null) {
             created_at: new Date(savedGateway.created_at),
           });
         }
-        showSuccess('Settings updated successfully');
+        showSuccess('IoT Gateway saved successfully');
       } else {
         // Create new gateway
         const createData: IoTGatewayCreate = {

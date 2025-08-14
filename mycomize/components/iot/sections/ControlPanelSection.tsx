@@ -437,7 +437,7 @@ export function ControlPanelSection({
                                   <HStack className="items-center" space="sm">
                                     {/* Entity Name */}
                                     <VStack className="flex-1">
-                                      <Text className="ml-6">{friendlyName}</Text>
+                                      <Text className="ml-6 text-sm">{friendlyName}</Text>
                                     </VStack>
 
                                     {/* Individual Unlink Icon - Show when NOT in bulk unlink mode */}
@@ -677,11 +677,13 @@ export function ControlPanelSection({
                       <Card className="flex-1 bg-background-0 p-0.5">
                         <HStack className="items-center justify-between">
                           <VStack className="mx-3 flex-1">
-                            <Text className="">{friendlyName}</Text>
+                            <Text className="text-sm">{friendlyName}</Text>
                             {entity.device_class && (
                               <HStack>
-                                <Text className="ml-2 text-typography-400">Device Class: </Text>
-                                <Text className="capitalize italic text-typography-400">
+                                <Text className="ml-2 text-sm text-typography-400">
+                                  Device Class:{' '}
+                                </Text>
+                                <Text className="text-sm capitalize italic text-typography-400">
                                   {entity.device_class}
                                 </Text>
                               </HStack>
