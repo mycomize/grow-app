@@ -421,7 +421,7 @@ export function ControlPanelSection({
 
                     return (
                       <VStack key={growName} space="sm">
-                        <HStack className={index === 0 ? 'mt-0' : 'mt-4'}>
+                        <HStack className={index === 0 ? 'mt-2' : 'mt-4'}>
                           <Text className="text-md font-semibold italic text-typography-600">
                             {growName}
                           </Text>
