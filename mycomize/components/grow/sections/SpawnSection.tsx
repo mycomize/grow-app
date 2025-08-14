@@ -21,12 +21,26 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { ChevronDown, ArrowDownToDot, CalendarDays, X } from 'lucide-react-native';
 
 // Import tek types
-import { BulkStageData } from '~/lib/tekTypes';
 import { BulkGrow } from '~/lib/growTypes';
 import { StageTabs } from '~/components/ui/stage-tabs';
+import { IoTEntity, IoTGateway } from '~/lib/iot';
+
+interface StageIoTData {
+  entities: IoTEntity[];
+  gateways: IoTGateway[];
+  entityStates: Record<string, string>;
+  loading: boolean;
+}
+
+interface SpawnStageData {
+  spawn_start_date?: string;
+  full_spawn_colonization_date?: string;
+  spawn_colonization_status?: string;
+  inoculation_date?: string;
+}
 
 interface SpawnSectionProps {
-  growData: BulkGrow;
+  growData: SpawnStageData;
   updateField: (field: string, value: any) => void;
   activeDatePicker: string | null;
   setActiveDatePicker: (field: string | null) => void;
@@ -42,6 +56,12 @@ interface SpawnSectionProps {
   currentStageIndex: number;
   stageIndex: number;
   advanceToNextStage: () => void;
+
+  // Grow object for IoT integration
+  grow?: any;
+
+  // IoT data for this specific stage
+  stageIoTData?: StageIoTData;
 }
 
 export const SpawnSection: React.FC<SpawnSectionProps> = ({
@@ -54,21 +74,22 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
   stageData,
   onUpdateBulkStageData,
   status,
-  currentStageIndex,
-  stageIndex,
   advanceToNextStage,
+  grow,
+  stageIoTData,
 }) => {
   const showCompleteButton = status === 'active';
 
   return (
-    <VStack space="md" className="bg-background-0 p-4">
+    <VStack space="md" className="bg-background-0 p-1">
       {/* Stage Tabs */}
       <StageTabs
         stageData={stageData}
         onUpdateBulkStageData={onUpdateBulkStageData}
-        grow={growData}
-        stageName="Spawn Colonization"
+        grow={grow}
+        stageName="spawn_colonization"
         stageStartDate={growData.spawn_start_date || growData.inoculation_date}
+        stageIoTData={stageIoTData}
       />
 
       {/* Spawn-specific fields */}

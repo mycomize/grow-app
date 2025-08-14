@@ -22,15 +22,23 @@ import { CalendarDays, ChevronDown, X, ArrowDownToDot } from 'lucide-react-nativ
 
 // Import tek types
 import { StageTabs } from '~/components/ui/stage-tabs';
+import { IoTEntity, IoTGateway } from '~/lib/iot';
 
-interface GrowData {
+interface StageIoTData {
+  entities: IoTEntity[];
+  gateways: IoTGateway[];
+  entityStates: Record<string, string>;
+  loading: boolean;
+}
+
+interface FruitingStageData {
   fruiting_start_date?: string;
   fruiting_pin_date?: string;
   fruiting_status?: string;
 }
 
 interface FruitingSectionProps {
-  growData: GrowData;
+  growData: FruitingStageData;
   updateField: (field: string, value: any) => void;
   activeDatePicker: string | null;
   setActiveDatePicker: (field: string | null) => void;
@@ -46,6 +54,12 @@ interface FruitingSectionProps {
   currentStageIndex: number;
   stageIndex: number;
   advanceToNextStage: () => void;
+
+  // Grow object for IoT integration
+  grow?: any;
+
+  // IoT data for this specific stage
+  stageIoTData?: StageIoTData;
 }
 
 export const FruitingSection: React.FC<FruitingSectionProps> = ({
@@ -59,18 +73,21 @@ export const FruitingSection: React.FC<FruitingSectionProps> = ({
   onUpdateBulkStageData,
   status,
   advanceToNextStage,
+  grow,
+  stageIoTData,
 }) => {
   const showCompleteButton = status === 'active';
 
   return (
-    <VStack space="md" className="bg-background-0 p-4">
+    <VStack space="md" className="bg-background-0 p-1">
       {/* Stage Tabs */}
       <StageTabs
         stageData={stageData}
         onUpdateBulkStageData={onUpdateBulkStageData}
-        grow={growData}
-        stageName="Fruiting"
+        grow={grow}
+        stageName="fruiting"
         stageStartDate={growData.fruiting_start_date}
+        stageIoTData={stageIoTData}
       />
 
       {/* Fruiting-specific fields */}

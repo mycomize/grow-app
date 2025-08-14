@@ -37,7 +37,6 @@ export default function GrowScreen() {
   const [filterLocation, setFilterLocation] = useState<string>('');
   const [showSortModal, setShowSortModal] = useState<boolean>(false);
   const [showFilterModal, setShowFilterModal] = useState<boolean>(false);
-  const [tempFilterActiveOnly, setTempFilterActiveOnly] = useState<boolean>(false);
   const [tempFilterStatus, setTempFilterStatus] = useState<string>('');
   const [tempFilterStage, setTempFilterStage] = useState<string>('');
   const [tempFilterSpecies, setTempFilterSpecies] = useState<string>('');

@@ -12,15 +12,25 @@ import { EnvironmentalConditionsList } from '~/components/tek/EnvironmentalCondi
 import { TasksList } from '~/components/tek/TasksList';
 import { StageNotes } from '~/components/tek/StageNotes';
 
+// Import grow components
+import { IotControlsList } from '~/components/grow/IotControlsList';
+
 // Import tek types
 import { BulkStageData } from '~/lib/tekTypes';
 import { BulkGrowComplete, bulkGrowStages } from '~/lib/growTypes';
-import { IoTEntity } from '~/lib/iot';
+import { IoTEntity, IoTGateway } from '~/lib/iot';
 import { AuthContext } from '~/lib/AuthContext';
 import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
 
 type TabType = 'items' | 'conditions' | 'tasks' | 'notes' | 'iot';
+
+interface StageIoTData {
+  entities: IoTEntity[];
+  gateways: IoTGateway[];
+  entityStates: Record<string, string>;
+  loading: boolean;
+}
 
 interface StageTabsProps {
   stageData?: BulkStageData;
@@ -28,6 +38,7 @@ interface StageTabsProps {
   grow?: BulkGrowComplete; // Grow data for calendar integration and IoT
   stageName?: string; // Stage name for calendar integration
   stageStartDate?: string; // Stage start date for calendar integration
+  stageIoTData?: StageIoTData; // Pre-computed IoT data for this stage
 }
 
 export const StageTabs: React.FC<StageTabsProps> = ({
@@ -36,6 +47,7 @@ export const StageTabs: React.FC<StageTabsProps> = ({
   grow,
   stageName,
   stageStartDate,
+  stageIoTData,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('items');
   const { token } = useContext(AuthContext);
@@ -110,7 +122,8 @@ export const StageTabs: React.FC<StageTabsProps> = ({
     { id: 'conditions' as TabType, icon: Thermometer },
     { id: 'tasks' as TabType, icon: CheckSquare },
     { id: 'notes' as TabType, icon: FileText },
-    { id: 'iot' as TabType, icon: CircuitBoard },
+    // Only show IoT tab for actual grows (when grow prop exists and has an ID)
+    ...(grow?.id ? [{ id: 'iot' as TabType, icon: CircuitBoard }] : []),
   ];
 
   return (
@@ -160,7 +173,14 @@ export const StageTabs: React.FC<StageTabsProps> = ({
         {activeTab === 'notes' && (
           <StageNotes notes={currentBulkStageData.notes} onUpdateNotes={handleUpdateNotes} />
         )}
-        {activeTab === 'iot' && <></>}
+        {activeTab === 'iot' && grow?.id && stageIoTData && (
+          <IotControlsList
+            entities={stageIoTData.entities}
+            gateways={stageIoTData.gateways}
+            entityStates={stageIoTData.entityStates}
+            loading={stageIoTData.loading}
+          />
+        )}
       </VStack>
     </VStack>
   );

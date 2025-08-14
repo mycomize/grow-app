@@ -203,11 +203,6 @@ export function IoTLinkingModal({
                                     </Text>
                                   </HStack>
                                 </VStack>
-                                {grow.current_stage && (
-                                  <Text className="text-xs capitalize text-typography-400">
-                                    Current: {grow.current_stage.replace('_', ' ')}
-                                  </Text>
-                                )}
                               </HStack>
                             </RadioLabel>
                           </Radio>

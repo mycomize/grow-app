@@ -141,6 +141,7 @@ export function GrowForm({
                   setActiveDatePicker={onSetActiveDatePicker}
                   handleDateChange={onHandleDateChange}
                   parseDate={onParseDate}
+                  grow={growData}
                 />
               </AccordionContent>
             </AccordionItem>

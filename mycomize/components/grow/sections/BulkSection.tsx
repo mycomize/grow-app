@@ -23,9 +23,24 @@ import { ChevronDown, ArrowDownToDot, CalendarDays, X } from 'lucide-react-nativ
 // Import tek types
 import { BulkGrow } from '~/lib/growTypes';
 import { StageTabs } from '~/components/ui/stage-tabs';
+import { IoTEntity, IoTGateway } from '~/lib/iot';
+
+interface StageIoTData {
+  entities: IoTEntity[];
+  gateways: IoTGateway[];
+  entityStates: Record<string, string>;
+  loading: boolean;
+}
+
+interface BulkStageData {
+  bulk_start_date?: string;
+  full_bulk_colonization_date?: string;
+  bulk_colonization_status?: string;
+  s2b_ratio?: string;
+}
 
 interface BulkSectionProps {
-  growData: BulkGrow;
+  growData: BulkStageData;
   updateField: (field: string, value: any) => void;
   activeDatePicker: string | null;
   setActiveDatePicker: (field: string | null) => void;
@@ -41,6 +56,12 @@ interface BulkSectionProps {
   currentStageIndex: number;
   stageIndex: number;
   advanceToNextStage: () => void;
+
+  // Grow object for IoT integration
+  grow?: any;
+
+  // IoT data for this specific stage
+  stageIoTData?: StageIoTData;
 }
 
 export const BulkSection: React.FC<BulkSectionProps> = ({
@@ -54,18 +75,21 @@ export const BulkSection: React.FC<BulkSectionProps> = ({
   onUpdateBulkStageData,
   status,
   advanceToNextStage,
+  grow,
+  stageIoTData,
 }) => {
   const showCompleteButton = status === 'active';
 
   return (
-    <VStack space="md" className="bg-background-0 p-4">
+    <VStack space="md" className="bg-background-0 p-1">
       {/* Stage Tabs */}
       <StageTabs
         stageData={stageData}
         onUpdateBulkStageData={onUpdateBulkStageData}
-        grow={growData}
-        stageName="Bulk Colonization"
+        grow={grow}
+        stageName="bulk_colonization"
         stageStartDate={growData.bulk_start_date}
+        stageIoTData={stageIoTData}
       />
 
       {/* Bulk-specific fields */}

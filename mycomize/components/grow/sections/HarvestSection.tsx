@@ -11,6 +11,14 @@ import { FlushList } from '../FlushList';
 // Import tek types
 import { BulkGrowFlush } from '~/lib/growTypes';
 import { StageTabs } from '~/components/ui/stage-tabs';
+import { IoTEntity, IoTGateway } from '~/lib/iot';
+
+interface StageIoTData {
+  entities: IoTEntity[];
+  gateways: IoTGateway[];
+  entityStates: Record<string, string>;
+  loading: boolean;
+}
 
 interface HarvestSectionProps {
   flushes: BulkGrowFlush[];
@@ -26,6 +34,12 @@ interface HarvestSectionProps {
   currentStageIndex: number;
   stageIndex: number;
   advanceToNextStage: () => void;
+
+  // Grow object for IoT integration (consistent with other sections)
+  grow?: any;
+
+  // IoT data for this specific stage
+  stageIoTData?: StageIoTData;
 }
 
 export const HarvestSection: React.FC<HarvestSectionProps> = ({
@@ -36,18 +50,21 @@ export const HarvestSection: React.FC<HarvestSectionProps> = ({
   onUpdateBulkStageData,
   status,
   advanceToNextStage,
+  grow,
+  stageIoTData,
 }) => {
   const showCompleteButton = status === 'active';
 
   return (
-    <VStack space="md" className="bg-background-0 p-4">
+    <VStack space="md" className="bg-background-0 p-1">
       {/* Stage Tabs */}
       <StageTabs
         stageData={stageData}
         onUpdateBulkStageData={onUpdateBulkStageData}
-        grow={growData}
-        stageName="Harvest"
+        grow={grow}
+        stageName="harvest"
         stageStartDate={growData?.fruiting_start_date}
+        stageIoTData={stageIoTData}
       />
 
       {/* Harvest Flushes */}

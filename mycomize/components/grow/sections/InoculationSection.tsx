@@ -21,16 +21,23 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { CalendarDays, ChevronDown, X, ArrowDownToDot } from 'lucide-react-native';
 
 // Import tek types
-import { BulkStageData } from '~/lib/tekTypes';
 import { StageTabs } from '~/components/ui/stage-tabs';
+import { IoTEntity, IoTGateway } from '~/lib/iot';
 
-interface GrowData {
+interface InoculationStageData {
   inoculation_date?: string;
   inoculation_status?: string;
 }
 
+interface StageIoTData {
+  entities: IoTEntity[];
+  gateways: IoTGateway[];
+  entityStates: Record<string, string>;
+  loading: boolean;
+}
+
 interface InoculationSectionProps {
-  growData: GrowData;
+  growData: InoculationStageData;
   updateField: (field: string, value: any) => void;
   activeDatePicker: string | null;
   setActiveDatePicker: (field: string | null) => void;
@@ -46,6 +53,12 @@ interface InoculationSectionProps {
   currentStageIndex: number;
   stageIndex: number;
   advanceToNextStage: () => void;
+
+  // Grow object for IoT integration
+  grow?: any;
+
+  // IoT data for this specific stage
+  stageIoTData?: StageIoTData;
 }
 
 export const InoculationSection: React.FC<InoculationSectionProps> = ({
@@ -61,15 +74,23 @@ export const InoculationSection: React.FC<InoculationSectionProps> = ({
   currentStageIndex,
   stageIndex,
   advanceToNextStage,
+  grow,
+  stageIoTData,
 }) => {
   const showCompleteButton =
     growData.inoculation_date &&
     (status === 'active' || (currentStageIndex === -1 && stageIndex === 0));
 
   return (
-    <VStack space="md" className="bg-background-0 p-4">
+    <VStack space="md" className="bg-background-0 p-1">
       {/* Stage Tabs */}
-      <StageTabs stageData={stageData} onUpdateBulkStageData={onUpdateBulkStageData} />
+      <StageTabs
+        stageData={stageData}
+        onUpdateBulkStageData={onUpdateBulkStageData}
+        grow={grow}
+        stageName="inoculation"
+        stageIoTData={stageIoTData}
+      />
 
       {/* Inoculation-specific fields */}
       <VStack space="lg" className="mt-4 border-t border-background-200 pt-4">

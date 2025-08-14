@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useContext, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
@@ -30,6 +31,11 @@ import { SpawnSection } from './SpawnSection';
 import { BulkSection } from './BulkSection';
 import { FruitingSection } from './FruitingSection';
 import { HarvestSection } from './HarvestSection';
+import { IoTEntity, IoTGateway } from '~/lib/iot';
+import { AuthContext } from '~/lib/AuthContext';
+import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
+import { useRouter } from 'expo-router';
+import { useUnifiedToast } from '~/components/ui/unified-toast';
 
 interface BulkStageData {
   inoculation_date?: string;
@@ -52,6 +58,7 @@ interface StagesSectionProps {
   setActiveDatePicker: (field: string | null) => void;
   handleDateChange: (field: string, date?: Date) => void;
   parseDate: (dateString?: string) => Date | null;
+  grow?: any; // Complete grow object for IoT integration
 }
 
 interface Stage {
@@ -110,15 +117,186 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
   growData,
   updateField,
   flushes,
-  addFlush,
-  updateFlush,
-  removeFlush,
   activeDatePicker,
   setActiveDatePicker,
   handleDateChange,
   parseDate,
+  grow,
 }) => {
+  const { token } = useContext(AuthContext);
+  const router = useRouter();
+  const { showError } = useUnifiedToast();
+
   const [expandedStages, setExpandedStages] = useState<string[]>([]);
+  const [iotEntities, setIotEntities] = useState<IoTEntity[]>([]);
+  const [iotGateways, setIotGateways] = useState<IoTGateway[]>([]);
+  const [entityStates, setEntityStates] = useState<Record<string, string>>({});
+  const [iotLoading, setIotLoading] = useState(false);
+
+  // Use useFocusEffect to refresh IoT data when returning to grow from IoT control panel
+  useFocusEffect(
+    useCallback(() => {
+      const fetchIoTData = async () => {
+        if (!token || !grow?.id) {
+          setIotLoading(false);
+          return;
+        }
+
+        try {
+          setIotLoading(true);
+
+          // First get all gateways for this user
+          const allGateways: IoTGateway[] = await apiClient.get(
+            '/iot-gateways',
+            token,
+            'IoTGateway',
+            true
+          );
+
+          setIotGateways(allGateways);
+
+          // Then fetch entities from each gateway
+          const allEntities: IoTEntity[] = [];
+
+          for (const gateway of allGateways) {
+            try {
+              const gatewayEntities: IoTEntity[] = await apiClient.get(
+                `/iot-gateways/${gateway.id}/entities`,
+                token,
+                'IoTEntity',
+                true
+              );
+
+              allEntities.push(...gatewayEntities);
+            } catch (gatewayErr) {
+              console.warn(`Failed to fetch entities from gateway ${gateway.id}:`, gatewayErr);
+              // Continue with other gateways even if one fails
+            }
+          }
+
+          setIotEntities(allEntities);
+        } catch (err) {
+          if (isUnauthorizedError(err as Error)) {
+            router.replace('/login');
+            return;
+          }
+          console.error('Failed to fetch IoT data:', err);
+        } finally {
+          setIotLoading(false);
+        }
+      };
+
+      fetchIoTData();
+
+      // No cleanup needed for useFocusEffect in this case
+      return () => {};
+    }, [token, grow?.id])
+  );
+
+  // Fetch entity states for connected Home Assistant gateways
+  useEffect(() => {
+    const fetchEntityStates = async () => {
+      if (iotEntities.length === 0 || iotGateways.length === 0 || iotLoading) return;
+
+      const statesMap: Record<string, string> = {};
+
+      // For each gateway, fetch states for its entities
+      for (const gateway of iotGateways) {
+        // Get entities for this gateway
+        const gatewayEntities = iotEntities.filter((entity) => entity.gateway_id === gateway.id);
+        if (gatewayEntities.length === 0) continue;
+
+        try {
+          // Use the Home Assistant REST API to fetch states
+          const response = await fetch(`${gateway.api_url}/api/states`, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${gateway.api_key}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const allStates = await response.json();
+            const statesById = allStates.reduce((acc: Record<string, any>, state: any) => {
+              acc[state.entity_id] = state;
+              return acc;
+            }, {});
+
+            // Map entity states
+            gatewayEntities.forEach((entity) => {
+              const haState = statesById[entity.entity_name];
+              if (haState) {
+                // Format the state based on domain
+                let displayState = haState.state;
+
+                if (entity.domain === 'sensor' && haState.attributes?.unit_of_measurement) {
+                  displayState = `${haState.state}${haState.attributes.unit_of_measurement}`;
+                } else if (entity.domain === 'binary_sensor') {
+                  displayState = haState.state === 'on' ? 'On' : 'Off';
+                } else if (entity.domain === 'switch' || entity.domain === 'light') {
+                  displayState = haState.state === 'on' ? 'On' : 'Off';
+                } else if (entity.domain === 'number') {
+                  const unit = haState.attributes?.unit_of_measurement;
+                  displayState = unit ? `${haState.state}${unit}` : haState.state;
+                } else if (entity.domain === 'automation') {
+                  displayState = haState.state === 'on' ? 'Enabled' : 'Disabled';
+                }
+
+                statesMap[entity.entity_name] = displayState;
+              }
+            });
+          }
+        } catch (err) {
+          console.error(`Failed to fetch states from gateway ${gateway.name}:`, err);
+        }
+      }
+
+      setEntityStates(statesMap);
+    };
+
+    fetchEntityStates();
+  }, [iotEntities, iotGateways, iotLoading]);
+
+  // Compute filtered IoT data for each stage
+  const getStageIoTData = useCallback(
+    (stageId: string) => {
+      if (!grow?.id) {
+        return {
+          entities: [],
+          gateways: [],
+          entityStates: {},
+          loading: false,
+        };
+      }
+
+      // Filter entities to only those linked to this specific grow and stage
+      const stageEntities = iotEntities.filter(
+        (entity) => entity.linked_grow_id === grow.id && entity.linked_stage === stageId
+      );
+
+      // Get only gateways that have entities for this stage
+      const stageGateways = iotGateways.filter((gateway) =>
+        stageEntities.some((entity) => entity.gateway_id === gateway.id)
+      );
+
+      // Filter entity states to only include states for entities in this stage
+      const stageEntityStates: Record<string, string> = {};
+      stageEntities.forEach((entity) => {
+        if (entityStates[entity.entity_name]) {
+          stageEntityStates[entity.entity_name] = entityStates[entity.entity_name];
+        }
+      });
+
+      return {
+        entities: stageEntities,
+        gateways: stageGateways,
+        entityStates: stageEntityStates,
+        loading: iotLoading,
+      };
+    },
+    [iotEntities, iotGateways, entityStates, iotLoading, grow?.id]
+  );
 
   const toggleStageExpansion = (stageId: string) => {
     setExpandedStages((prev) =>
@@ -360,7 +538,7 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
   };
 
   return (
-    <VStack space="lg" className="bg-background-0 p-2">
+    <VStack space="lg" className="bg-background-0 p-1">
       {/* Instructions */}
       <Text className="text-md mb-2 text-typography-500">
         Track your grow's progress through each stage. Press Complete to move to the next stage when
@@ -469,7 +647,7 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                       <Pressable
                         onPress={() => toggleStageExpansion(stage.id)}
                         className="flex-row items-center">
-                        <Text className="text-md ml-3 text-typography-600">
+                        <Text className="text-md ml-1 text-typography-600">
                           {expandedStages.includes(stage.id) ? 'Hide' : 'Show'} Details
                         </Text>
                         <Icon
@@ -481,7 +659,7 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
 
                       {/* Render sub-sections */}
                       {expandedStages.includes(stage.id) && (
-                        <View className="mt-0 rounded-lg  bg-background-50">
+                        <View className="mt-0 rounded-lg  bg-background-0">
                           {stage.id === 'inoculation' && (
                             <InoculationSection
                               growData={growData}
@@ -498,6 +676,8 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                               currentStageIndex={currentStageIndex}
                               stageIndex={index}
                               advanceToNextStage={advanceToNextStage}
+                              grow={grow}
+                              stageIoTData={getStageIoTData(stage.id)}
                             />
                           )}
                           {stage.id === 'spawn_colonization' && (
@@ -516,6 +696,8 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                               currentStageIndex={currentStageIndex}
                               stageIndex={index}
                               advanceToNextStage={advanceToNextStage}
+                              grow={grow}
+                              stageIoTData={getStageIoTData(stage.id)}
                             />
                           )}
                           {stage.id === 'bulk_colonization' && (
@@ -534,6 +716,8 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                               currentStageIndex={currentStageIndex}
                               stageIndex={index}
                               advanceToNextStage={advanceToNextStage}
+                              grow={grow}
+                              stageIoTData={getStageIoTData(stage.id)}
                             />
                           )}
                           {stage.id === 'fruiting' && (
@@ -552,6 +736,8 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                               currentStageIndex={currentStageIndex}
                               stageIndex={index}
                               advanceToNextStage={advanceToNextStage}
+                              grow={grow}
+                              stageIoTData={getStageIoTData(stage.id)}
                             />
                           )}
                           {stage.id === 'harvest' && (
@@ -569,6 +755,8 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                               onUpdateBulkStageData={(data) =>
                                 updateBulkStageData(getBulkStageDataKey(stage.id), data)
                               }
+                              grow={grow}
+                              stageIoTData={getStageIoTData(stage.id)}
                             />
                           )}
                         </View>
