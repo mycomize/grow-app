@@ -51,7 +51,7 @@ export default function GrowScreen() {
       // Reset grows before fetching to avoid stale data
       setGrows([]);
 
-      const data: BulkGrowComplete[] = await apiClient.getBulkGrows(token!);
+      const data: BulkGrowComplete[] = await apiClient.getBulkGrowsWithIoT(token!);
       setGrows(data);
       setLoading(false);
     } catch (error) {

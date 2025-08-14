@@ -96,6 +96,18 @@ async def read_grows(
     grows = db.query(BulkGrow).filter(BulkGrow.user_id == current_user.id).offset(skip).limit(limit).all()
     return grows
 
+@router.get("/with-iot", response_model=List[BulkGrowWithIoTEntities])
+async def read_grows_with_iot(
+    db: Session = Depends(get_mycomize_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get all grows with IoT entities (but no flushes) for the current user"""
+    # Query all grows for the current user with their IoT entities relationships loaded
+    grows = db.query(BulkGrow).options(
+        joinedload(BulkGrow.iot_entities)
+    ).filter(BulkGrow.user_id == current_user.id).all()
+    return grows
+
 @router.get("/all", response_model=List[BulkGrowComplete])
 async def read_all_grows(
     db: Session = Depends(get_mycomize_db),

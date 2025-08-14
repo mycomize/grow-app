@@ -219,6 +219,10 @@ class ApiClient {
     return this.get('/grows/', token, 'BulkGrow', true);
   }
 
+  async getBulkGrowsWithIoT(token: string) {
+    return this.get('/grows/with-iot', token, 'BulkGrow', true);
+  }
+
   async getBulkGrow(id: string, token: string) {
     return this.get(`/grows/${id}`, token, 'BulkGrow');
   }

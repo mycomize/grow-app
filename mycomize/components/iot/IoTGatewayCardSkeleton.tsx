@@ -4,7 +4,7 @@ import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Skeleton, SkeletonText } from '~/components/ui/skeleton';
 
-export const IntegrationCardSkeleton: React.FC = () => {
+export const IoTGatewayCardSkeleton: React.FC = () => {
   return (
     <Card className="w-11/12 rounded-xl bg-background-0">
       <VStack className="flex p-2">

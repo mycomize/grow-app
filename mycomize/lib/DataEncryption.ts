@@ -335,10 +335,20 @@ export async function decryptData<T extends Record<string, any>>(
     }
   }
 
-  // Handle nested arrays (like flushes in BulkGrow)
+  // Handle nested arrays (like flushes and iot_entities in BulkGrow)
   if (dataType === 'BulkGrow' && decryptedData.flushes && Array.isArray(decryptedData.flushes)) {
     decryptedData.flushes = await Promise.all(
       decryptedData.flushes.map(async (flush: any) => await decryptData('BulkGrowFlush', flush))
+    );
+  }
+
+  if (
+    dataType === 'BulkGrow' &&
+    decryptedData.iot_entities &&
+    Array.isArray(decryptedData.iot_entities)
+  ) {
+    decryptedData.iot_entities = await Promise.all(
+      decryptedData.iot_entities.map(async (entity: any) => await decryptData('IoTEntity', entity))
     );
   }
 

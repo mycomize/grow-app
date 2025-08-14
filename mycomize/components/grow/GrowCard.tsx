@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from '~/components/ui/card';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
@@ -25,11 +25,14 @@ import {
   Skull,
   MapPin,
 } from 'lucide-react-native';
+import { Spinner } from '~/components/ui/spinner';
 import { BulkGrowComplete, bulkGrowStatuses } from '~/lib/growTypes';
 import { GatewayStatus } from './GatewayStatus';
 import { InfoBadge } from '~/components/ui/info-badge';
 import { CountBadge } from '~/components/ui/count-badge';
 import { IoTEntity, IoTGateway } from '~/lib/iot';
+import { useGrowGateways } from '~/lib/iot-gateway/useGrowGateways';
+import { getConnectionBadgeProps } from '~/lib/iot-gateway/connectionUtils';
 
 interface GrowCardProps {
   grow: BulkGrowComplete;
@@ -40,6 +43,12 @@ interface GrowCardProps {
 export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }) => {
   const router = useRouter();
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+
+  // Memoize IoT entities to prevent infinite re-renders
+  const iotEntities = useMemo(() => grow.iot_entities || [], [grow.iot_entities]);
+
+  // Fetch gateway details and connection statuses for this grow's IoT entities
+  const { gateways, connectionStatuses, loading: gatewaysLoading } = useGrowGateways(iotEntities);
 
   const getStatusColor = (status?: string) => {
     if (status === bulkGrowStatuses.CONTAMINATED) return 'text-error-500';
@@ -205,7 +214,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
       <VStack className="p-2">
         <View>
           {/* First row: Grow name and strain */}
-          <HStack className="mb-1 items-center justify-between">
+          <HStack className="mb-0.5 items-center justify-between">
             <Text
               className="flex-1 text-lg font-bold text-typography-700"
               numberOfLines={1}
@@ -350,49 +359,47 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
             />
           </HStack>
 
-          {/* Fifth row: IoT Controls by Gateway */}
-          <VStack className="mb-4" space="xs">
+          {/* Fifth row: IoT Gateways with Connection Status */}
+          <VStack className="mb-4 mt-1" space="xs">
             <HStack className="items-center gap-2">
               <Icon as={CircuitBoard} className="text-typography-400" size="lg" />
-              <Text className="text-lg font-medium text-typography-600">IoT Controls</Text>
+              <Text className="text-lg font-medium text-typography-600">IoT Gateways</Text>
             </HStack>
             {(() => {
-              // Get IoT entities from the grow and group by gateway
-              const entities = grow.iot_entities || [];
-
-              if (entities.length === 0) {
+              if (iotEntities.length === 0) {
                 return <Text className="text-md text-typography-400">None</Text>;
               }
 
-              // Group entities by gateway_id
-              const entitiesByGateway = entities.reduce(
-                (acc, entity) => {
-                  const gatewayId = entity.gateway_id;
-                  if (!acc[gatewayId]) {
-                    acc[gatewayId] = [];
-                  }
-                  acc[gatewayId].push(entity);
-                  return acc;
-                },
-                {} as Record<number, IoTEntity[]>
-              );
+              if (gatewaysLoading) {
+                return (
+                  <HStack className="items-center justify-center py-2">
+                    <Spinner size="small" />
+                  </HStack>
+                );
+              }
 
-              // Show gateway names with controls count
+              if (gateways.length === 0) {
+                return (
+                  <Text className="text-md text-typography-400">Gateway data unavailable</Text>
+                );
+              }
+
+              // Show each gateway with name and connection status
               return (
                 <VStack space="sm">
-                  {Object.entries(entitiesByGateway).map(([gatewayId, gatewayEntities]) => {
-                    // Find the gateway info from the first entity's gateway reference
-                    // Note: We'll need to get gateway name from somewhere - for now use ID
-                    const controlCount = gatewayEntities.length;
+                  {gateways.map((gateway) => {
+                    const connectionStatus = connectionStatuses[gateway.id] || 'unknown';
+                    const badgeProps = getConnectionBadgeProps(connectionStatus);
+
                     return (
-                      <HStack key={gatewayId} className="items-center justify-between">
-                        <Text className="text-md text-typography-600">Gateway {gatewayId}</Text>
-                        <CountBadge
-                          count={controlCount}
-                          label={controlCount === 1 ? 'control' : 'controls'}
-                          variant="success"
-                          size="sm"
-                        />
+                      <HStack key={gateway.id} className="items-center justify-between">
+                        <Text
+                          className="text-md ml-3 flex-1 text-typography-600"
+                          numberOfLines={1}
+                          ellipsizeMode="tail">
+                          {gateway.name || 'Unnamed Gateway'}
+                        </Text>
+                        <InfoBadge {...badgeProps} size="sm" />
                       </HStack>
                     );
                   })}

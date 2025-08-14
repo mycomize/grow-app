@@ -35,9 +35,7 @@ import {
   CircuitBoard,
   Trash2,
   CirclePlus,
-  Home,
   HouseWifi,
-  Bug,
 } from 'lucide-react-native';
 import { Pressable } from '~/components/ui/pressable';
 import { View } from '~/components/ui/view';
@@ -46,17 +44,17 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { AuthContext } from '~/lib/AuthContext';
 import { IoTGateway, gatewayTypeLabels } from '~/lib/iot';
-import { IntegrationCardSkeleton } from '~/components/iot/IntegrationCardSkeleton';
+import { IoTGatewayCardSkeleton } from '~/components/iot/IoTGatewayCardSkeleton';
 import { ConnectionStatus } from '~/components/ui/connection-status-badge';
 import { InfoBadge, InfoBadgeVariant } from '~/components/ui/info-badge';
 import { CountBadge } from '~/components/ui/count-badge';
 
-interface AddIntegrationButtonProps {
+interface AddIoTGatewayButtonProps {
   title: string;
   initial?: boolean;
 }
 
-const AddIntegrationButton: React.FC<AddIntegrationButtonProps> = ({ title, initial = false }) => {
+const AddIoTGatewayButton: React.FC<AddIoTGatewayButtonProps> = ({ title, initial = false }) => {
   const router = useRouter();
 
   return (
@@ -76,7 +74,7 @@ const AddIntegrationButton: React.FC<AddIntegrationButtonProps> = ({ title, init
   );
 };
 
-interface IntegrationCardProps {
+interface IoTGatewayCardProps {
   gateway: IoTGateway;
   token: string | null | undefined;
   connectionStatus: ConnectionStatus;
@@ -84,7 +82,7 @@ interface IntegrationCardProps {
   onDelete: (gateway: IoTGateway) => void;
 }
 
-const IntegrationCard: React.FC<IntegrationCardProps> = ({
+const IoTGatewayCard: React.FC<IoTGatewayCardProps> = ({
   gateway,
   token,
   connectionStatus,
@@ -136,7 +134,7 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
             }}>
             <HStack className="mb-2 items-center">
               <Heading size="lg" className="flex-1">
-                {gateway.name || 'Unnamed Integration'}
+                {gateway.name || 'Unnamed IoTGateway'}
               </Heading>
               <HStack className="items-center" space="xs">
                 <Text size="sm" className="text-typography-500">
@@ -272,7 +270,7 @@ export default function IoTScreen() {
 
       Alert.alert(
         'Delete Gateway',
-        `Are you sure you want to delete "${gateway.name || 'Unnamed Integration'}"? This action cannot be undone.`,
+        `Are you sure you want to delete "${gateway.name || 'Unnamed IoTGateway'}"? This action cannot be undone.`,
         [
           {
             text: 'Cancel',
@@ -306,8 +304,6 @@ export default function IoTScreen() {
   // Check connection status for all gateways
   const checkAllConnections = useCallback(async () => {
     const statusPromises = gateways.map(async (gateway) => {
-      // Gateways are always active if they exist
-
       try {
         const startTime = Date.now();
         const response = await fetch(`${gateway.api_url}/api/`, {
@@ -451,7 +447,7 @@ export default function IoTScreen() {
         <View className="mt-2" />
         {/* Show 2 skeleton cards while loading */}
         {Array.from({ length: 2 }).map((_, index) => (
-          <IntegrationCardSkeleton key={index} />
+          <IoTGatewayCardSkeleton key={index} />
         ))}
       </VStack>
     );
@@ -462,7 +458,7 @@ export default function IoTScreen() {
       <Text className="mb-4 text-center text-lg text-typography-600">
         Add your first IoT Gateway integration!
       </Text>
-      <AddIntegrationButton title="Add Integration" initial={true} />
+      <AddIoTGatewayButton title="Add IoTGateway" initial={true} />
     </VStack>
   ) : (
     <ScrollView className="m-0 flex-1 bg-background-50">
@@ -516,9 +512,9 @@ export default function IoTScreen() {
           </VStack>
         </Card>
 
-        {/* Gateway Cards */}
+        {/* IoT Gateway Cards */}
         {filteredAndSortedGateways.map((gateway, index) => (
-          <IntegrationCard
+          <IoTGatewayCard
             key={gateway.id}
             gateway={gateway}
             token={token}
