@@ -35,8 +35,6 @@ export default function GrowEditScreen() {
       activeDatePicker={formLogic.activeDatePicker}
       growId={id as string}
       onUpdateField={formLogic.updateField}
-      onGatewayLinked={formLogic.handleGatewayLinked}
-      onGatewayUnlinked={formLogic.handleGatewayUnlinked}
       onAddFlush={formLogic.addFlush}
       onUpdateFlush={formLogic.updateFlush}
       onRemoveFlush={formLogic.removeFlush}

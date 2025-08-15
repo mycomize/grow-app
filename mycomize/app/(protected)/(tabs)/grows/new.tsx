@@ -23,8 +23,6 @@ export default function NewGrowScreen() {
         activeDatePicker={null}
         growId="new"
         onUpdateField={() => {}}
-        onGatewayLinked={() => {}}
-        onGatewayUnlinked={() => {}}
         onAddFlush={() => {}}
         onUpdateFlush={() => {}}
         onRemoveFlush={() => {}}
@@ -50,8 +48,6 @@ export default function NewGrowScreen() {
       activeDatePicker={formLogic.activeDatePicker}
       growId="new"
       onUpdateField={formLogic.updateField}
-      onGatewayLinked={formLogic.handleGatewayLinked}
-      onGatewayUnlinked={formLogic.handleGatewayUnlinked}
       onAddFlush={formLogic.addFlush}
       onUpdateFlush={formLogic.updateFlush}
       onRemoveFlush={formLogic.removeFlush}

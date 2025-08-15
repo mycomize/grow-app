@@ -40,8 +40,6 @@ interface GrowFormProps {
   activeDatePicker: string | null;
   growId?: string;
   onUpdateField: (field: keyof BulkGrow, value: any) => void;
-  onGatewayLinked: (gatewayId: number) => void;
-  onGatewayUnlinked: () => void;
   onAddFlush: () => void;
   onUpdateFlush: (id: string, data: any) => void;
   onRemoveFlush: (id: string) => void;
@@ -64,8 +62,6 @@ export function GrowForm({
   activeDatePicker,
   growId,
   onUpdateField,
-  onGatewayLinked,
-  onGatewayUnlinked,
   onAddFlush,
   onUpdateFlush,
   onRemoveFlush,
@@ -166,11 +162,7 @@ export function GrowForm({
                 </AccordionTrigger>
               </AccordionHeader>
               <AccordionContent>
-                <IoTGatewaySection
-                  growId={growId ? parseInt(growId) : undefined}
-                  onGatewayLinked={onGatewayLinked}
-                  onGatewayUnlinked={onGatewayUnlinked}
-                />
+                <IoTGatewaySection growId={growId ? parseInt(growId) : undefined} />
               </AccordionContent>
             </AccordionItem>
           </Accordion>

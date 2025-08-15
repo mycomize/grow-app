@@ -196,15 +196,6 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
     setGrowData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Handle IoT Gateway linking
-  const handleGatewayLinked = (gatewayId: number) => {
-    // Relationship is handled by the backend IoT gateway linking endpoint
-  };
-
-  const handleGatewayUnlinked = () => {
-    // Relationship is handled by the backend IoT gateway unlinking endpoint
-  };
-
   // Handle date changes
   const handleDateChange = (field: string, date?: Date, event?: any) => {
     // If user cancelled, don't change anything
@@ -306,11 +297,6 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
     setSuccess(null);
 
     try {
-      // Calculate total harvest weights from flushes
-      const totalWetYield = flushes.reduce((sum, flush) => sum + (flush.wet_yield_grams || 0), 0);
-      const totalDryYield = flushes.reduce((sum, flush) => sum + (flush.dry_yield_grams || 0), 0);
-      const firstHarvestDate = flushes.find((f) => f.harvest_date)?.harvest_date;
-
       // Prepare data for API
       const apiData = {
         ...growData,
@@ -346,8 +332,12 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
       // Navigate back to grows list after a brief delay
       setTimeout(() => {
         router.replace('/grows');
-      }, 1500);
+      }, 500);
     } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Failed to save grow');
     } finally {
       setIsSaving(false);
@@ -387,8 +377,6 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
 
     // Functions
     updateField,
-    handleGatewayLinked,
-    handleGatewayUnlinked,
     handleDateChange,
     parseDate,
     addFlush,
