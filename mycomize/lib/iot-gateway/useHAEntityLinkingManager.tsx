@@ -51,7 +51,7 @@ export function useHAEntityLinkingManager(appAuthToken: string | null) {
       console.log('Debug - Entity IDs:', entityDbIds, 'Grow ID:', growId, 'Stage:', stage);
 
       if (entityDbIds.length === 0) {
-        showError('No valid entities found for in dbEntities for linking');
+        console.log('No valid entities found for in dbEntities for linking');
         return;
       }
 
@@ -63,14 +63,14 @@ export function useHAEntityLinkingManager(appAuthToken: string | null) {
         appAuthToken
       );
 
-      showSuccess(`Successfully linked ${entityIds.length} entities to grow`);
+      showSuccess(`Successfully linked ${entityIds.length} IoT controls`);
       return true;
     } catch (err) {
       if (isUnauthorizedError(err as Error)) {
         router.replace('/login');
         return;
       }
-      showError(
+      console.log(
         'Failed to link entities: ' + (err instanceof Error ? err.message : 'Unknown error')
       );
       return false;
@@ -90,7 +90,7 @@ export function useHAEntityLinkingManager(appAuthToken: string | null) {
     try {
       const entity = dbEntities.find((e) => e.entity_name === entityId);
       if (!entity) {
-        showError('Failed to link entity: Entity not found in dbEntities');
+        console.log('Failed to link IoT control');
         return;
       }
 
@@ -102,14 +102,16 @@ export function useHAEntityLinkingManager(appAuthToken: string | null) {
         appAuthToken
       );
 
-      showSuccess('Successfully linked entity to grow');
+      showSuccess('Successfully linked IoT control');
       return true;
     } catch (err) {
       if (isUnauthorizedError(err as Error)) {
         router.replace('/login');
         return;
       }
-      showError('Failed to link entity: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      console.log(
+        'Failed to link entity: ' + (err instanceof Error ? err.message : 'Unknown error')
+      );
       return false;
     }
   };
@@ -135,7 +137,7 @@ export function useHAEntityLinkingManager(appAuthToken: string | null) {
       console.log('Debug - Unlinking Entity IDs:', entityDbIds);
 
       if (entityDbIds.length === 0) {
-        showError('No valid entities found for unlinking');
+        console.log('No valid entities found for unlinking');
         return;
       }
 
@@ -148,7 +150,7 @@ export function useHAEntityLinkingManager(appAuthToken: string | null) {
         router.replace('/login');
         return;
       }
-      showError(
+      console.log(
         'Failed to unlink entities: ' + (err instanceof Error ? err.message : 'Unknown error')
       );
       return false;
@@ -166,7 +168,7 @@ export function useHAEntityLinkingManager(appAuthToken: string | null) {
     try {
       const entity = dbEntities.find((e) => e.entity_name === entityId);
       if (!entity) {
-        showError('Failed to unlink entity: Entity not found in dbEntities');
+        console.log('Failed to unlink entity: Entity not found in dbEntities');
         return;
       }
 
@@ -179,7 +181,7 @@ export function useHAEntityLinkingManager(appAuthToken: string | null) {
         router.replace('/login');
         return;
       }
-      showError(
+      console.log(
         'Failed to unlink entity: ' + (err instanceof Error ? err.message : 'Unknown error')
       );
       return false;

@@ -285,7 +285,7 @@ export function ControlPanelSection({
           {/* Linked Controls Content. Each entry here should have a linked grow id */}
           {linkedEntities.length === 0 ? (
             <VStack
-              className="mt-2 items-center rounded-lg border border-dashed border-typography-300 p-6"
+              className="mb-1 mt-2 items-center rounded-lg border border-dashed border-typography-300 p-6"
               space="sm">
               <Icon as={ListX} size="xl" className="text-typography-400" />
               <Text className="text-center text-typography-500">
@@ -296,7 +296,7 @@ export function ControlPanelSection({
             </VStack>
           ) : (
             <ScrollView
-              className="max-h-96"
+              className="max-h-96 rounded-md border border-outline-50 pl-3"
               showsVerticalScrollIndicator={true}
               nestedScrollEnabled={true}>
               <VStack space="sm" className="pb-3 pr-4">
@@ -320,8 +320,9 @@ export function ControlPanelSection({
                     return (
                       <VStack key={growName} space="sm">
                         <HStack className={index === 0 ? 'mt-2' : 'mt-4'}>
-                          <Text className="text-typography-500">Grow: </Text>
-                          <Text className="text-md  italic text-typography-600">{growName}</Text>
+                          <Text className="text-md font-semibold italic text-typography-600">
+                            {growName}
+                          </Text>
                         </HStack>
                         {Object.entries(entitiesByStage).map(([stageName, stageEntities]) => (
                           <VStack key={`${growName}-${stageName}`} space="xs">
@@ -358,7 +359,7 @@ export function ControlPanelSection({
         <HStack className="items-center justify-between">
           <Text className="text-lg font-semibold text-typography-700">Linkable Controls</Text>
           <HStack className="items-center" space="md">
-            {/* filteredLinkableEntities are a subset of linkableEntities based on the domain and device 
+            {/* filteredEntities are a subset of linkableEntities based on the domain and device 
                 class filters active at the time */}
             <InfoBadge text={`${filteredEntities.length} CONTROLS`} variant="default" size="sm" />
             <Pressable onPress={() => setLinkableControlsExpanded(!linkableControlsExpanded)}>
@@ -391,7 +392,7 @@ export function ControlPanelSection({
 
             {/* Domain Filters */}
             <HStack className="mt-1 items-center">
-              <Icon as={Filter} size="lg" className="text-typography-500" />
+              <Icon as={Filter} size="sm" className="text-typography-500" />
               <Text className="ml-2">Domain Filter</Text>
               <Pressable className="ml-auto p-2" onPress={onToggleShowDomainFilters}>
                 <Icon
@@ -427,7 +428,7 @@ export function ControlPanelSection({
 
             {/* Device Class Filters */}
             <HStack className="mb-1 items-center">
-              <Icon as={Filter} size="lg" className="text-typography-500" />
+              <Icon as={Filter} size="sm" className="text-typography-500" />
               <Text className="ml-2">Device Class Filter</Text>
               <Pressable className="ml-auto p-2" onPress={onToggleShowDeviceClassFilters}>
                 <Icon
@@ -504,7 +505,7 @@ export function ControlPanelSection({
               </VStack>
             ) : (
               <ScrollView
-                className="max-h-80"
+                className="max-h-96 rounded-md border border-outline-50 pl-3"
                 showsVerticalScrollIndicator={true}
                 nestedScrollEnabled={true}>
                 <VStack space="sm" className="pb-4 pr-4">
@@ -519,12 +520,9 @@ export function ControlPanelSection({
                       {} as Record<string, IoTEntity[]>
                     )
                   ).map(([domain, domainEntities]) => (
-                    <VStack key={domain} space="sm">
+                    <VStack key={domain} space="xs">
                       <HStack className="mt-2 items-center">
-                        <Text
-                          className={`${getDomainIcon(domain) ? 'ml-2' : ''} text-md capitalize text-typography-500`}>
-                          {domain}
-                        </Text>
+                        <Text className="text-md capitalize text-typography-500">{domain}</Text>
                       </HStack>
 
                       <VStack space="xs">

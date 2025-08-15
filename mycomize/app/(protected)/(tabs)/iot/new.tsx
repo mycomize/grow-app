@@ -82,7 +82,7 @@ export default function NewIoTGatewayScreen() {
       showDomainFilters={showDomainFilters}
       showDeviceClassFilters={showDeviceClassFilters}
       grows={grows}
-      saveButtonText="Add IoT Gateway"
+      saveButtonText="Save"
       onUpdateFormField={updateFormField}
       onToggleApiKeyVisibility={toggleApiKeyVisibility}
       onTestConnection={testConnection}

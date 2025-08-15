@@ -148,7 +148,7 @@ export const InoculationSection: React.FC<InoculationSectionProps> = ({
 
         {/* Complete button - only show if inoculation date is selected */}
         {showCompleteButton && (
-          <HStack className="mt-4 justify-end">
+          <HStack className="mt-2 justify-end">
             <Button
               size="sm"
               variant="solid"

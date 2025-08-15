@@ -60,7 +60,7 @@ export const IoTUnlinkConfirmationModal: React.FC<IoTUnlinkConfirmationModalProp
         : '';
 
       return (
-        <VStack space="sm" className="rounded-lg bg-background-50 p-4">
+        <VStack space="sm" className="rounded-lg bg-background-0 px-2 py-4">
           <HStack className="items-center justify-between">
             <Text className="font-semibold italic text-typography-600">{growName}</Text>
             {variantOrSpecies && (

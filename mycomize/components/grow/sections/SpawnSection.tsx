@@ -189,7 +189,7 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
 
         {/* Complete button */}
         {showCompleteButton && (
-          <HStack className="mt-4 justify-end">
+          <HStack className="mt-2 justify-end">
             <Button
               size="sm"
               variant="solid"

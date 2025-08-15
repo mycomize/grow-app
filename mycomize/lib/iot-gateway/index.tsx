@@ -42,7 +42,7 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
   // Initialize all modular hooks
   const formState = useFormState();
   const connectionManager = useHAConnectionManager();
-  const entityManager = useHAEntityManager(appAuthToken || null);
+  const entityManager = useHAEntityManager(appAuthToken || null, gatewayId === 'new');
   const filterManager = useHAFilterManager();
   const linkingManager = useHAEntityLinkingManager(appAuthToken || null);
   const gatewayOperations = useHAGatewayOperations(appAuthToken || null);
@@ -70,7 +70,6 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
 
     if (gatewayId === 'new') {
       // For new gateways, just set loading to false since no data needs to be fetched
-      console.log('[useIoTGatewayFormLogic] Initializing new gateway form');
       formState.setIsLoading(false);
       return;
     }
@@ -93,10 +92,7 @@ export function useIoTGatewayFormLogic({ gatewayId }: UseIoTGatewayFormLogicProp
   // Load available grows for entity linking functionality on mount
   useEffect(() => {
     linkingManager.fetchGrows();
-  }, []); // Empty dependency - only run once on mount
-
-  // Removed focus effect to ensure "fetch once on mount" behavior
-  // Entities are only fetched on initial mount and after successful linking operations
+  }, []);
 
   // Test connection to Home Assistant API and fetch entities on successful connection
   // Validates credentials and connectivity before allowing save operation

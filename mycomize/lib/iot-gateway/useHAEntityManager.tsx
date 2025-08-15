@@ -4,7 +4,7 @@ import { useUnifiedToast } from '~/components/ui/unified-toast';
 import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { IoTGateway, IoTGatewayUpdate, IoTEntity, IoTEntityCreate, HAEntity } from '~/lib/iot';
 
-export function useHAEntityManager(appAuthToken: string | null) {
+export function useHAEntityManager(appAuthToken: string | null, isNewGateway: boolean = false) {
   const router = useRouter();
   const { showError, showSuccess } = useUnifiedToast();
 
@@ -367,12 +367,9 @@ export function useHAEntityManager(appAuthToken: string | null) {
   useEffect(() => {
     // Only compute if we have both HA entities and DB entities (or DB entities is empty array for new gateway)
     if (haEntities.length > 0 && dbEntities.length >= 0) {
-      console.log(
-        `[useHAEntityManager] Auto-computing entity lists: ${haEntities.length} HA entities, ${dbEntities.length} DB entities`
-      );
-      computeEntityLists(haEntities, dbEntities, false);
+      computeEntityLists(haEntities, dbEntities, isNewGateway);
     }
-  }, [haEntities, dbEntities, computeEntityLists]);
+  }, [haEntities, dbEntities, computeEntityLists, isNewGateway]);
 
   /**
    * DB sync effect - handles synchronization when HA and DB entities are available

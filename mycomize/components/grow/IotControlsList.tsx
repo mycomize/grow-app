@@ -107,7 +107,7 @@ export const IotControlsList: React.FC<IotControlsListProps> = ({
   const [linkedControlsExpanded, setLinkedControlsExpanded] = useState(true);
   const [linkableControlsExpanded, setLinkableControlsExpanded] = useState(true);
 
-  // Group linked entities by gateway
+  // Group linked entities by gateway, then by domain
   const groupedEntities = useMemo(() => {
     if (!entities.length || !gateways.length) return {};
 
@@ -127,18 +127,26 @@ export const IotControlsList: React.FC<IotControlsListProps> = ({
         if (!acc[gatewayName]) {
           acc[gatewayName] = {
             gateway,
-            entities: [],
+            entitiesByDomain: {},
           };
         }
 
-        acc[gatewayName].entities.push({
+        const domain = entity.domain;
+        if (!acc[gatewayName].entitiesByDomain[domain]) {
+          acc[gatewayName].entitiesByDomain[domain] = [];
+        }
+
+        acc[gatewayName].entitiesByDomain[domain].push({
           ...entity,
           state: entityStates[entity.entity_name],
         });
 
         return acc;
       },
-      {} as Record<string, { gateway: IoTGateway | undefined; entities: EntityWithState[] }>
+      {} as Record<
+        string,
+        { gateway: IoTGateway | undefined; entitiesByDomain: Record<string, EntityWithState[]> }
+      >
     );
   }, [entities, gateways, entityStates]);
 
@@ -284,35 +292,45 @@ export const IotControlsList: React.FC<IotControlsListProps> = ({
         </VStack>
       ) : (
         <ScrollView
-          className="max-h-96"
+          className="mb-2 mt-3 max-h-96 rounded-md border border-outline-50 pb-2 pl-3"
           showsVerticalScrollIndicator={true}
           nestedScrollEnabled={true}>
           <VStack space="md" className="pb-2 pr-4">
             {Object.entries(groupedEntities).map(
-              ([gatewayName, { gateway, entities: gatewayEntities }], index) => (
+              ([gatewayName, { gateway, entitiesByDomain }], index) => (
                 <VStack key={gatewayName} space="sm">
                   {/* Gateway Header */}
                   <HStack
-                    className={`items-center justify-between ${index === 0 ? 'mb-3 mt-3' : 'mt-4'}`}>
+                    className={`items-center justify-between ${index === 0 ? 'mb-0 mt-3' : 'mt-3'}`}>
                     <Text className="text-md font-semibold italic text-typography-600">
                       {gatewayName}
                     </Text>
                     {gateway && <InfoBadge {...getConnectionBadgeProps('connected')} size="sm" />}
                   </HStack>
 
-                  {/* Gateway Entities */}
+                  {/* Gateway Entities grouped by domain */}
                   <VStack space="sm">
-                    {gatewayEntities.map((entity) => (
-                      <EntityCard
-                        key={entity.entity_name}
-                        entity={entity}
-                        entityState={entity.state}
-                        isSelected={unlinkSelection.selectedEntities.has(entity.entity_name)}
-                        bulkMode={unlinkSelection.bulkMode}
-                        showUnlinkButton={true}
-                        onSelect={unlinkSelection.toggleEntitySelection}
-                        onUnlink={handleIndividualUnlink}
-                      />
+                    {Object.entries(entitiesByDomain).map(([domain, domainEntities]) => (
+                      <VStack key={domain} space="xs">
+                        <HStack className="mt-1 items-center">
+                          <Text className="text-md capitalize text-typography-500">{domain}</Text>
+                        </HStack>
+
+                        <VStack space="sm">
+                          {domainEntities.map((entity: EntityWithState) => (
+                            <EntityCard
+                              key={entity.entity_name}
+                              entity={entity}
+                              entityState={entity.state}
+                              isSelected={unlinkSelection.selectedEntities.has(entity.entity_name)}
+                              bulkMode={unlinkSelection.bulkMode}
+                              showUnlinkButton={true}
+                              onSelect={unlinkSelection.toggleEntitySelection}
+                              onUnlink={handleIndividualUnlink}
+                            />
+                          ))}
+                        </VStack>
+                      </VStack>
                     ))}
                   </VStack>
                 </VStack>
@@ -365,7 +383,7 @@ export const IotControlsList: React.FC<IotControlsListProps> = ({
               <Pressable className="ml-auto p-2" onPress={onToggleShowDomainFilters}>
                 <Icon
                   as={showDomainFilters ? ChevronDown : SlidersHorizontal}
-                  size="sm"
+                  size="lg"
                   className="text-typography-500"
                 />
               </Pressable>
@@ -401,7 +419,7 @@ export const IotControlsList: React.FC<IotControlsListProps> = ({
               <Pressable className="ml-auto p-2" onPress={onToggleShowDeviceClassFilters}>
                 <Icon
                   as={showDeviceClassFilters ? ChevronDown : SlidersHorizontal}
-                  size="sm"
+                  size="lg"
                   className="text-typography-500"
                 />
               </Pressable>
@@ -463,13 +481,13 @@ export const IotControlsList: React.FC<IotControlsListProps> = ({
               </VStack>
             ) : (
               <ScrollView
-                className="mt-1 max-h-80"
+                className="mt-3 max-h-96 rounded-md border border-outline-50 pl-3 pt-1"
                 showsVerticalScrollIndicator={true}
                 nestedScrollEnabled={true}>
                 <VStack space="sm" className="pb-4 pr-4">
                   {Object.entries(groupedLinkableEntities).map(([domain, domainEntities]) => (
-                    <VStack key={domain} space="sm">
-                      <HStack className="mt-2 items-center">
+                    <VStack key={domain} space="xs">
+                      <HStack className="mt-1 items-center">
                         <Text className="text-md capitalize text-typography-500">{domain}</Text>
                       </HStack>
 

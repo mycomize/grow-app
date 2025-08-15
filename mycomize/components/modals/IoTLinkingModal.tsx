@@ -15,7 +15,6 @@ import { Button, ButtonText } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Radio, RadioGroup, RadioIcon, RadioIndicator, RadioLabel } from '~/components/ui/radio';
 import { Card } from '~/components/ui/card';
-import { Heading } from '~/components/ui/heading';
 import { ScrollView } from '~/components/ui/scroll-view';
 import { X, CircleIcon, CircleX, MoveRight } from 'lucide-react-native';
 import MushroomIcon from '~/components/icons/MushroomIcon';
@@ -119,47 +118,43 @@ export function IoTLinkingModal({
         </ModalHeader>
 
         <ModalBody>
-          <VStack space="sm">
+          <VStack space="xl">
             {/* Linking Summary */}
-            <Card className="px-0">
-              <VStack space="xs">
-                <Text className="font-semibold text-typography-500">
-                  {mode === 'bulk'
-                    ? selectedEntities.length > 1
-                      ? `Linking ${selectedEntities.length} controls:`
-                      : `Linking control:`
-                    : 'Linking control:'}
-                </Text>
-                <ScrollView className="max-h-44">
-                  <VStack space="xs">
-                    {selectedEntities.map((entityId) => (
-                      <Text key={entityId} className="ml-2 text-sm text-typography-600">
-                        • {entityNames[entityId] || entityId}
-                      </Text>
-                    ))}
-                  </VStack>
-                </ScrollView>
-              </VStack>
-            </Card>
+            <VStack space="xs" className="mt-2">
+              <Text className="font-semibold text-typography-500">
+                {mode === 'bulk'
+                  ? selectedEntities.length > 1
+                    ? `Linking ${selectedEntities.length} controls:`
+                    : `Linking control:`
+                  : 'Linking control:'}
+              </Text>
+              <ScrollView className="max-h-72 min-h-20 rounded-md border border-outline-50 pl-3 pt-2">
+                <VStack space="xs">
+                  {selectedEntities.map((entityId) => (
+                    <Text key={entityId} className="ml-2 text-sm text-typography-600">
+                      • {entityNames[entityId] || entityId}
+                    </Text>
+                  ))}
+                </VStack>
+              </ScrollView>
+            </VStack>
 
             {/* Progress Indicator or Context Confirmation */}
             {contextMode && contextGrowId && contextStageName ? (
-              <Card className="bg-background-0 px-0">
-                <VStack space="xs">
-                  <Text className="font-semibold text-typography-500">Linking to:</Text>
-                  <HStack className="items-center justify-center" space="md">
-                    <Text className="rounded-sm bg-success-300 px-2 py-1 text-center text-sm font-semibold text-typography-800">
-                      {grows.find((grow) => Number(grow.id) === Number(contextGrowId))?.name ||
-                        'Unknown Grow'}
-                    </Text>
-                    <Icon as={MoveRight} className="text-success-600" />
-                    <Text className="rounded-sm bg-success-300 px-2 py-1 text-center text-sm font-semibold text-typography-800">
-                      {stages.find((stage) => stage.value === contextStageName)?.label ||
-                        contextStageName}
-                    </Text>
-                  </HStack>
-                </VStack>
-              </Card>
+              <VStack space="xs">
+                <Text className="font-semibold text-typography-500">Linking to:</Text>
+                <HStack className="items-center justify-center" space="md">
+                  <Text className="rounded-sm bg-success-300 px-2 py-1 text-center text-sm font-semibold text-typography-800">
+                    {grows.find((grow) => Number(grow.id) === Number(contextGrowId))?.name ||
+                      'Unknown Grow'}
+                  </Text>
+                  <Icon as={MoveRight} className="text-success-600" />
+                  <Text className="rounded-sm bg-success-300 px-2 py-1 text-center text-sm font-semibold text-typography-800">
+                    {stages.find((stage) => stage.value === contextStageName)?.label ||
+                      contextStageName}
+                  </Text>
+                </HStack>
+              </VStack>
             ) : (
               <HStack className="mb-3 items-center justify-center" space="md">
                 <HStack className="items-center" space="sm">
@@ -197,7 +192,7 @@ export function IoTLinkingModal({
             {/* Grow Selection - Hide in context mode */}
             {step === 'grow' && !contextMode && (
               <VStack space="md">
-                <Text className="font-semibold text-typography-600">Select a Grow</Text>
+                <Text className="font-semibold text-typography-500">Select a Grow</Text>
                 {grows.length === 0 ? (
                   <VStack
                     className="items-center rounded-lg border border-dashed border-typography-300 p-6"
@@ -251,7 +246,7 @@ export function IoTLinkingModal({
             {/* Stage Selection */}
             {step === 'stage' && (
               <VStack space="md">
-                <Text className="font-semibold text-typography-600">Select a Stage</Text>
+                <Text className="mt-2 font-semibold text-typography-500">Select a Stage</Text>
                 <ScrollView className="max-h-64">
                   <RadioGroup value={selectedStage || ''} onChange={handleStageSelect}>
                     <VStack space="md">
