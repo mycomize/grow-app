@@ -354,7 +354,7 @@ class ApiClient {
       `/iot-gateways/${gatewayId}/entities/${entityId}/link`,
       { grow_id: growId, stage: stage },
       token,
-      'IoTAssignmentRequest',
+      'EntityLinkingRequest',
       'IoTEntity'
     );
   }
@@ -375,7 +375,7 @@ class ApiClient {
         body: requestBody,
         token,
       },
-      requestDataType: 'IoTAssignmentRequest',
+      requestDataType: 'BulkEntityLinkingRequest',
       responseDataType: 'IoTEntity',
       isArrayResponse: true,
     });

@@ -2,15 +2,12 @@ import { useState, useMemo } from 'react';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
-import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
-import { Input, InputField, InputSlot } from '~/components/ui/input';
-import { Card } from '~/components/ui/card';
-import { Icon } from '~/components/ui/icon';
 import { Switch } from '~/components/ui/switch';
 import { Pressable } from '~/components/ui/pressable';
 import { Divider } from '~/components/ui/divider';
-import { Checkbox, CheckboxIcon, CheckboxIndicator } from '~/components/ui/checkbox';
 import { ScrollView } from '~/components/ui/scroll-view';
+import { Icon } from '~/components/ui/icon';
+import { Card } from '~/components/ui/card';
 import { getSwitchColors } from '~/lib/switchUtils';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import {
@@ -25,9 +22,6 @@ import {
   SlidersHorizontal,
   ListX,
   X,
-  Check,
-  Link,
-  Unlink,
   WifiOff,
 } from 'lucide-react-native';
 import { InfoBadge } from '~/components/ui/info-badge';
@@ -36,6 +30,14 @@ import { IoTFilterPreferences } from '~/lib/iotTypes';
 import { IoTLinkingModal } from '~/components/modals/IoTLinkingModal';
 import { IoTUnlinkConfirmationModal } from '~/components/modals/IoTUnlinkConfirmationModal';
 import { BulkGrow, stageLabels } from '~/lib/growTypes';
+import { Input, InputField, InputSlot } from '~/components/ui/input';
+
+// Import our shared hooks and components
+import { useIoTEntitySelection } from '~/lib/iot/useIoTEntitySelection';
+import { useIoTOperations } from '~/lib/iot/useIoTOperations';
+import { useEntitySearch } from '~/lib/iot/useEntitySearch';
+import { EntityCard } from '~/components/iot/EntityCard';
+import { BulkActionBar } from '~/components/iot/BulkActionBar';
 
 // This file uses "Controls" as the name in the UI for entities
 interface ControlPanelSectionProps {
@@ -79,66 +81,23 @@ export function ControlPanelSection({
   const { theme } = useTheme();
   const { trackFalse, trackTrue, thumbColor } = getSwitchColors(theme);
 
-  // Separate state for link and unlink operations
-  const [selectedLinkEntities, setSelectedLinkEntities] = useState<Set<string>>(new Set());
-  const [selectedUnlinkEntities, setSelectedUnlinkEntities] = useState<Set<string>>(new Set());
+  // Use shared hooks for selection and operations
+  const linkSelection = useIoTEntitySelection();
+  const unlinkSelection = useIoTEntitySelection();
+  const operations = useIoTOperations(); // No context for control panel
+  const { searchQuery, setSearchQuery, filteredEntities } = useEntitySearch(
+    linkableEntities,
+    filterPreferences
+  );
 
-  // Link modal state
+  // Modal state
   const [showLinkingModal, setShowLinkingModal] = useState(false);
-  const [linkingMode, setLinkingMode] = useState<'bulk' | 'individual'>('bulk');
-  const [currentLinkEntityId, setCurrentLinkEntityId] = useState<string | null>(null);
-  const [bulkLinkMode, setBulkLinkMode] = useState(false);
-
-  // Unlink modal state
   const [showUnlinkModal, setShowUnlinkModal] = useState(false);
-  const [unlinkMode, setUnlinkMode] = useState<'bulk' | 'individual'>('bulk');
-  const [currentUnlinkEntityId, setCurrentUnlinkEntityId] = useState<string | null>(null);
-  const [bulkUnlinkMode, setBulkUnlinkMode] = useState(false);
-
-  // Search functionality state
-  const [searchQuery, setSearchQuery] = useState('');
+  const [modalMode, setModalMode] = useState<'bulk' | 'individual'>('bulk');
 
   // Section expansion state
   const [linkedControlsExpanded, setLinkedControlsExpanded] = useState(true);
   const [linkableControlsExpanded, setLinkableControlsExpanded] = useState(true);
-
-  /**
-   * Filtered linkable entities based on domain filters, device class filters, and search query
-   * Uses useMemo for performance optimization to prevent unnecessary recalculations
-   */
-  const filteredLinkableEntities = useMemo(() => {
-    let filtered = linkableEntities;
-
-    // Apply domain filter - only show entities from selected domains
-    if (filterPreferences.domains.length > 0) {
-      filtered = filtered.filter((entity) => filterPreferences.domains.includes(entity.domain));
-    }
-
-    // Apply device class filter - only show entities with selected device classes
-    // Note: entities without device_class are always included if no device class filters are active
-    if (filterPreferences.deviceClasses.length > 0) {
-      filtered = filtered.filter(
-        (entity) =>
-          // Include entities that have a device_class matching the filter
-          (entity.device_class && filterPreferences.deviceClasses.includes(entity.device_class)) ||
-          // Also include entities without device_class (null/undefined) to avoid hiding them
-          !entity.device_class
-      );
-    }
-
-    // Apply search query filter - search in friendly_name and entity_name
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter((entity) => {
-        const friendlyName = (entity.friendly_name || '').toLowerCase();
-        const entityName = (entity.entity_name || '').toLowerCase();
-
-        return friendlyName.includes(query) || entityName.includes(query);
-      });
-    }
-
-    return filtered;
-  }, [linkableEntities, filterPreferences.domains, filterPreferences.deviceClasses, searchQuery]);
 
   /**
    * Group linked entities by grow name, then sort by stage within each grow
@@ -195,114 +154,74 @@ export function ControlPanelSection({
     return grouped;
   }, [linkedEntities, grows]);
 
-  /**
-   * Handler for search query changes
-   * Updates the search state which triggers filteredLinkableEntities recalculation
-   */
-  const onSearchQueryChange = (text: string) => {
-    setSearchQuery(text);
-  };
-
   // Handler functions for linking
-  const handleLinkEntityCheckboxToggle = (entityId: string) => {
-    const newSelected = new Set(selectedLinkEntities);
-    if (newSelected.has(entityId)) {
-      newSelected.delete(entityId);
-    } else {
-      newSelected.add(entityId);
-    }
-    setSelectedLinkEntities(newSelected);
-  };
-
-  const handleEnterBulkLinkMode = () => {
-    setBulkLinkMode(true);
-    setSelectedLinkEntities(new Set());
-  };
-
-  const handleExitBulkLinkMode = () => {
-    setBulkLinkMode(false);
-    setSelectedLinkEntities(new Set());
+  const handleIndividualLink = async (entityId: string) => {
+    setModalMode('individual');
+    linkSelection.clearSelection();
+    linkSelection.toggleEntitySelection(entityId);
+    setShowLinkingModal(true);
   };
 
   const handleBulkLinkClick = () => {
-    setLinkingMode('bulk');
+    setModalMode('bulk');
     setShowLinkingModal(true);
   };
 
-  const handleIndividualLinkClick = (entityId: string) => {
-    setCurrentLinkEntityId(entityId);
-    setSelectedLinkEntities(new Set([entityId]));
-    setLinkingMode('individual');
-    setShowLinkingModal(true);
-  };
+  const handleLinkingSubmit = async (growId: number, stage: string) => {
+    const entityIds = Array.from(linkSelection.selectedEntities);
+    if (entityIds.length === 0) return;
 
-  const handleLinkingSubmit = (growId: number, stage: string) => {
-    if (linkingMode === 'bulk') {
-      onBulkLink(Array.from(selectedLinkEntities), growId, stage);
-      setBulkLinkMode(false); // Exit bulk link mode after successful linking
-    } else if (currentLinkEntityId) {
-      onIndividualLink(currentLinkEntityId, growId, stage);
+    if (modalMode === 'bulk') {
+      onBulkLink(entityIds, growId, stage);
+      linkSelection.exitBulkMode();
+    } else if (entityIds.length === 1) {
+      onIndividualLink(entityIds[0], growId, stage);
     }
-    setShowLinkingModal(false);
-    setSelectedLinkEntities(new Set());
-    setCurrentLinkEntityId(null);
-  };
 
-  const handleLinkingModalClose = () => {
     setShowLinkingModal(false);
-    setSelectedLinkEntities(new Set());
-    setCurrentLinkEntityId(null);
   };
 
   // Handler functions for unlinking
-  const handleUnlinkEntityCheckboxToggle = (entityId: string) => {
-    const newSelected = new Set(selectedUnlinkEntities);
-    if (newSelected.has(entityId)) {
-      newSelected.delete(entityId);
-    } else {
-      newSelected.add(entityId);
-    }
-    setSelectedUnlinkEntities(newSelected);
-  };
-
-  const handleEnterBulkUnlinkMode = () => {
-    setBulkUnlinkMode(true);
-    setSelectedUnlinkEntities(new Set());
-  };
-
-  const handleExitBulkUnlinkMode = () => {
-    setBulkUnlinkMode(false);
-    setSelectedUnlinkEntities(new Set());
+  const handleIndividualUnlink = async (entityId: string) => {
+    setModalMode('individual');
+    unlinkSelection.clearSelection();
+    unlinkSelection.toggleEntitySelection(entityId);
+    setShowUnlinkModal(true);
   };
 
   const handleBulkUnlinkClick = () => {
-    setUnlinkMode('bulk');
+    setModalMode('bulk');
     setShowUnlinkModal(true);
   };
 
-  const handleIndividualUnlinkClick = (entityId: string) => {
-    setCurrentUnlinkEntityId(entityId);
-    setSelectedUnlinkEntities(new Set([entityId]));
-    setUnlinkMode('individual');
-    setShowUnlinkModal(true);
-  };
+  const handleUnlinkConfirm = async () => {
+    const entityIds = Array.from(unlinkSelection.selectedEntities);
+    if (entityIds.length === 0) return;
 
-  const handleUnlinkConfirm = () => {
-    if (unlinkMode === 'bulk') {
-      onBulkUnlink(Array.from(selectedUnlinkEntities));
-      setBulkUnlinkMode(false);
-    } else if (currentUnlinkEntityId) {
-      onIndividualUnlink(currentUnlinkEntityId);
+    if (modalMode === 'bulk') {
+      onBulkUnlink(entityIds);
+      unlinkSelection.exitBulkMode();
+    } else if (entityIds.length === 1) {
+      onIndividualUnlink(entityIds[0]);
     }
+
     setShowUnlinkModal(false);
-    setSelectedUnlinkEntities(new Set());
-    setCurrentUnlinkEntityId(null);
   };
 
-  const handleUnlinkModalClose = () => {
-    setShowUnlinkModal(false);
-    setSelectedUnlinkEntities(new Set());
-    setCurrentUnlinkEntityId(null);
+  // Get domain icon
+  const getDomainIcon = (domain: string) => {
+    switch (domain) {
+      case 'sensor':
+        return Activity;
+      case 'automation':
+        return Bot;
+      case 'number':
+        return Calculator;
+      case 'switch':
+        return ToggleRight;
+      default:
+        return null; // No icon for unknown domains
+    }
   };
 
   // Create entity names mapping for modal
@@ -348,37 +267,16 @@ export function ControlPanelSection({
           </HStack>
         </HStack>
 
-        {/* Bulk Unlink Button or Bulk Unlink Interface - Show below header when there are linked entities */}
+        {/* Bulk Unlink Action Bar */}
         {linkedEntities.length > 0 && linkedControlsExpanded && (
-          <HStack className="justify-end">
-            {!bulkUnlinkMode ? (
-              <Button
-                variant="solid"
-                action="positive"
-                size="sm"
-                onPress={handleEnterBulkUnlinkMode}>
-                <ButtonIcon as={Unlink} size="sm" className="text-white" />
-                <ButtonText className="text-white">Bulk Unlink</ButtonText>
-              </Button>
-            ) : (
-              <HStack className="items-center gap-2">
-                <Button
-                  variant="solid"
-                  action="positive"
-                  size="sm"
-                  onPress={handleBulkUnlinkClick}
-                  disabled={selectedUnlinkEntities.size === 0}>
-                  <ButtonIcon as={Unlink} size="sm" className="text-white" />
-                  <ButtonText className="text-white">
-                    Unlink ({selectedUnlinkEntities.size})
-                  </ButtonText>
-                </Button>
-                <Pressable onPress={handleExitBulkUnlinkMode}>
-                  <Icon as={X} size="md" className="text-typography-500" />
-                </Pressable>
-              </HStack>
-            )}
-          </HStack>
+          <BulkActionBar
+            selectedCount={unlinkSelection.selectedEntities.size}
+            bulkMode={unlinkSelection.bulkMode}
+            actionType="unlink"
+            onEnterBulkMode={unlinkSelection.enterBulkMode}
+            onExitBulkMode={unlinkSelection.exitBulkMode}
+            onBulkAction={handleBulkUnlinkClick}
+          />
         )}
       </VStack>
 
@@ -401,7 +299,7 @@ export function ControlPanelSection({
               className="max-h-96"
               showsVerticalScrollIndicator={true}
               nestedScrollEnabled={true}>
-              <VStack space="sm" className="pb-4 pr-4">
+              <VStack space="sm" className="pb-3 pr-4">
                 {/* Group linked entities by grow name, then by stage within each grow */}
                 {Object.entries(groupedLinkedEntities).map(
                   ([growName, linkedGrowEntities], index) => {
@@ -422,61 +320,25 @@ export function ControlPanelSection({
                     return (
                       <VStack key={growName} space="sm">
                         <HStack className={index === 0 ? 'mt-2' : 'mt-4'}>
-                          <Text className="text-md font-semibold italic text-typography-600">
-                            {growName}
-                          </Text>
+                          <Text className="text-typography-500">Grow: </Text>
+                          <Text className="text-md  italic text-typography-600">{growName}</Text>
                         </HStack>
                         {Object.entries(entitiesByStage).map(([stageName, stageEntities]) => (
                           <VStack key={`${growName}-${stageName}`} space="xs">
                             <Text className="text-typography-500">{stageName}</Text>
-                            {stageEntities.map((entity) => {
-                              const friendlyName = entity.friendly_name || entity.entity_name;
-
-                              return (
-                                <Card key={entity.entity_name} className="bg-background-0 p-0.5">
-                                  <HStack className="items-center" space="sm">
-                                    {/* Entity Name */}
-                                    <VStack className="flex-1">
-                                      <Text className="ml-6 text-sm">{friendlyName}</Text>
-                                    </VStack>
-
-                                    {/* Individual Unlink Icon - Show when NOT in bulk unlink mode */}
-                                    {!bulkUnlinkMode && (
-                                      <Pressable
-                                        onPress={() =>
-                                          handleIndividualUnlinkClick(entity.entity_name)
-                                        }
-                                        className="p-1">
-                                        <Icon
-                                          as={Unlink}
-                                          size="sm"
-                                          className="text-typography-500"
-                                        />
-                                      </Pressable>
-                                    )}
-
-                                    {/* Selection Checkbox - Show when in bulk unlink mode */}
-                                    {bulkUnlinkMode && (
-                                      <Checkbox
-                                        value={
-                                          selectedUnlinkEntities.has(entity.entity_name)
-                                            ? 'checked'
-                                            : 'unchecked'
-                                        }
-                                        isChecked={selectedUnlinkEntities.has(entity.entity_name)}
-                                        onChange={() =>
-                                          handleUnlinkEntityCheckboxToggle(entity.entity_name)
-                                        }
-                                        isDisabled={false}>
-                                        <CheckboxIndicator>
-                                          <CheckboxIcon as={Check} />
-                                        </CheckboxIndicator>
-                                      </Checkbox>
-                                    )}
-                                  </HStack>
-                                </Card>
-                              );
-                            })}
+                            {stageEntities.map((entity) => (
+                              <EntityCard
+                                key={entity.entity_name}
+                                entity={entity}
+                                isSelected={unlinkSelection.selectedEntities.has(
+                                  entity.entity_name
+                                )}
+                                bulkMode={unlinkSelection.bulkMode}
+                                showUnlinkButton={true}
+                                onSelect={unlinkSelection.toggleEntitySelection}
+                                onUnlink={handleIndividualUnlink}
+                              />
+                            ))}
                           </VStack>
                         ))}
                       </VStack>
@@ -490,7 +352,7 @@ export function ControlPanelSection({
       )}
 
       {/* Linkable Controls Section. All of these entries have no linked grow */}
-      <VStack space="xl" className="mt-3">
+      <VStack space="xl" className="mt-1">
         <Divider />
 
         <HStack className="items-center justify-between">
@@ -498,11 +360,7 @@ export function ControlPanelSection({
           <HStack className="items-center" space="md">
             {/* filteredLinkableEntities are a subset of linkableEntities based on the domain and device 
                 class filters active at the time */}
-            <InfoBadge
-              text={`${filteredLinkableEntities.length} CONTROLS`}
-              variant="default"
-              size="sm"
-            />
+            <InfoBadge text={`${filteredEntities.length} CONTROLS`} variant="default" size="sm" />
             <Pressable onPress={() => setLinkableControlsExpanded(!linkableControlsExpanded)}>
               <Icon
                 as={linkableControlsExpanded ? ChevronDown : ChevronRight}
@@ -515,16 +373,16 @@ export function ControlPanelSection({
 
         {linkableControlsExpanded && (
           <VStack space="sm">
-            <Input className="mb-4 mt-2">
+            <Input className="mb-2 mt-1">
               <Icon as={Search} className="ml-3 text-typography-500" />
               <InputField
                 placeholder="Search controls..."
                 value={searchQuery}
-                onChangeText={onSearchQueryChange}
+                onChangeText={setSearchQuery}
               />
               {searchQuery && (
                 <InputSlot className="pr-3">
-                  <Pressable onPress={() => onSearchQueryChange('')}>
+                  <Pressable onPress={() => setSearchQuery('')}>
                     <Icon as={X} size="sm" className="text-typography-500" />
                   </Pressable>
                 </InputSlot>
@@ -568,7 +426,7 @@ export function ControlPanelSection({
             )}
 
             {/* Device Class Filters */}
-            <HStack className="mt-3 items-center">
+            <HStack className="mb-1 items-center">
               <Icon as={Filter} size="lg" className="text-typography-500" />
               <Text className="ml-2">Device Class Filter</Text>
               <Pressable className="ml-auto p-2" onPress={onToggleShowDeviceClassFilters}>
@@ -605,43 +463,21 @@ export function ControlPanelSection({
               </VStack>
             )}
 
-            {/* Enter Bulk Link Mode Button */}
-            {!bulkLinkMode && filteredLinkableEntities.length > 0 && (
-              <HStack className=" justify-end">
-                <Button
-                  variant="solid"
-                  action="positive"
-                  size="sm"
-                  onPress={handleEnterBulkLinkMode}>
-                  <ButtonIcon as={Link} size="sm" className="text-typography-900" />
-                  <ButtonText className="text-typography-900">Bulk Link</ButtonText>
-                </Button>
-              </HStack>
+            {/* Bulk Link Action Bar */}
+            {filteredEntities.length > 0 && (
+              <BulkActionBar
+                selectedCount={linkSelection.selectedEntities.size}
+                bulkMode={linkSelection.bulkMode}
+                actionType="link"
+                onEnterBulkMode={linkSelection.enterBulkMode}
+                onExitBulkMode={linkSelection.exitBulkMode}
+                onBulkAction={handleBulkLinkClick}
+              />
             )}
 
-            {/* Bulk Linking Interface - When in bulk link mode */}
-            {bulkLinkMode && (
-              <HStack className="mt-0 items-center justify-end gap-2">
-                <Button
-                  variant="solid"
-                  action="positive"
-                  size="sm"
-                  onPress={handleBulkLinkClick}
-                  disabled={selectedLinkEntities.size === 0}>
-                  <ButtonIcon as={Link} size="sm" className="text-typography-900" />
-                  <ButtonText className="text-typography-900">
-                    Link ({selectedLinkEntities.size})
-                  </ButtonText>
-                </Button>
-                <Pressable onPress={handleExitBulkLinkMode}>
-                  <Icon as={X} size="md" className="text-typography-500" />
-                </Pressable>
-              </HStack>
-            )}
-
-            {/* Grouped Linkable Entities for Selection */}
+            {/* Grouped Linkable Entities */}
             {Object.entries(
-              filteredLinkableEntities.reduce(
+              filteredEntities.reduce(
                 (acc, entity) => {
                   const domain = entity.domain;
                   if (!acc[domain]) acc[domain] = [];
@@ -650,78 +486,65 @@ export function ControlPanelSection({
                 },
                 {} as Record<string, IoTEntity[]>
               )
-            ).map(([domain, linkableDomainEntities]) => (
-              <VStack key={domain} className="p-0" space="sm">
-                <HStack className="mt-2 items-center">
-                  {domain === 'sensor' && (
-                    <Icon as={Activity} size="lg" className="text-typography-500" />
-                  )}
-                  {domain === 'automation' && (
-                    <Icon as={Bot} size="xl" className="text-typography-500" />
-                  )}
-                  {domain === 'number' && (
-                    <Icon as={Calculator} size="lg" className="text-typography-500" />
-                  )}
-                  {domain === 'switch' && (
-                    <Icon as={ToggleRight} size="lg" className="text-typography-500" />
-                  )}
-                  <Text className="ml-2 text-lg font-semibold capitalize">{domain}</Text>
-                </HStack>
-
-                {linkableDomainEntities.map((entity) => {
-                  const friendlyName = entity.friendly_name || entity.entity_name;
-
-                  return (
-                    <HStack key={entity.entity_name} className="items-center" space="xs">
-                      {/* Linkable Entity Card */}
-                      <Card className="flex-1 bg-background-0 p-0.5">
-                        <HStack className="items-center justify-between">
-                          <VStack className="mx-3 flex-1">
-                            <Text className="text-sm">{friendlyName}</Text>
-                            {entity.device_class && (
-                              <HStack>
-                                <Text className="ml-2 text-sm text-typography-400">
-                                  Device Class:{' '}
-                                </Text>
-                                <Text className="text-sm capitalize italic text-typography-400">
-                                  {entity.device_class}
-                                </Text>
-                              </HStack>
-                            )}
-                          </VStack>
-                          {/* Link Icon - Show only when NOT in bulk link mode */}
-                          {!bulkLinkMode && (
-                            <Pressable
-                              onPress={() => handleIndividualLinkClick(entity.entity_name)}
-                              className="p-1">
-                              <Icon as={Link} size="md" className="text-typography-500" />
-                            </Pressable>
-                          )}
-                          {/* Selection Checkbox - Show when in bulk link mode */}
-                          {bulkLinkMode && (
-                            <VStack className="p-1">
-                              <Checkbox
-                                value={
-                                  selectedLinkEntities.has(entity.entity_name)
-                                    ? 'checked'
-                                    : 'unchecked'
-                                }
-                                isChecked={selectedLinkEntities.has(entity.entity_name)}
-                                onChange={() => handleLinkEntityCheckboxToggle(entity.entity_name)}
-                                isDisabled={false}>
-                                <CheckboxIndicator>
-                                  <CheckboxIcon as={Check} />
-                                </CheckboxIndicator>
-                              </Checkbox>
-                            </VStack>
-                          )}
-                        </HStack>
-                      </Card>
-                    </HStack>
-                  );
-                })}
+            ).length === 0 ? (
+              <VStack
+                className="mt-2 items-center rounded-lg border border-dashed border-typography-300 p-6"
+                space="sm">
+                <Icon as={ListX} size="xl" className="text-typography-400" />
+                <Text className="text-center text-typography-500">
+                  {linkableEntities.length === 0
+                    ? 'No controls available to link'
+                    : 'No controls match your search'}
+                </Text>
+                <Text className="text-center text-sm text-typography-400">
+                  {linkableEntities.length === 0
+                    ? 'Add IoT gateways and controls in the IoT section'
+                    : 'Try adjusting your search terms'}
+                </Text>
               </VStack>
-            ))}
+            ) : (
+              <ScrollView
+                className="max-h-80"
+                showsVerticalScrollIndicator={true}
+                nestedScrollEnabled={true}>
+                <VStack space="sm" className="pb-4 pr-4">
+                  {Object.entries(
+                    filteredEntities.reduce(
+                      (acc, entity) => {
+                        const domain = entity.domain;
+                        if (!acc[domain]) acc[domain] = [];
+                        acc[domain].push(entity);
+                        return acc;
+                      },
+                      {} as Record<string, IoTEntity[]>
+                    )
+                  ).map(([domain, domainEntities]) => (
+                    <VStack key={domain} space="sm">
+                      <HStack className="mt-2 items-center">
+                        <Text
+                          className={`${getDomainIcon(domain) ? 'ml-2' : ''} text-md capitalize text-typography-500`}>
+                          {domain}
+                        </Text>
+                      </HStack>
+
+                      <VStack space="xs">
+                        {domainEntities.map((entity) => (
+                          <EntityCard
+                            key={entity.entity_name}
+                            entity={entity}
+                            isSelected={linkSelection.selectedEntities.has(entity.entity_name)}
+                            bulkMode={linkSelection.bulkMode}
+                            showLinkButton={true}
+                            onSelect={linkSelection.toggleEntitySelection}
+                            onLink={handleIndividualLink}
+                          />
+                        ))}
+                      </VStack>
+                    </VStack>
+                  ))}
+                </VStack>
+              </ScrollView>
+            )}
           </VStack>
         )}
       </VStack>
@@ -729,27 +552,23 @@ export function ControlPanelSection({
       {/* Linking Modal */}
       <IoTLinkingModal
         isVisible={showLinkingModal}
-        mode={linkingMode}
-        selectedEntities={Array.from(selectedLinkEntities)}
+        mode={modalMode}
+        selectedEntities={Array.from(linkSelection.selectedEntities)}
         entityNames={linkableEntityNames}
         grows={grows}
         onAssign={handleLinkingSubmit}
-        onClose={handleLinkingModalClose}
+        onClose={() => setShowLinkingModal(false)}
       />
 
       {/* Unlink Confirmation Modal */}
       <IoTUnlinkConfirmationModal
         isOpen={showUnlinkModal}
-        onClose={handleUnlinkModalClose}
+        onClose={() => setShowUnlinkModal(false)}
         onConfirm={handleUnlinkConfirm}
-        mode={unlinkMode}
-        selectedEntities={
-          unlinkMode === 'bulk'
-            ? linkedEntities.filter((entity) => selectedUnlinkEntities.has(entity.entity_name))
-            : currentUnlinkEntityId
-              ? linkedEntities.filter((entity) => entity.entity_name === currentUnlinkEntityId)
-              : []
-        }
+        mode={modalMode}
+        selectedEntities={linkedEntities.filter((entity) =>
+          unlinkSelection.selectedEntities.has(entity.entity_name)
+        )}
         grows={grows}
       />
     </VStack>

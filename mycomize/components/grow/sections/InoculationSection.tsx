@@ -22,18 +22,11 @@ import { CalendarDays, ChevronDown, X, ArrowDownToDot } from 'lucide-react-nativ
 
 // Import tek types
 import { StageTabs } from '~/components/ui/stage-tabs';
-import { IoTEntity, IoTGateway } from '~/lib/iot';
+import { StageIoTData } from '~/lib/iotTypes';
 
 interface InoculationStageData {
   inoculation_date?: string;
   inoculation_status?: string;
-}
-
-interface StageIoTData {
-  entities: IoTEntity[];
-  gateways: IoTGateway[];
-  entityStates: Record<string, string>;
-  loading: boolean;
 }
 
 interface InoculationSectionProps {
@@ -93,7 +86,7 @@ export const InoculationSection: React.FC<InoculationSectionProps> = ({
       />
 
       {/* Inoculation-specific fields */}
-      <VStack space="lg" className="mt-4 border-t border-background-200 pt-4">
+      <VStack space="lg" className="mt-1 border-t border-background-200 pt-4">
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText className="text-typography-700">

@@ -23,14 +23,7 @@ import { ChevronDown, ArrowDownToDot, CalendarDays, X } from 'lucide-react-nativ
 // Import tek types
 import { BulkGrow } from '~/lib/growTypes';
 import { StageTabs } from '~/components/ui/stage-tabs';
-import { IoTEntity, IoTGateway } from '~/lib/iot';
-
-interface StageIoTData {
-  entities: IoTEntity[];
-  gateways: IoTGateway[];
-  entityStates: Record<string, string>;
-  loading: boolean;
-}
+import { StageIoTData } from '~/lib/iotTypes';
 
 interface SpawnStageData {
   spawn_start_date?: string;
@@ -93,7 +86,7 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
       />
 
       {/* Spawn-specific fields */}
-      <VStack space="lg" className="mt-4 border-t border-background-200 pt-4">
+      <VStack space="lg" className="mt-1 border-t border-background-200 pt-4">
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText className="text-typography-600">Start Date</FormControlLabelText>

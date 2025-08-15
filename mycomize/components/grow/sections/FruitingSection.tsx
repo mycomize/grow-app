@@ -22,14 +22,7 @@ import { CalendarDays, ChevronDown, X, ArrowDownToDot } from 'lucide-react-nativ
 
 // Import tek types
 import { StageTabs } from '~/components/ui/stage-tabs';
-import { IoTEntity, IoTGateway } from '~/lib/iot';
-
-interface StageIoTData {
-  entities: IoTEntity[];
-  gateways: IoTGateway[];
-  entityStates: Record<string, string>;
-  loading: boolean;
-}
+import { StageIoTData } from '~/lib/iotTypes';
 
 interface FruitingStageData {
   fruiting_start_date?: string;
@@ -91,7 +84,7 @@ export const FruitingSection: React.FC<FruitingSectionProps> = ({
       />
 
       {/* Fruiting-specific fields */}
-      <VStack space="lg" className="mt-4 border-t border-background-200 pt-4">
+      <VStack space="lg" className="mt-1 border-t border-background-200 pt-4">
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText className="text-typography-700">

@@ -32,6 +32,7 @@ import { BulkSection } from './BulkSection';
 import { FruitingSection } from './FruitingSection';
 import { HarvestSection } from './HarvestSection';
 import { IoTEntity, IoTGateway } from '~/lib/iot';
+import { IoTFilterPreferences, StageIoTData } from '~/lib/iotTypes';
 import { AuthContext } from '~/lib/AuthContext';
 import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { useRouter } from 'expo-router';
@@ -130,8 +131,46 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
   const [expandedStages, setExpandedStages] = useState<string[]>([]);
   const [iotEntities, setIotEntities] = useState<IoTEntity[]>([]);
   const [iotGateways, setIotGateways] = useState<IoTGateway[]>([]);
+  const [linkableEntities, setLinkableEntities] = useState<IoTEntity[]>([]);
   const [entityStates, setEntityStates] = useState<Record<string, string>>({});
   const [iotLoading, setIotLoading] = useState(false);
+
+  // Filter preferences state
+  const [filterPreferences, setFilterPreferences] = useState<IoTFilterPreferences>({
+    domains: [],
+    deviceClasses: [],
+    showAllDomains: true,
+    showAllDeviceClasses: true,
+  });
+  const [showDomainFilters, setShowDomainFilters] = useState(false);
+  const [showDeviceClassFilters, setShowDeviceClassFilters] = useState(false);
+
+  // Filter handlers
+  const toggleShowDomainFilters = () => {
+    setShowDomainFilters(!showDomainFilters);
+  };
+
+  const toggleShowDeviceClassFilters = () => {
+    setShowDeviceClassFilters(!showDeviceClassFilters);
+  };
+
+  const toggleDomainFilter = (domain: string) => {
+    setFilterPreferences((prev) => ({
+      ...prev,
+      domains: prev.domains.includes(domain)
+        ? prev.domains.filter((d) => d !== domain)
+        : [...prev.domains, domain],
+    }));
+  };
+
+  const toggleDeviceClassFilter = (deviceClass: string) => {
+    setFilterPreferences((prev) => ({
+      ...prev,
+      deviceClasses: prev.deviceClasses.includes(deviceClass)
+        ? prev.deviceClasses.filter((dc) => dc !== deviceClass)
+        : [...prev.deviceClasses, deviceClass],
+    }));
+  };
 
   // Use useFocusEffect to refresh IoT data when returning to grow from IoT control panel
   useFocusEffect(
@@ -174,7 +213,12 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
             }
           }
 
-          setIotEntities(allEntities);
+          // Separate linked entities from linkable entities
+          const linkedEntities = allEntities.filter((entity) => entity.linked_grow_id);
+          const unlinkableEntities = allEntities.filter((entity) => !entity.linked_grow_id);
+
+          setIotEntities(linkedEntities);
+          setLinkableEntities(unlinkableEntities);
         } catch (err) {
           if (isUnauthorizedError(err as Error)) {
             router.replace('/login');
@@ -258,6 +302,56 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
     fetchEntityStates();
   }, [iotEntities, iotGateways, iotLoading]);
 
+  // Refresh IoT data function
+  const refreshIoTData = useCallback(async () => {
+    if (!token || !grow?.id) return;
+
+    try {
+      setIotLoading(true);
+
+      // Refetch all gateways and entities
+      const allGateways: IoTGateway[] = await apiClient.get(
+        '/iot-gateways',
+        token,
+        'IoTGateway',
+        true
+      );
+
+      setIotGateways(allGateways);
+
+      const allEntities: IoTEntity[] = [];
+      for (const gateway of allGateways) {
+        try {
+          const gatewayEntities: IoTEntity[] = await apiClient.get(
+            `/iot-gateways/${gateway.id}/entities`,
+            token,
+            'IoTEntity',
+            true
+          );
+          allEntities.push(...gatewayEntities);
+        } catch (gatewayErr) {
+          console.warn(`Failed to fetch entities from gateway ${gateway.id}:`, gatewayErr);
+        }
+      }
+
+      // Separate linked entities from linkable entities
+      const linkedEntities = allEntities.filter((entity) => entity.linked_grow_id);
+      const unlinkableEntities = allEntities.filter((entity) => !entity.linked_grow_id);
+
+      setIotEntities(linkedEntities);
+      setLinkableEntities(unlinkableEntities);
+    } catch (err) {
+      if (isUnauthorizedError(err as Error)) {
+        router.replace('/login');
+        return;
+      }
+      console.error('Failed to refresh IoT data:', err);
+      showError('Failed to refresh IoT data');
+    } finally {
+      setIotLoading(false);
+    }
+  }, [token, grow?.id, router, showError]);
+
   // Compute filtered IoT data for each stage
   const getStageIoTData = useCallback(
     (stageId: string) => {
@@ -267,6 +361,15 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
           gateways: [],
           entityStates: {},
           loading: false,
+          linkableEntities: [],
+          onRefreshData: () => {},
+          filterPreferences,
+          showDomainFilters,
+          showDeviceClassFilters,
+          onToggleShowDomainFilters: toggleShowDomainFilters,
+          onToggleShowDeviceClassFilters: toggleShowDeviceClassFilters,
+          onToggleDomainFilter: toggleDomainFilter,
+          onToggleDeviceClassFilter: toggleDeviceClassFilter,
         };
       }
 
@@ -293,9 +396,33 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
         gateways: stageGateways,
         entityStates: stageEntityStates,
         loading: iotLoading,
+        linkableEntities: linkableEntities,
+        onRefreshData: refreshIoTData,
+        filterPreferences,
+        showDomainFilters,
+        showDeviceClassFilters,
+        onToggleShowDomainFilters: toggleShowDomainFilters,
+        onToggleShowDeviceClassFilters: toggleShowDeviceClassFilters,
+        onToggleDomainFilter: toggleDomainFilter,
+        onToggleDeviceClassFilter: toggleDeviceClassFilter,
       };
     },
-    [iotEntities, iotGateways, entityStates, iotLoading, grow?.id]
+    [
+      iotEntities,
+      iotGateways,
+      entityStates,
+      iotLoading,
+      grow?.id,
+      linkableEntities,
+      refreshIoTData,
+      filterPreferences,
+      showDomainFilters,
+      showDeviceClassFilters,
+      toggleShowDomainFilters,
+      toggleShowDeviceClassFilters,
+      toggleDomainFilter,
+      toggleDeviceClassFilter,
+    ]
   );
 
   const toggleStageExpansion = (stageId: string) => {
@@ -582,57 +709,111 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                 <VStack className="flex-1 pb-4">
                   <VStack space="xs">
                     {/* Stage name row */}
-                    <HStack className="items-center justify-between">
-                      <HStack className="flex-1 items-center gap-2">
-                        {stage.name === 'Inoculation' && (
-                          <>
-                            <View className="ml-0.5" />
-                            <Icon as={Syringe} size="md" className="text-typography-500" />
-                          </>
-                        )}
-                        {stage.name === 'Spawn Colonization' && (
-                          <>
-                            <View className="ml-0.5" />
-                            <Icon as={Wheat} size="md" className="text-typography-500" />
-                          </>
-                        )}
-                        {stage.name === 'Bulk Colonization' && (
-                          <>
-                            <View className="ml-0.5" />
-                            <Icon as={Box} size="md" className="text-typography-500" />
-                          </>
-                        )}
-                        {stage.name === 'Fruiting' && (
-                          <>
-                            <View className="ml-0.5" />
-                            <MushroomIcon height={18} width={18} strokeWidth={2} color="#9ca3af" />
-                          </>
-                        )}
-                        {stage.name === 'Harvest' && (
-                          <>
-                            <View className="ml-0.5" />
-                            <Icon as={ShoppingBasket} size="md" className="text-typography-500" />
-                          </>
-                        )}
-                        {status === 'active' && (
-                          <>
+                    {status !== 'pending' ||
+                    (stage.id === 'inoculation' && currentStageIndex === -1) ? (
+                      <Pressable
+                        onPress={() => toggleStageExpansion(stage.id)}
+                        className="flex-row items-center justify-between">
+                        <HStack className="flex-1 items-center gap-2">
+                          {stage.name === 'Inoculation' && (
+                            <>
+                              <View className="ml-0" />
+                              <Icon as={Syringe} size="md" className="text-typography-500" />
+                            </>
+                          )}
+                          {stage.name === 'Spawn Colonization' && (
+                            <>
+                              <View className="ml-0" />
+                              <Icon as={Wheat} size="md" className="text-typography-500" />
+                            </>
+                          )}
+                          {stage.name === 'Bulk Colonization' && (
+                            <>
+                              <View className="ml-0" />
+                              <Icon as={Box} size="md" className="text-typography-500" />
+                            </>
+                          )}
+                          {stage.name === 'Fruiting' && (
+                            <>
+                              <View className="ml-0" />
+                              <MushroomIcon
+                                height={18}
+                                width={18}
+                                strokeWidth={2}
+                                color="#9ca3af"
+                              />
+                            </>
+                          )}
+                          {stage.name === 'Harvest' && (
+                            <>
+                              <View className="ml-0" />
+                              <Icon as={ShoppingBasket} size="md" className="text-typography-500" />
+                            </>
+                          )}
+                          {status === 'active' ? (
                             <Text className="text-lg font-semibold text-typography-700">
                               {stage.name}
                             </Text>
-                          </>
-                        )}
-                        {status !== 'active' && (
-                          <Text
-                            className={`text-lg ${status === 'pending' ? 'text-typography-700' : stage.color}`}>
-                            {stage.name}
-                          </Text>
-                        )}
-                        <View className="ml-auto">
-                          {getCostBadge(getBulkStageDataKey(stage.id))}
-                        </View>
-                        {getStatusBadge(stage.id)}
+                          ) : (
+                            <Text className={`text-lg ${stage.color}`}>{stage.name}</Text>
+                          )}
+                          <View className="ml-auto">
+                            {getCostBadge(getBulkStageDataKey(stage.id))}
+                          </View>
+                          {getStatusBadge(stage.id)}
+                        </HStack>
+                        <Icon
+                          as={expandedStages.includes(stage.id) ? ChevronDown : ChevronRight}
+                          size="md"
+                          className="ml-2 text-primary-600"
+                        />
+                      </Pressable>
+                    ) : (
+                      <HStack className="items-center justify-between">
+                        <HStack className="flex-1 items-center gap-2">
+                          {stage.name === 'Inoculation' && (
+                            <>
+                              <View className="ml-0.5" />
+                              <Icon as={Syringe} size="md" className="text-typography-500" />
+                            </>
+                          )}
+                          {stage.name === 'Spawn Colonization' && (
+                            <>
+                              <View className="ml-0.5" />
+                              <Icon as={Wheat} size="md" className="text-typography-500" />
+                            </>
+                          )}
+                          {stage.name === 'Bulk Colonization' && (
+                            <>
+                              <View className="ml-0.5" />
+                              <Icon as={Box} size="md" className="text-typography-500" />
+                            </>
+                          )}
+                          {stage.name === 'Fruiting' && (
+                            <>
+                              <View className="ml-0.5" />
+                              <MushroomIcon
+                                height={18}
+                                width={18}
+                                strokeWidth={2}
+                                color="#9ca3af"
+                              />
+                            </>
+                          )}
+                          {stage.name === 'Harvest' && (
+                            <>
+                              <View className="ml-0.5" />
+                              <Icon as={ShoppingBasket} size="md" className="text-typography-500" />
+                            </>
+                          )}
+                          <Text className="text-lg text-typography-700">{stage.name}</Text>
+                          <View className="ml-auto">
+                            {getCostBadge(getBulkStageDataKey(stage.id))}
+                          </View>
+                          {getStatusBadge(stage.id)}
+                        </HStack>
                       </HStack>
-                    </HStack>
+                    )}
 
                     {/* Count badges */}
                     <HStack space="xs" className="my-1 ml-3">
@@ -640,24 +821,10 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                     </HStack>
                   </VStack>
 
-                  {/* Expand/Collapse button and sub-section */}
+                  {/* Sub-section content */}
                   {(status !== 'pending' ||
                     (stage.id === 'inoculation' && currentStageIndex === -1)) && (
                     <VStack space="sm" className="mt-3">
-                      <Pressable
-                        onPress={() => toggleStageExpansion(stage.id)}
-                        className="flex-row items-center">
-                        <Text className="text-md ml-1 text-typography-600">
-                          {expandedStages.includes(stage.id) ? 'Hide' : 'Show'} Details
-                        </Text>
-                        <Icon
-                          as={expandedStages.includes(stage.id) ? ChevronDown : ChevronRight}
-                          size="sm"
-                          className="ml-1 text-primary-600"
-                        />
-                      </Pressable>
-
-                      {/* Render sub-sections */}
                       {expandedStages.includes(stage.id) && (
                         <View className="mt-0 rounded-lg  bg-background-0">
                           {stage.id === 'inoculation' && (

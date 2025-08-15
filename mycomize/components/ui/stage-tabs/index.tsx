@@ -19,18 +19,12 @@ import { IotControlsList } from '~/components/grow/IotControlsList';
 import { BulkStageData } from '~/lib/tekTypes';
 import { BulkGrowComplete, bulkGrowStages } from '~/lib/growTypes';
 import { IoTEntity, IoTGateway } from '~/lib/iot';
+import { IoTFilterPreferences, StageIoTData } from '~/lib/iotTypes';
 import { AuthContext } from '~/lib/AuthContext';
 import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
 
 type TabType = 'items' | 'conditions' | 'tasks' | 'notes' | 'iot';
-
-interface StageIoTData {
-  entities: IoTEntity[];
-  gateways: IoTGateway[];
-  entityStates: Record<string, string>;
-  loading: boolean;
-}
 
 interface StageTabsProps {
   stageData?: BulkStageData;
@@ -129,7 +123,7 @@ export const StageTabs: React.FC<StageTabsProps> = ({
   return (
     <VStack space="md">
       {/* Tab Buttons */}
-      <HStack space="xs" className="mb-2 justify-center">
+      <HStack space="xs" className="mb-1 justify-center">
         {tabs.map((tab) => (
           <Button
             key={tab.id}
@@ -179,6 +173,18 @@ export const StageTabs: React.FC<StageTabsProps> = ({
             gateways={stageIoTData.gateways}
             entityStates={stageIoTData.entityStates}
             loading={stageIoTData.loading}
+            grow={grow}
+            growId={grow.id}
+            stageName={stageName || 'unknown'}
+            linkableEntities={stageIoTData.linkableEntities || []}
+            onRefreshData={stageIoTData.onRefreshData || (() => {})}
+            filterPreferences={stageIoTData.filterPreferences}
+            showDomainFilters={stageIoTData.showDomainFilters}
+            showDeviceClassFilters={stageIoTData.showDeviceClassFilters}
+            onToggleShowDomainFilters={stageIoTData.onToggleShowDomainFilters}
+            onToggleShowDeviceClassFilters={stageIoTData.onToggleShowDeviceClassFilters}
+            onToggleDomainFilter={stageIoTData.onToggleDomainFilter}
+            onToggleDeviceClassFilter={stageIoTData.onToggleDeviceClassFilter}
           />
         )}
       </VStack>

@@ -1,5 +1,7 @@
 // Shared IoT-related types and interfaces
 
+import { IoTEntity, IoTGateway } from './iot';
+
 export interface ConnectionInfo {
   status: 'connected' | 'connecting' | 'disconnected' | 'unknown';
   version?: string;
@@ -61,4 +63,23 @@ export interface IoTFilterPreferences {
   showAllDomains: boolean;
   deviceClasses: string[];
   showAllDeviceClasses: boolean;
+}
+
+// Stage IoT data interface - used across all stage components
+export interface StageIoTData {
+  entities: IoTEntity[];
+  gateways: IoTGateway[];
+  entityStates: Record<string, string>;
+  loading: boolean;
+  linkableEntities?: IoTEntity[];
+  onRefreshData?: () => void;
+
+  // Filter preferences and handlers
+  filterPreferences: IoTFilterPreferences;
+  showDomainFilters: boolean;
+  showDeviceClassFilters: boolean;
+  onToggleShowDomainFilters: () => void;
+  onToggleShowDeviceClassFilters: () => void;
+  onToggleDomainFilter: (domain: string) => void;
+  onToggleDeviceClassFilter: (deviceClass: string) => void;
 }

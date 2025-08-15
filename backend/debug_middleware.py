@@ -22,8 +22,8 @@ class BulkAssignDebugMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         
     async def dispatch(self, request: Request, call_next):
-        # Only debug bulk-link requests
-        if "bulk-link" in str(request.url):
+        # Debug both individual link and bulk-link requests
+        if "/link" in str(request.url) and request.method in ["PUT", "DELETE"]:
             print("\n" + "="*80)
             print("BULK LINK DEBUG MIDDLEWARE")
             print("="*80)

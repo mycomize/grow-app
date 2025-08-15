@@ -11,14 +11,7 @@ import { FlushList } from '../FlushList';
 // Import tek types
 import { BulkGrowFlush } from '~/lib/growTypes';
 import { StageTabs } from '~/components/ui/stage-tabs';
-import { IoTEntity, IoTGateway } from '~/lib/iot';
-
-interface StageIoTData {
-  entities: IoTEntity[];
-  gateways: IoTGateway[];
-  entityStates: Record<string, string>;
-  loading: boolean;
-}
+import { StageIoTData } from '~/lib/iotTypes';
 
 interface HarvestSectionProps {
   flushes: BulkGrowFlush[];
@@ -68,7 +61,7 @@ export const HarvestSection: React.FC<HarvestSectionProps> = ({
       />
 
       {/* Harvest Flushes */}
-      <VStack space="lg" className="mt-4 border-t border-background-200 pt-4">
+      <VStack space="lg" className="mt-1 border-t border-background-200 pt-4">
         <FlushList flushes={flushes} onUpdateFlushes={onUpdateFlushes} />
 
         {/* Complete button */}

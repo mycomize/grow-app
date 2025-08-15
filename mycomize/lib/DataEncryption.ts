@@ -83,6 +83,17 @@ const MODEL_SPECIFIC_ALLOWLISTS = {
     'grow_id', // Foreign key for grow assignment
   ] as const,
 
+  EntityLinkingRequest: [
+    // Backend-generated fields for individual entity linking - foreign keys should remain unencrypted
+    'grow_id', // Foreign key for grow assignment
+  ] as const,
+
+  BulkEntityLinkingRequest: [
+    // Backend-generated fields for bulk entity linking - foreign keys should remain unencrypted
+    'entity_ids', // Array of foreign keys for entity assignments
+    'grow_id', // Foreign key for grow assignment
+  ] as const,
+
   BulkEntityCreateRequest: [
     // The entities field itself should remain as a list structure, but individual entities will be encrypted
     'entities',
@@ -128,6 +139,16 @@ export const ENCRYPTION_CONFIG = {
   IoTAssignmentRequest: {
     encryptionStrategy: 'encrypt_all_except_allowlist' as const,
     allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.IoTAssignmentRequest,
+  },
+
+  EntityLinkingRequest: {
+    encryptionStrategy: 'encrypt_all_except_allowlist' as const,
+    allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.EntityLinkingRequest,
+  },
+
+  BulkEntityLinkingRequest: {
+    encryptionStrategy: 'encrypt_all_except_allowlist' as const,
+    allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.BulkEntityLinkingRequest,
   },
 
   BulkEntityCreateRequest: {

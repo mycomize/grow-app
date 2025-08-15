@@ -30,6 +30,11 @@ interface IoTLinkingModalProps {
   grows: BulkGrow[];
   onAssign: (growId: number, stage: string) => void;
   onClose: () => void;
+
+  // NEW: Context-aware props
+  contextGrowId?: number;
+  contextStageName?: string;
+  contextMode?: boolean; // Skip grow/stage selection
 }
 
 const stages = [
@@ -48,6 +53,9 @@ export function IoTLinkingModal({
   grows,
   onAssign,
   onClose,
+  contextGrowId,
+  contextStageName,
+  contextMode = false,
 }: IoTLinkingModalProps) {
   const [selectedGrowId, setSelectedGrowId] = useState<string | null>(null);
   const [selectedStage, setSelectedStage] = useState<string | null>(null);
@@ -60,11 +68,18 @@ export function IoTLinkingModal({
   // Reset state when modal opens
   useEffect(() => {
     if (isVisible) {
-      setSelectedGrowId(null);
-      setSelectedStage(null);
-      setStep('grow');
+      if (contextMode && contextGrowId && contextStageName) {
+        // In context mode, auto-set the values and skip selection
+        setSelectedGrowId(contextGrowId.toString());
+        setSelectedStage(contextStageName);
+        setStep('stage'); // Skip to confirmation
+      } else {
+        setSelectedGrowId(null);
+        setSelectedStage(null);
+        setStep('grow');
+      }
     }
-  }, [isVisible]);
+  }, [isVisible, contextMode, contextGrowId, contextStageName]);
 
   const handleGrowSelect = (growId: string) => {
     setSelectedGrowId(growId);
@@ -104,21 +119,21 @@ export function IoTLinkingModal({
         </ModalHeader>
 
         <ModalBody>
-          <VStack space="lg">
+          <VStack space="sm">
             {/* Linking Summary */}
             <Card className="px-0">
               <VStack space="xs">
-                <Text className="font-semibold text-typography-600">
+                <Text className="font-semibold text-typography-500">
                   {mode === 'bulk'
                     ? selectedEntities.length > 1
                       ? `Linking ${selectedEntities.length} controls:`
                       : `Linking control:`
                     : 'Linking control:'}
                 </Text>
-                <ScrollView className="max-h-32">
+                <ScrollView className="max-h-44">
                   <VStack space="xs">
                     {selectedEntities.map((entityId) => (
-                      <Text key={entityId} className="ml-2 text-sm text-typography-500">
+                      <Text key={entityId} className="ml-2 text-sm text-typography-600">
                         • {entityNames[entityId] || entityId}
                       </Text>
                     ))}
@@ -127,41 +142,60 @@ export function IoTLinkingModal({
               </VStack>
             </Card>
 
-            {/* Progress Indicator */}
-            <HStack className="mb-3 items-center justify-center" space="md">
-              <HStack className="items-center" space="sm">
-                {step === 'stage' && selectedGrowId ? (
-                  <Text
-                    className="rounded-sm bg-success-300 px-2 py-1 text-center text-sm font-semibold text-typography-800"
-                    numberOfLines={1}>
-                    {grows.find((grow) => grow.id.toString() === selectedGrowId)?.name}
-                  </Text>
-                ) : (
-                  <Text
-                    className={`text-md ${step === 'grow' ? 'border-b-2 border-success-400 pb-0 font-semibold' : ''}`}>
-                    1. Select Grow
-                  </Text>
-                )}
+            {/* Progress Indicator or Context Confirmation */}
+            {contextMode && contextGrowId && contextStageName ? (
+              <Card className="bg-background-0 px-0">
+                <VStack space="xs">
+                  <Text className="font-semibold text-typography-500">Linking to:</Text>
+                  <HStack className="items-center justify-center" space="md">
+                    <Text className="rounded-sm bg-success-300 px-2 py-1 text-center text-sm font-semibold text-typography-800">
+                      {grows.find((grow) => Number(grow.id) === Number(contextGrowId))?.name ||
+                        'Unknown Grow'}
+                    </Text>
+                    <Icon as={MoveRight} className="text-success-600" />
+                    <Text className="rounded-sm bg-success-300 px-2 py-1 text-center text-sm font-semibold text-typography-800">
+                      {stages.find((stage) => stage.value === contextStageName)?.label ||
+                        contextStageName}
+                    </Text>
+                  </HStack>
+                </VStack>
+              </Card>
+            ) : (
+              <HStack className="mb-3 items-center justify-center" space="md">
+                <HStack className="items-center" space="sm">
+                  {step === 'stage' && selectedGrowId ? (
+                    <Text
+                      className="rounded-sm bg-success-300 px-2 py-1 text-center text-sm font-semibold text-typography-800"
+                      numberOfLines={1}>
+                      {grows.find((grow) => grow.id.toString() === selectedGrowId)?.name}
+                    </Text>
+                  ) : (
+                    <Text
+                      className={`text-md ${step === 'grow' ? 'border-b-2 border-success-400 pb-0 font-semibold' : ''}`}>
+                      1. Select Grow
+                    </Text>
+                  )}
+                </HStack>
+                <Icon as={MoveRight} className="text-typography-500" />
+                <HStack className="items-center" space="sm">
+                  {selectedStage ? (
+                    <Text
+                      className="rounded-sm bg-success-300 px-2 py-1 text-center text-sm font-semibold text-typography-800"
+                      numberOfLines={1}>
+                      {stages.find((stage) => stage.value === selectedStage)?.label}
+                    </Text>
+                  ) : (
+                    <Text
+                      className={`text-md ${step === 'stage' ? 'border-b-2 border-success-500 pb-0 font-semibold' : ''}`}>
+                      2. Select Stage
+                    </Text>
+                  )}
+                </HStack>
               </HStack>
-              <Icon as={MoveRight} className="text-typography-500" />
-              <HStack className="items-center" space="sm">
-                {selectedStage ? (
-                  <Text
-                    className="rounded-sm bg-success-300 px-2 py-1 text-center text-sm font-semibold text-typography-800"
-                    numberOfLines={1}>
-                    {stages.find((stage) => stage.value === selectedStage)?.label}
-                  </Text>
-                ) : (
-                  <Text
-                    className={`text-md ${step === 'stage' ? 'border-b-2 border-success-500 pb-0 font-semibold' : ''}`}>
-                    2. Select Stage
-                  </Text>
-                )}
-              </HStack>
-            </HStack>
+            )}
 
-            {/* Grow Selection */}
-            {step === 'grow' && (
+            {/* Grow Selection - Hide in context mode */}
+            {step === 'grow' && !contextMode && (
               <VStack space="md">
                 <Text className="font-semibold text-typography-600">Select a Grow</Text>
                 {grows.length === 0 ? (
@@ -241,35 +275,54 @@ export function IoTLinkingModal({
 
         <ModalFooter>
           <HStack className="w-full justify-between">
-            <Button
-              variant="outline"
-              action="secondary"
-              onPress={step === 'grow' ? onClose : handleBack}>
-              <ButtonText>{step === 'grow' ? 'Cancel' : 'Back'}</ButtonText>
-            </Button>
-
-            {step === 'grow' ? (
-              grows.length === 0 ? (
-                <Button variant="solid" action="primary" onPress={onClose}>
-                  <ButtonText>Close</ButtonText>
+            {contextMode ? (
+              // Context mode - Simple Cancel/Link buttons
+              <>
+                <Button variant="outline" action="secondary" onPress={onClose}>
+                  <ButtonText>Cancel</ButtonText>
                 </Button>
-              ) : (
                 <Button
                   variant="solid"
                   action="positive"
-                  onPress={() => selectedGrowId && setStep('stage')}
-                  disabled={!selectedGrowId}>
-                  <ButtonText className="text-typography-900">Next</ButtonText>
+                  onPress={handleAssign}
+                  disabled={!selectedGrowId || !selectedStage}>
+                  <ButtonText className="text-typography-900">Link</ButtonText>
                 </Button>
-              )
+              </>
             ) : (
-              <Button
-                variant="solid"
-                action="positive"
-                onPress={handleAssign}
-                disabled={!selectedStage}>
-                <ButtonText className="text-typography-900">Link</ButtonText>
-              </Button>
+              // Normal mode - Step-by-step navigation
+              <>
+                <Button
+                  variant="outline"
+                  action="secondary"
+                  onPress={step === 'grow' ? onClose : handleBack}>
+                  <ButtonText>{step === 'grow' ? 'Cancel' : 'Back'}</ButtonText>
+                </Button>
+
+                {step === 'grow' ? (
+                  grows.length === 0 ? (
+                    <Button variant="solid" action="primary" onPress={onClose}>
+                      <ButtonText>Close</ButtonText>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="solid"
+                      action="positive"
+                      onPress={() => selectedGrowId && setStep('stage')}
+                      disabled={!selectedGrowId}>
+                      <ButtonText className="text-typography-900">Next</ButtonText>
+                    </Button>
+                  )
+                ) : (
+                  <Button
+                    variant="solid"
+                    action="positive"
+                    onPress={handleAssign}
+                    disabled={!selectedStage}>
+                    <ButtonText className="text-typography-900">Link</ButtonText>
+                  </Button>
+                )}
+              </>
             )}
           </HStack>
         </ModalFooter>

@@ -13,7 +13,7 @@ from .routers.tek import router as tek_router
 app = FastAPI(title="Mycomize Grow API")
 
 # Conditionally add debug middleware for bulk-assign endpoint
-if os.getenv("DEBUG_BULK_ASSIGN", "false").lower() == "true":
+if os.getenv("DEBUG_BULK_ASSIGN", "false").lower() == "true" or os.getenv("DEBUG_BULK_LINK", "false").lower() == "true":
     from .debug_middleware import BulkAssignDebugMiddleware
     app.add_middleware(BulkAssignDebugMiddleware)
     print("DEBUG: BulkAssignDebugMiddleware enabled")
