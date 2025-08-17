@@ -22,6 +22,11 @@ export default function NewGrowScreen() {
         isDeleting={false}
         activeDatePicker={null}
         growId="new"
+        // IoT props (empty during loading)
+        linkedEntities={[]}
+        gateways={[]}
+        entityStates={{}}
+        iotLoading={true}
         onUpdateField={() => {}}
         onAddFlush={() => {}}
         onUpdateFlush={() => {}}
@@ -32,6 +37,7 @@ export default function NewGrowScreen() {
         onShowDeleteModal={() => {}}
         onDeleteGrow={() => {}}
         onSaveGrow={() => {}}
+        onUpdateEntityState={() => {}}
         saveButtonText="Creating..."
       />
     );
@@ -47,6 +53,11 @@ export default function NewGrowScreen() {
       isDeleting={formLogic.isDeleting}
       activeDatePicker={formLogic.activeDatePicker}
       growId="new"
+      // IoT props
+      linkedEntities={formLogic.linkedEntities}
+      gateways={formLogic.gateways}
+      entityStates={formLogic.entityStates}
+      iotLoading={formLogic.iotLoading}
       onUpdateField={formLogic.updateField}
       onAddFlush={formLogic.addFlush}
       onUpdateFlush={formLogic.updateFlush}
@@ -57,6 +68,7 @@ export default function NewGrowScreen() {
       onShowDeleteModal={formLogic.setShowDeleteModal}
       onDeleteGrow={formLogic.deleteGrow}
       onSaveGrow={formLogic.saveGrow}
+      onUpdateEntityState={formLogic.updateEntityState}
       saveButtonText="Save Grow"
     />
   );

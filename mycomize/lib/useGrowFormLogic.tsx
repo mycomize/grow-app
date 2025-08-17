@@ -6,6 +6,7 @@ import { useUnifiedToast } from '~/components/ui/unified-toast';
 import { AuthContext } from '~/lib/AuthContext';
 import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { BulkGrow, BulkGrowFlush } from '~/lib/growTypes';
+import { IoTEntity, IoTGateway, HAEntity } from '~/lib/iot';
 
 type GrowData = BulkGrow;
 
@@ -73,6 +74,12 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeDatePicker, setActiveDatePicker] = useState<string | null>(null);
+
+  // IoT data state
+  const [linkedEntities, setLinkedEntities] = useState<IoTEntity[]>([]);
+  const [gateways, setGateways] = useState<IoTGateway[]>([]);
+  const [entityStates, setEntityStates] = useState<Record<string, HAEntity>>({});
+  const [iotLoading, setIotLoading] = useState(false);
 
   // Update grow data when initialData changes
   useEffect(() => {
@@ -168,6 +175,47 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
     fetchGrow();
   }, [growId, fromTek, token, router]);
 
+  // Fetch IoT data when grow data is available and growId exists
+  useEffect(() => {
+    const fetchIoTData = async () => {
+      if (!growId || growId === 'new') {
+        // For new grows, just fetch gateways
+        setIotLoading(true);
+        const gatewayData = await fetchGateways();
+        setGateways(gatewayData);
+        setIotLoading(false);
+        return;
+      }
+
+      setIotLoading(true);
+
+      const [entities, gatewayData] = await Promise.all([
+        fetchLinkedEntities(growId),
+        fetchGateways(),
+      ]);
+
+      setLinkedEntities(entities);
+      setGateways(gatewayData);
+
+      if (entities.length > 0 && gatewayData.length > 0) {
+        const gatewayMap = gatewayData.reduce(
+          (acc, gateway) => {
+            acc[gateway.id] = gateway;
+            return acc;
+          },
+          {} as Record<number, IoTGateway>
+        );
+
+        const states = await fetchEntityStates(entities, gatewayMap);
+        setEntityStates(states);
+      }
+
+      setIotLoading(false);
+    };
+
+    fetchIoTData();
+  }, [growId, token, router]);
+
   // Utility functions for date handling
   const parseDate = (dateString?: string): Date | null => {
     if (!dateString) return null;
@@ -233,6 +281,97 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
   const removeFlush = (id: string) => {
     const numericId = parseInt(id);
     setFlushes((prev) => prev.filter((flush) => flush.id !== numericId));
+  };
+
+  // IoT data fetching functions
+  const fetchLinkedEntities = async (currentGrowId: string) => {
+    if (!token || !currentGrowId || currentGrowId === 'new') return [];
+
+    try {
+      // Fetch the grow data which includes linked IoT entities via joinedload
+      const growWithIoT = await apiClient.getBulkGrow(currentGrowId, token);
+      return growWithIoT.iot_entities || [];
+    } catch (error) {
+      if (isUnauthorizedError(error as Error)) {
+        router.replace('/login');
+        return [];
+      }
+      console.error('Error fetching linked entities:', error);
+      return [];
+    }
+  };
+
+  const fetchGateways = async () => {
+    if (!token) return [];
+
+    try {
+      const gatewayData: IoTGateway[] = await apiClient.get(
+        '/iot-gateways/',
+        token,
+        'IoTGateway',
+        true
+      );
+      return gatewayData.map((gateway) => ({
+        ...gateway,
+        created_at: new Date(gateway.created_at),
+      }));
+    } catch (error) {
+      if (isUnauthorizedError(error as Error)) {
+        router.replace('/login');
+        return [];
+      }
+      console.error('Error fetching gateways:', error);
+      return [];
+    }
+  };
+
+  const fetchEntityStates = async (
+    entities: IoTEntity[],
+    gatewayMap: Record<number, IoTGateway>
+  ) => {
+    const statePromises = entities.map(async (entity) => {
+      const gateway = gatewayMap[entity.gateway_id];
+      if (!gateway) return null;
+
+      try {
+        const response = await fetch(`${gateway.api_url}/api/states/${entity.entity_name}`, {
+          headers: {
+            Authorization: `Bearer ${gateway.api_key}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const state: HAEntity = await response.json();
+          return { entityName: entity.entity_name, state };
+        }
+      } catch (error) {
+        console.error(`Error fetching state for ${entity.entity_name}:`, error);
+      }
+      return null;
+    });
+
+    const results = await Promise.all(statePromises);
+    const statesMap: Record<string, HAEntity> = {};
+
+    results.forEach((result) => {
+      if (result) {
+        statesMap[result.entityName] = result.state;
+      }
+    });
+
+    return statesMap;
+  };
+
+  // Update entity state after control action
+  const updateEntityState = (entityId: string, newState: string) => {
+    setEntityStates((prev) => ({
+      ...prev,
+      [entityId]: {
+        ...prev[entityId],
+        state: newState,
+      },
+    }));
   };
 
   // Calculate total cost from stages data
@@ -365,6 +504,12 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
     setGrowData,
     flushes,
 
+    // IoT Data
+    linkedEntities,
+    gateways,
+    entityStates,
+    iotLoading,
+
     // State
     isLoading,
     isSaving,
@@ -384,5 +529,6 @@ export function useGrowFormLogic({ initialData, growId, fromTek }: UseGrowFormLo
     removeFlush,
     deleteGrow,
     saveGrow,
+    updateEntityState,
   };
 }

@@ -24,6 +24,7 @@ import MushroomIcon from '~/components/icons/MushroomIcon';
 import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
 
 import { BulkGrow, BulkGrowFlush } from '~/lib/growTypes';
+import { IoTEntity, IoTGateway, HAEntity } from '~/lib/iot';
 
 // Import modular sections
 import { BasicsSection } from '~/components/grow/sections/BasicsSection';
@@ -39,6 +40,13 @@ interface GrowFormProps {
   isDeleting: boolean;
   activeDatePicker: string | null;
   growId?: string;
+
+  // IoT props
+  linkedEntities: IoTEntity[];
+  gateways: IoTGateway[];
+  entityStates: Record<string, HAEntity>;
+  iotLoading: boolean;
+
   onUpdateField: (field: keyof BulkGrow, value: any) => void;
   onAddFlush: () => void;
   onUpdateFlush: (id: string, data: any) => void;
@@ -49,6 +57,7 @@ interface GrowFormProps {
   onShowDeleteModal: (show: boolean) => void;
   onDeleteGrow: () => void;
   onSaveGrow: () => void;
+  onUpdateEntityState: (entityId: string, newState: string) => void;
   saveButtonText?: string;
 }
 
@@ -61,6 +70,13 @@ export function GrowForm({
   isDeleting,
   activeDatePicker,
   growId,
+
+  // IoT props
+  linkedEntities,
+  gateways,
+  entityStates,
+  iotLoading,
+
   onUpdateField,
   onAddFlush,
   onUpdateFlush,
@@ -71,6 +87,7 @@ export function GrowForm({
   onShowDeleteModal,
   onDeleteGrow,
   onSaveGrow,
+  onUpdateEntityState,
   saveButtonText = 'Save',
 }: GrowFormProps) {
   const router = useRouter();
@@ -162,7 +179,14 @@ export function GrowForm({
                 </AccordionTrigger>
               </AccordionHeader>
               <AccordionContent>
-                <IoTGatewaySection growId={growId ? parseInt(growId) : undefined} />
+                <IoTGatewaySection
+                  growId={growId ? parseInt(growId) : undefined}
+                  linkedEntities={linkedEntities}
+                  gateways={gateways}
+                  entityStates={entityStates}
+                  iotLoading={iotLoading}
+                  onEntityStateUpdate={onUpdateEntityState}
+                />
               </AccordionContent>
             </AccordionItem>
           </Accordion>

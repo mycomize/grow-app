@@ -34,6 +34,11 @@ export default function GrowEditScreen() {
       isDeleting={formLogic.isDeleting}
       activeDatePicker={formLogic.activeDatePicker}
       growId={id as string}
+      // IoT props
+      linkedEntities={formLogic.linkedEntities}
+      gateways={formLogic.gateways}
+      entityStates={formLogic.entityStates}
+      iotLoading={formLogic.iotLoading}
       onUpdateField={formLogic.updateField}
       onAddFlush={formLogic.addFlush}
       onUpdateFlush={formLogic.updateFlush}
@@ -44,6 +49,7 @@ export default function GrowEditScreen() {
       onShowDeleteModal={formLogic.setShowDeleteModal}
       onDeleteGrow={formLogic.deleteGrow}
       onSaveGrow={formLogic.saveGrow}
+      onUpdateEntityState={formLogic.updateEntityState}
       saveButtonText="Save"
     />
   );
