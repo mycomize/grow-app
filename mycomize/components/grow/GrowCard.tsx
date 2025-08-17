@@ -214,7 +214,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
       <VStack className="p-2">
         <View>
           {/* First row: Grow name and strain */}
-          <HStack className="mb-0.5 items-center justify-between">
+          <HStack className="mb-2 items-center justify-between">
             <Text
               className="flex-1 text-lg font-bold text-typography-700"
               numberOfLines={1}
@@ -245,7 +245,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
             <HStack className="mb-5 items-center">
               {grow.location && (
                 <>
-                  <Icon as={MapPin} className="mr-1 text-typography-500" />
+                  <Icon as={MapPin} className="mr-1 text-typography-400" />
                   <Text
                     className="text-md text-typography-500"
                     numberOfLines={1}
@@ -410,7 +410,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
 
           {/* Last row: Grow tags */}
           {Array.isArray(grow.tags) && grow.tags.length > 0 && (
-            <VStack className="mb-4" space="xs">
+            <VStack className="mb-1" space="xs">
               <HStack space="xs" className="flex-wrap">
                 {grow.tags.slice(0, 3).map((tag, index) => (
                   <Pressable

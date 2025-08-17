@@ -149,19 +149,15 @@ const IoTGatewayCard: React.FC<IoTGatewayCardProps> = ({
               </HStack>
             </HStack>
 
-            {gateway.description && (
-              <Text className="mb-2 text-sm text-typography-600">{gateway.description}</Text>
-            )}
-
             <HStack className="mb-1 mt-1">
-              <Text className="text-base">API URL</Text>
-              <Text className="ml-auto text-sm" numberOfLines={1} ellipsizeMode="middle">
+              <Text className="text-typography-600">API URL</Text>
+              <Text className="text-md ml-auto" numberOfLines={1} ellipsizeMode="middle">
                 {gateway.api_url || 'No URL set'}
               </Text>
             </HStack>
 
             <HStack className="mb-1 mt-1 items-center">
-              <Text className="text-base">Link Status</Text>
+              <Text className="text-typography-600">Link Status</Text>
               <HStack className="ml-auto items-center" space="xs">
                 <InfoBadge {...getConnectionBadgeProps(connectionStatus)} />
                 {latency !== undefined && connectionStatus === 'connected' && (
@@ -171,7 +167,7 @@ const IoTGatewayCard: React.FC<IoTGatewayCardProps> = ({
             </HStack>
 
             <HStack className="mb-1 mt-1 items-center">
-              <Text className="text-base">IoT Controls</Text>
+              <Text className="text-typography-600">IoT Controls</Text>
               <InfoBadge
                 text={`${gateway.linked_entities_count || 0} LINKED`}
                 variant="default"

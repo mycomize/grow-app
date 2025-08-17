@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
-import { Card } from '~/components/ui/card';
 import { Icon } from '~/components/ui/icon';
 import { Switch } from '~/components/ui/switch';
 import { Input, InputField, InputSlot } from '~/components/ui/input';
@@ -13,7 +12,6 @@ import { getSwitchColors } from '~/lib/switchUtils';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import {
   ListX,
-  WifiOff,
   Activity,
   Bot,
   Calculator,

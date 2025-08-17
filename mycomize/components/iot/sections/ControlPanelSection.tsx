@@ -521,7 +521,7 @@ export function ControlPanelSection({
                     )
                   ).map(([domain, domainEntities]) => (
                     <VStack key={domain} space="xs">
-                      <HStack className="mt-2 items-center">
+                      <HStack className="items-center">
                         <Text className="text-md capitalize text-typography-500">{domain}</Text>
                       </HStack>
 
