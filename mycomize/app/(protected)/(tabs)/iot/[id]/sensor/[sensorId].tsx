@@ -65,24 +65,21 @@ export default function SensorDetailScreen() {
       const gatewayData: IoTGateway = await apiClient.getIoTGateway(id as string, token!);
       setGateway({
         ...gatewayData,
-        created_at: new Date(gatewayData.created_at),
       });
 
       // Fetch current sensor state from Home Assistant
-      if (gatewayData.is_active) {
-        const stateResponse = await fetch(`${gatewayData.api_url}/api/states/${sensorId}`, {
-          headers: {
-            Authorization: `Bearer ${gatewayData.api_key}`,
-            'Content-Type': 'application/json',
-          },
-        });
+      const stateResponse = await fetch(`${gatewayData.api_url}/api/states/${sensorId}`, {
+        headers: {
+          Authorization: `Bearer ${gatewayData.api_key}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-        if (stateResponse.ok) {
-          const stateData: HAEntity = await stateResponse.json();
-          setSensorState(stateData);
-        } else {
-          throw new Error('Failed to fetch sensor state');
-        }
+      if (stateResponse.ok) {
+        const stateData: HAEntity = await stateResponse.json();
+        setSensorState(stateData);
+      } else {
+        throw new Error('Failed to fetch sensor state');
       }
     } catch (err) {
       if (isUnauthorizedError(err as Error)) {

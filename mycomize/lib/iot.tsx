@@ -5,7 +5,6 @@ export interface IoTGateway {
   description?: string;
   api_url: string;
   api_key: string;
-  created_at: Date;
   iot_entities_count?: number;
   linked_entities_count?: number | string; // Can be number (parsed) or string (encrypted from API)
   linkable_entities_count?: number | string; // Can be number (parsed) or string (encrypted from API)

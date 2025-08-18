@@ -241,7 +241,6 @@ export default function IoTScreen() {
 
         return {
           ...gateway,
-          created_at: new Date(gateway.created_at),
           linked_entities_count: linkedCount,
           linkable_entities_count: linkableCount,
         };
@@ -380,8 +379,6 @@ export default function IoTScreen() {
           return (a.name || '').localeCompare(b.name || '');
         case 'type':
           return (a.type || '').localeCompare(b.type || '');
-        case 'created_at':
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); // Most recent first
         case 'status':
           const statusA = 'active'; // Gateways are always active if they exist
           const statusB = 'active'; // Gateways are always active if they exist
@@ -550,7 +547,6 @@ export default function IoTScreen() {
                 {[
                   { value: 'name', label: 'Name' },
                   { value: 'type', label: 'Type' },
-                  { value: 'created_at', label: 'Created Date' },
                   { value: 'status', label: 'Status' },
                 ].map((option) => (
                   <Pressable

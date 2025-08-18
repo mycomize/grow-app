@@ -60,7 +60,6 @@ const MODEL_SPECIFIC_ALLOWLISTS = {
     // Backend-generated fields present in IoTGateway model
     'id',
     'user_id',
-    'created_at',
     // SQLAlchemy relationships present in IoTGateway model
     'user',
     'entities',
@@ -71,7 +70,6 @@ const MODEL_SPECIFIC_ALLOWLISTS = {
     'id',
     'gateway_id',
     'linked_grow_id',
-    'created_at',
     // SQLAlchemy relationships present in IoTEntity model
     'gateway',
     'linked_grow',

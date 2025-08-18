@@ -76,7 +76,6 @@ export function useHAGatewayOperations(appAuthToken: string | null) {
         if (setGateway) {
           setGateway({
             ...savedGateway,
-            created_at: new Date(savedGateway.created_at),
           });
         }
         showSuccess('IoT Gateway saved successfully');

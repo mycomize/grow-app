@@ -60,7 +60,6 @@ export const useGrowGateways = (iotEntities: IoTEntity[]): UseGrowGatewaysResult
             );
             return {
               ...gateway,
-              created_at: new Date(gateway.created_at),
             };
           } catch (err) {
             console.error(`Failed to fetch gateway ${gatewayId}:`, err);

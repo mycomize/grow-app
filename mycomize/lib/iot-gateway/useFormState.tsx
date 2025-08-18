@@ -48,7 +48,6 @@ export function useFormState(initialGateway?: IoTGateway) {
   const initializeFormFromGateway = (gatewayData: IoTGateway) => {
     setGateway({
       ...gatewayData,
-      created_at: new Date(gatewayData.created_at),
     });
 
     setFormData({

@@ -16,7 +16,6 @@ class IoTGateway(Base):
     # Backend generated fields are unencrypted
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.now, nullable=False)
 
     # All user data fields encrypted
     name = Column(Text, nullable=False)
