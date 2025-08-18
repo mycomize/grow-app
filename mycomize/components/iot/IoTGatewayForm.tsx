@@ -1,3 +1,4 @@
+import { useState, useEffect, useContext, useCallback } from 'react';
 import { ScrollView } from '~/components/ui/scroll-view';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
@@ -15,93 +16,162 @@ import { Save, ChevronDown, ChevronRight, FileText, ServerCog, Trash2 } from 'lu
 import { useRouter } from 'expo-router';
 import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
 
-import { IoTGateway, IoTGatewayUpdate, IoTEntity, HAEntity } from '~/lib/iot';
-import { IoTFilterPreferences, ConnectionInfo } from '~/lib/iotTypes';
-import { BulkGrow } from '~/lib/growTypes';
+import {
+  useGatewayStore,
+  useGatewayById,
+  useCurrentGatewayFormData,
+  useInitializeCurrentGateway,
+  useClearCurrentGateway,
+} from '~/lib/stores/iot/gatewayStore';
+import { useEntityStore } from '~/lib/stores/iot/entityStore';
+import { AuthContext } from '~/lib/AuthContext';
 
 // Import modular sections
 import { BasicsSection } from '~/components/iot/sections/BasicsSection';
 import { ControlPanelSection } from '~/components/iot/sections/ControlPanelSection';
 
 interface IoTGatewayFormProps {
-  gateway: IoTGateway | null;
-  formData: IoTGatewayUpdate;
-  isEditing: boolean;
-  isDeleting: boolean;
-  isSaving: boolean;
-  showDeleteModal: boolean;
-  showApiKey: boolean;
-  keyboardVisible: boolean;
-  gatewayId?: string;
-
-  // Connection state
-  connectionInfo: ConnectionInfo;
-  isTestingConnection: boolean;
-
-  // Control panel state
-  linkedEntities: IoTEntity[];
-  linkableEntities: IoTEntity[];
-  filterPreferences: IoTFilterPreferences;
-  showDomainFilters: boolean;
-  showDeviceClassFilters: boolean;
-  grows: BulkGrow[];
-
+  gatewayId: string;
   saveButtonText?: string;
-
-  // Event handlers
-  onUpdateFormField: (field: keyof IoTGatewayUpdate, value: any) => void;
-  onToggleApiKeyVisibility: () => void;
-  onTestConnection: () => void;
-  onFilterEnabledChange: (enabled: boolean) => void;
-  onToggleShowDomainFilters: () => void;
-  onToggleShowDeviceClassFilters: () => void;
-  onToggleDomainFilter: (domain: string) => void;
-  onToggleDeviceClassFilter: (deviceClass: string) => void;
-  onToggleShowAllDeviceClasses: () => void;
-  onBulkLink: (entityIds: string[], growId: number, stage: string) => void;
-  onIndividualLink: (entityId: string, growId: number, stage: string) => void;
-  onBulkUnlink: (entityIds: string[]) => void;
-  onIndividualUnlink: (entityId: string) => void;
-  onShowDeleteModal: (show: boolean) => void;
-  onDeleteGateway: () => void;
-  onSaveGateway: () => void;
 }
 
-export function IoTGatewayForm({
-  gateway,
-  formData,
-  isEditing,
-  isSaving,
-  isDeleting,
-  showDeleteModal,
-  showApiKey,
-  keyboardVisible,
-  gatewayId,
-  connectionInfo,
-  isTestingConnection,
-  linkedEntities,
-  linkableEntities,
-  filterPreferences,
-  showDomainFilters,
-  showDeviceClassFilters,
-  grows,
-  onUpdateFormField,
-  onToggleApiKeyVisibility,
-  onTestConnection,
-  onToggleShowDomainFilters,
-  onToggleShowDeviceClassFilters,
-  onToggleDomainFilter,
-  onToggleDeviceClassFilter,
-  onBulkLink,
-  onIndividualLink,
-  onBulkUnlink,
-  onIndividualUnlink,
-  onShowDeleteModal,
-  onDeleteGateway,
-  onSaveGateway,
-  saveButtonText = 'Save',
-}: IoTGatewayFormProps) {
+export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewayFormProps) {
+  const { token } = useContext(AuthContext);
   const router = useRouter();
+
+  // Zustand store hooks
+  const gateway = useGatewayById(gatewayId === 'new' ? '' : gatewayId);
+  const currentGatewayFormData = useCurrentGatewayFormData();
+  const initializeCurrentGateway = useInitializeCurrentGateway();
+  const clearCurrentGateway = useClearCurrentGateway();
+  const { createGateway, updateGateway, deleteGateway: deleteGatewayAction } = useGatewayStore();
+
+  const {
+    fetchHaEntities,
+    fetchIotEntities,
+    fetchGrows,
+    syncIotEntities,
+    computeAndSetEntityLists,
+  } = useEntityStore();
+
+  // Local UI state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  // Initialize current gateway when component mounts
+  useEffect(() => {
+    initializeCurrentGateway(gatewayId);
+
+    // Cleanup when component unmounts or gatewayId changes
+    return () => {
+      // Don't clear on unmount, only on navigation away (handled separately)
+    };
+  }, [gatewayId, initializeCurrentGateway]);
+
+  // Fetch entities and grows when gateway is available
+  useEffect(() => {
+    const initializeGatewayData = async () => {
+      if (gateway && token) {
+        // Fetch both HA and IoT entities, then compute entity lists once
+        const promises = [];
+
+        // Fetch HA entities if credentials available
+        if (gateway.api_url && gateway.api_key) {
+          promises.push(fetchHaEntities(gateway));
+        }
+
+        // Fetch IoT entities from database
+        promises.push(fetchIotEntities(token, gateway.id.toString()));
+
+        // Wait for both to complete
+        await Promise.all(promises);
+
+        // Now compute entity lists once after both are loaded
+        computeAndSetEntityLists(false);
+      }
+
+      // Always fetch grows for linking
+      if (token) {
+        fetchGrows(token);
+      }
+    };
+
+    initializeGatewayData();
+  }, [gateway, token, fetchHaEntities, fetchIotEntities, fetchGrows, computeAndSetEntityLists]);
+
+  // Save gateway handler
+  const handleSaveGateway = useCallback(async () => {
+    if (!token || !currentGatewayFormData) return;
+
+    setIsSaving(true);
+    try {
+      if (gatewayId === 'new') {
+        // Create new gateway - ensure all required fields are present
+        const gatewayData = {
+          name: currentGatewayFormData.name || 'New Gateway',
+          type: currentGatewayFormData.type || 'home_assistant',
+          description: currentGatewayFormData.description || '',
+          api_url: currentGatewayFormData.api_url || '',
+          api_key: currentGatewayFormData.api_key || '',
+        };
+        const success = await createGateway(token, gatewayData);
+        if (success) {
+          clearCurrentGateway();
+          router.back();
+        }
+      } else if (gateway) {
+        // Update existing gateway
+        const success = await updateGateway(token, gateway.id.toString(), currentGatewayFormData);
+        if (success) {
+          // Sync entities after successful gateway save
+          const updatedGateway = { ...gateway, ...currentGatewayFormData };
+          await syncIotEntities(token, updatedGateway);
+          clearCurrentGateway();
+          router.back();
+        }
+      }
+    } catch (error) {
+      console.error('Failed to save gateway:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [
+    gateway,
+    gatewayId,
+    token,
+    currentGatewayFormData,
+    createGateway,
+    updateGateway,
+    syncIotEntities,
+    clearCurrentGateway,
+    router,
+  ]);
+
+  // Delete gateway handler
+  const handleDeleteGateway = useCallback(async () => {
+    if (!gateway || !token) return;
+
+    setIsDeleting(true);
+    try {
+      const success = await deleteGatewayAction(token, gateway.id.toString());
+      if (success) {
+        clearCurrentGateway();
+        router.back();
+      }
+    } catch (error) {
+      console.error('Failed to delete gateway:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [gateway, token, deleteGatewayAction, clearCurrentGateway, router]);
+
+  // Cancel handler
+  const handleCancel = useCallback(() => {
+    clearCurrentGateway();
+    router.replace('/iot');
+  }, [clearCurrentGateway, router]);
 
   return (
     <VStack className="flex-1 bg-background-50">
@@ -129,21 +199,11 @@ export function IoTGatewayForm({
                 </AccordionTrigger>
               </AccordionHeader>
               <AccordionContent>
-                <BasicsSection
-                  gateway={gateway}
-                  formData={formData}
-                  isEditing={isEditing}
-                  showApiKey={showApiKey}
-                  connectionInfo={connectionInfo}
-                  isTestingConnection={isTestingConnection}
-                  onUpdateField={onUpdateFormField}
-                  onToggleApiKeyVisibility={onToggleApiKeyVisibility}
-                  onTestConnection={onTestConnection}
-                />
+                <BasicsSection />
               </AccordionContent>
             </AccordionItem>
 
-            {/* Control Panel Section */}
+            {/* Control Panel Section  */}
             <AccordionItem value="control-panel" className="rounded-md bg-background-0">
               <AccordionHeader>
                 <AccordionTrigger>
@@ -163,24 +223,7 @@ export function IoTGatewayForm({
                 </AccordionTrigger>
               </AccordionHeader>
               <AccordionContent>
-                <ControlPanelSection
-                  gateway={gateway}
-                  connectionStatus={connectionInfo.status}
-                  linkedEntities={linkedEntities}
-                  linkableEntities={linkableEntities}
-                  filterPreferences={filterPreferences}
-                  showDomainFilters={showDomainFilters}
-                  showDeviceClassFilters={showDeviceClassFilters}
-                  grows={grows}
-                  onToggleShowDomainFilters={onToggleShowDomainFilters}
-                  onToggleShowDeviceClassFilters={onToggleShowDeviceClassFilters}
-                  onToggleDomainFilter={onToggleDomainFilter}
-                  onToggleDeviceClassFilter={onToggleDeviceClassFilter}
-                  onBulkLink={onBulkLink}
-                  onIndividualLink={onIndividualLink}
-                  onBulkUnlink={onBulkUnlink}
-                  onIndividualUnlink={onIndividualUnlink}
-                />
+                <ControlPanelSection gatewayId={gatewayId} />
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -193,7 +236,7 @@ export function IoTGatewayForm({
           <Button
             variant="outline"
             className="h-12 flex-1 border border-outline-300"
-            onPress={() => router.replace('/iot')}>
+            onPress={handleCancel}>
             <ButtonText>Cancel</ButtonText>
           </Button>
 
@@ -202,7 +245,7 @@ export function IoTGatewayForm({
             <Button
               variant="solid"
               action="negative"
-              onPress={() => onShowDeleteModal(true)}
+              onPress={() => setShowDeleteModal(true)}
               isDisabled={isDeleting}
               className="h-12 flex-1">
               <ButtonIcon as={Trash2} className="text-white" />
@@ -214,7 +257,7 @@ export function IoTGatewayForm({
           <Button
             variant="solid"
             action="positive"
-            onPress={onSaveGateway}
+            onPress={handleSaveGateway}
             isDisabled={isSaving}
             className="h-12 flex-1">
             <ButtonIcon as={Save} className="text-white" />
@@ -228,8 +271,8 @@ export function IoTGatewayForm({
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         isOpen={showDeleteModal}
-        onClose={() => onShowDeleteModal(false)}
-        onConfirm={onDeleteGateway}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteGateway}
         title="Delete IoT Gateway"
         message="Are you sure you want to delete this IoT Gateway? This action cannot be undone."
         isDeleting={isDeleting}

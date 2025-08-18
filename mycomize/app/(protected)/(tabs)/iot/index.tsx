@@ -5,7 +5,6 @@ import { Text } from '~/components/ui/text';
 import { VStack } from '~/components/ui/vstack';
 import { Card } from '~/components/ui/card';
 import { Heading } from '~/components/ui/heading';
-import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { HStack } from '~/components/ui/hstack';
 import { Icon } from '~/components/ui/icon';
 import { Input, InputField, InputIcon } from '~/components/ui/input';
@@ -48,6 +47,7 @@ import { IoTGatewayCardSkeleton } from '~/components/iot/IoTGatewayCardSkeleton'
 import { ConnectionStatus } from '~/components/ui/connection-status-badge';
 import { InfoBadge, InfoBadgeVariant } from '~/components/ui/info-badge';
 import { CountBadge } from '~/components/ui/count-badge';
+import { useGateways, useGatewayLoading, useGatewayStore } from '~/lib/stores/iot/gatewayStore';
 
 interface AddIoTGatewayButtonProps {
   title: string;
@@ -200,8 +200,15 @@ const IoTGatewayCard: React.FC<IoTGatewayCardProps> = ({
 export default function IoTScreen() {
   const { token } = useContext(AuthContext);
   const router = useRouter();
-  const [gateways, setGateways] = useState<IoTGateway[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+
+  // Use Zustand store hooks
+  const gateways = useGateways();
+  const loading = useGatewayLoading();
+  const { fetchGateways, deleteGateway, checkAllConnections } = useGatewayStore();
+  const connectionStatuses = useGatewayStore((state) => state.connectionStatuses);
+  const connectionLatencies = useGatewayStore((state) => state.connectionLatencies);
+
+  // Local UI state
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<string>('name');
   const [filterConnectedOnly, setFilterConnectedOnly] = useState<boolean>(false);
@@ -209,56 +216,20 @@ export default function IoTScreen() {
   const [showFilterModal, setShowFilterModal] = useState<boolean>(false);
   const [tempSortBy, setTempSortBy] = useState<string>('name');
   const [tempFilterConnectedOnly, setTempFilterConnectedOnly] = useState<boolean>(false);
-  const [connectionStatuses, setConnectionStatuses] = useState<Record<number, ConnectionStatus>>(
-    {}
-  );
-  const [connectionLatencies, setConnectionLatencies] = useState<Record<number, number>>({});
 
-  // Define the fetch function
+  // Fetch gateways using store action
   const fetchData = useCallback(async () => {
     if (!token) return;
 
     try {
-      setLoading(true);
-      // Reset gateways before fetching to avoid stale data
-      setGateways([]);
-
-      const data: IoTGateway[] = await apiClient.get('/iot-gateways/', token, 'IoTGateway', true);
-
-      // Parse entity counts and convert encrypted string values to numbers
-      const gatewaysWithCounts = data.map((gateway) => {
-        // Parse encrypted count values - they come as strings and need to be parsed to integers
-        const linkedCount = gateway.linked_entities_count
-          ? typeof gateway.linked_entities_count === 'string'
-            ? parseInt(gateway.linked_entities_count, 10)
-            : gateway.linked_entities_count
-          : 0;
-        const linkableCount = gateway.linkable_entities_count
-          ? typeof gateway.linkable_entities_count === 'string'
-            ? parseInt(gateway.linkable_entities_count, 10)
-            : gateway.linkable_entities_count
-          : 0;
-
-        return {
-          ...gateway,
-          linked_entities_count: linkedCount,
-          linkable_entities_count: linkableCount,
-        };
-      });
-
-      setGateways(gatewaysWithCounts);
-      setLoading(false);
+      await fetchGateways(token);
     } catch (error) {
-      if (isUnauthorizedError(error as Error)) {
-        router.replace('/login');
-        return;
-      }
+      // Error handling is done in the store, including redirect to login
       console.error('Exception fetching IoT gateways:', error);
-      setLoading(false);
     }
-  }, [token, router]);
+  }, [token, fetchGateways]);
 
-  // Delete handler function
+  // Delete handler using store action
   const handleDelete = useCallback(
     async (gateway: IoTGateway) => {
       if (!token) return;
@@ -276,16 +247,13 @@ export default function IoTScreen() {
             style: 'destructive',
             onPress: async () => {
               try {
-                await apiClient.delete(`/iot-gateways/${gateway.id}`, token);
-                // Refresh the data after deletion
-                fetchData();
-              } catch (error) {
-                if (isUnauthorizedError(error as Error)) {
-                  router.replace('/login');
-                  return;
+                const success = await deleteGateway(token, gateway.id.toString());
+                if (!success) {
+                  Alert.alert('Error', 'Failed to delete the gateway. Please try again.');
                 }
+              } catch (error) {
+                // Error handling including login redirect is done in the store
                 console.error('Error deleting gateway:', error);
-                Alert.alert('Error', 'Failed to delete the gateway. Please try again.');
               }
             },
           },
@@ -293,62 +261,8 @@ export default function IoTScreen() {
         { cancelable: true }
       );
     },
-    [token, fetchData, router]
+    [token, deleteGateway]
   );
-
-  // Check connection status for all gateways
-  const checkAllConnections = useCallback(async () => {
-    const statusPromises = gateways.map(async (gateway) => {
-      try {
-        const startTime = Date.now();
-        const response = await fetch(`${gateway.api_url}/api/`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${gateway.api_key}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        const endTime = Date.now();
-        const latency = endTime - startTime;
-
-        return {
-          id: gateway.id,
-          status: response.ok
-            ? ('connected' as ConnectionStatus)
-            : ('disconnected' as ConnectionStatus),
-          latency: response.ok ? latency : undefined,
-        };
-      } catch (err) {
-        return {
-          id: gateway.id,
-          status: 'disconnected' as ConnectionStatus,
-          latency: undefined,
-        };
-      }
-    });
-
-    const results = await Promise.all(statusPromises);
-    const statusMap = results.reduce(
-      (acc, result) => {
-        acc[result.id] = result.status;
-        return acc;
-      },
-      {} as Record<number, ConnectionStatus>
-    );
-
-    const latencyMap = results.reduce(
-      (acc, result) => {
-        if (result.latency !== undefined) {
-          acc[result.id] = result.latency;
-        }
-        return acc;
-      },
-      {} as Record<number, number>
-    );
-
-    setConnectionStatuses(statusMap);
-    setConnectionLatencies(latencyMap);
-  }, [gateways]);
 
   // Modal handler functions
   const handleSortModalOpen = () => {
@@ -417,7 +331,7 @@ export default function IoTScreen() {
     })
   );
 
-  // Use useFocusEffect to refresh data when the screen comes into focus
+  // Use useFocusEffect to refresh data and check connections when the screen comes into focus
   useFocusEffect(
     useCallback(() => {
       fetchData();
@@ -427,12 +341,16 @@ export default function IoTScreen() {
     }, [fetchData])
   );
 
-  // Check connections when gateways change
-  React.useEffect(() => {
-    if (gateways.length > 0) {
-      checkAllConnections();
-    }
-  }, [gateways, checkAllConnections]);
+  // Check connections when gateways are loaded or when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (gateways.length > 0) {
+        // Only check connections for saved gateways on focus
+        checkAllConnections();
+      }
+      return () => {}; // No cleanup needed
+    }, [gateways, checkAllConnections])
+  );
 
   if (loading) {
     return (

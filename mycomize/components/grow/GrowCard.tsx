@@ -3,7 +3,6 @@ import { Card } from '~/components/ui/card';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
-import { Heading } from '~/components/ui/heading';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { View } from '~/components/ui/view';
@@ -27,12 +26,9 @@ import {
 } from 'lucide-react-native';
 import { Spinner } from '~/components/ui/spinner';
 import { BulkGrowComplete, bulkGrowStatuses } from '~/lib/growTypes';
-import { GatewayStatus } from './GatewayStatus';
 import { InfoBadge } from '~/components/ui/info-badge';
-import { CountBadge } from '~/components/ui/count-badge';
-import { IoTEntity, IoTGateway } from '~/lib/iot';
-import { useGrowGateways } from '~/lib/iot-gateway/useGrowGateways';
-import { getConnectionBadgeProps } from '~/lib/iot-gateway/connectionUtils';
+//import { useGrowGateways } from '~/lib/iot-gateway/useGrowGateways';
+//import { getConnectionBadgeProps } from '~/lib/iot-gateway/connectionUtils';
 
 interface GrowCardProps {
   grow: BulkGrowComplete;
@@ -48,7 +44,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
   const iotEntities = useMemo(() => grow.iot_entities || [], [grow.iot_entities]);
 
   // Fetch gateway details and connection statuses for this grow's IoT entities
-  const { gateways, connectionStatuses, loading: gatewaysLoading } = useGrowGateways(iotEntities);
+  //  const { gateways, connectionStatuses, loading: gatewaysLoading } = useGrowGateways(iotEntities);
 
   const getStatusColor = (status?: string) => {
     if (status === bulkGrowStatuses.CONTAMINATED) return 'text-error-500';
@@ -370,41 +366,41 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
                 return <Text className="text-md text-typography-400">None</Text>;
               }
 
-              if (gatewaysLoading) {
-                return (
-                  <HStack className="items-center justify-center py-2">
-                    <Spinner size="small" />
-                  </HStack>
-                );
-              }
+              //if (gatewaysLoading) {
+              //  return (
+              //    <HStack className="items-center justify-center py-2">
+              //      <Spinner size="small" />
+              //    </HStack>
+              //  );
+              //}
 
-              if (gateways.length === 0) {
-                return (
-                  <Text className="text-md text-typography-400">Gateway data unavailable</Text>
-                );
-              }
+              //if (gateways.length === 0) {
+              //  return (
+              //    <Text className="text-md text-typography-400">Gateway data unavailable</Text>
+              //  );
+              //}
 
               // Show each gateway with name and connection status
-              return (
-                <VStack space="sm">
-                  {gateways.map((gateway) => {
-                    const connectionStatus = connectionStatuses[gateway.id] || 'unknown';
-                    const badgeProps = getConnectionBadgeProps(connectionStatus);
+              //return (
+              //  <VStack space="sm">
+              //    {gateways.map((gateway) => {
+              //      const connectionStatus = connectionStatuses[gateway.id] || 'unknown';
+              //      const badgeProps = getConnectionBadgeProps(connectionStatus);
 
-                    return (
-                      <HStack key={gateway.id} className="items-center justify-between">
-                        <Text
-                          className="text-md ml-3 flex-1 text-typography-600"
-                          numberOfLines={1}
-                          ellipsizeMode="tail">
-                          {gateway.name || 'Unnamed Gateway'}
-                        </Text>
-                        <InfoBadge {...badgeProps} size="sm" />
-                      </HStack>
-                    );
-                  })}
-                </VStack>
-              );
+              //      return (
+              //        <HStack key={gateway.id} className="items-center justify-between">
+              //          <Text
+              //            className="text-md ml-3 flex-1 text-typography-600"
+              //            numberOfLines={1}
+              //            ellipsizeMode="tail">
+              //            {gateway.name || 'Unnamed Gateway'}
+              //          </Text>
+              //          <InfoBadge {...badgeProps} size="sm" />
+              //        </HStack>
+              //      );
+              //    })}
+              //  </VStack>
+              //);
             })()}
           </VStack>
 

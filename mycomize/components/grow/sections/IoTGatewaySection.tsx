@@ -18,7 +18,7 @@ import {
 import { IoTEntity, IoTGateway, HAEntity } from '~/lib/iot';
 import { stageLabels } from '~/lib/growTypes';
 import { InfoBadge } from '~/components/ui/info-badge';
-import { getConnectionBadgeProps } from '~/lib/iot-gateway/connectionUtils';
+//import { getConnectionBadgeProps } from '~/lib/iot-gateway/connectionUtils';
 
 // Import Home Assistant controls
 import { SwitchControl } from '~/components/iot/controls/hass/SwitchControl';
@@ -198,7 +198,7 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({
                   {gateway.name}
                 </Text>
                 <HStack className="items-center" space="md">
-                  <InfoBadge {...getConnectionBadgeProps('connected')} size="sm" />
+                  {/* <InfoBadge {...getConnectionBadgeProps('connected')} size="sm" /> */}
                   <Icon
                     as={isExpanded ? ChevronDown : ChevronRight}
                     size="lg"

@@ -3,7 +3,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
-import { Button, ButtonText } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { InfoBadge } from '~/components/ui/info-badge';
@@ -11,7 +10,6 @@ import {
   CheckCircle,
   Circle,
   ChevronRight,
-  ArrowDownToDot,
   ChevronDown,
   Disc2,
   Syringe,
@@ -21,7 +19,6 @@ import {
   Package,
   Thermometer,
   CheckSquare,
-  Clock,
 } from 'lucide-react-native';
 
 import MushroomIcon from '~/components/icons/MushroomIcon';
@@ -32,7 +29,7 @@ import { BulkSection } from './BulkSection';
 import { FruitingSection } from './FruitingSection';
 import { HarvestSection } from './HarvestSection';
 import { IoTEntity, IoTGateway } from '~/lib/iot';
-import { IoTFilterPreferences, StageIoTData } from '~/lib/iotTypes';
+import { IoTFilterPreferences } from '~/lib/iotTypes';
 import { AuthContext } from '~/lib/AuthContext';
 import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { useRouter } from 'expo-router';

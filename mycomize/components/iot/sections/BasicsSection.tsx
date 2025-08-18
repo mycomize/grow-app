@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
@@ -21,41 +21,34 @@ import {
   Wifi,
   WifiOff,
 } from 'lucide-react-native';
-import { IoTGateway, IoTGatewayUpdate } from '~/lib/iot';
 import { ConnectionStatus } from '~/components/ui/connection-status-badge';
 import { InfoBadge, InfoBadgeVariant } from '~/components/ui/info-badge';
 import { CountBadge } from '~/components/ui/count-badge';
 import { IoTTypeSelectionModal } from '~/components/modals/IoTTypeSelectionModal';
-import { ConnectionInfo } from '~/lib/iotTypes';
 import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback } from 'react';
+import {
+  useCurrentGatewayFormData,
+  useCurrentGatewayConnectionStatus,
+  useUpdateCurrentGatewayField,
+  useTestCurrentGatewayConnection,
+} from '~/lib/stores/iot/gatewayStore';
+import { useEntityStore } from '~/lib/stores/iot/entityStore';
 
-interface BasicsSectionProps {
-  gateway: IoTGateway | null;
-  formData: IoTGatewayUpdate;
-  isEditing: boolean;
-  showApiKey: boolean;
-  connectionInfo: ConnectionInfo;
-  isTestingConnection: boolean;
-  onUpdateField: (field: keyof IoTGatewayUpdate, value: any) => void;
-  onToggleApiKeyVisibility: () => void;
-  onTestConnection: () => void;
-}
+export function BasicsSection() {
+  // Zustand store hooks - optimized subscriptions
+  const formData = useCurrentGatewayFormData();
+  const { status: connectionStatus, latency } = useCurrentGatewayConnectionStatus();
+  const updateCurrentGatewayField = useUpdateCurrentGatewayField();
+  const testCurrentGatewayConnection = useTestCurrentGatewayConnection();
+  const { fetchHaEntities } = useEntityStore();
 
-export function BasicsSection({
-  gateway,
-  formData,
-  isEditing,
-  showApiKey,
-  connectionInfo,
-  isTestingConnection,
-  onUpdateField,
-  onToggleApiKeyVisibility,
-  onTestConnection,
-}: BasicsSectionProps) {
+  // Local UI state
   const [showTypeModal, setShowTypeModal] = useState(false);
-  const [gatewayType, setGatewayType] = useState('home_assistant');
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  const isEditing = true; // Always in editing mode for form sections
+  const isTestingConnection = connectionStatus === 'connecting';
 
   // Helper function to get InfoBadge props from connection status
   const getConnectionBadgeProps = (status: ConnectionStatus) => {
@@ -92,9 +85,10 @@ export function BasicsSection({
     useCallback(() => {
       const checkForScannedData = async () => {
         try {
+          // TODO: make this secure store
           const scannedData = await AsyncStorage.getItem('qr_scanned_data');
           if (scannedData) {
-            onUpdateField('api_key', scannedData);
+            updateCurrentGatewayField('api_key', scannedData);
             // Clear the stored data after using it
             await AsyncStorage.removeItem('qr_scanned_data');
           }
@@ -104,8 +98,30 @@ export function BasicsSection({
       };
 
       checkForScannedData();
-    }, [onUpdateField])
+    }, [updateCurrentGatewayField])
   );
+
+  // Connection test handler
+  const handleTestConnection = useCallback(async () => {
+    try {
+      const result = await testCurrentGatewayConnection();
+
+      // If connection successful, fetch HA entities for preview
+      if (result.status === 'connected' && formData) {
+        // Create temporary gateway object for entity fetching
+        const tempGateway = {
+          id: -1,
+          name: formData.name || 'Test',
+          type: formData.type || 'home_assistant',
+          api_url: formData.api_url || '',
+          api_key: formData.api_key || '',
+        };
+        await fetchHaEntities(tempGateway);
+      }
+    } catch (error) {
+      console.error('Connection test failed:', error);
+    }
+  }, [testCurrentGatewayConnection, fetchHaEntities, formData]);
 
   const getIoTGatewayTypeDisplayName = (type: string) => {
     switch (type) {
@@ -120,6 +136,19 @@ export function BasicsSection({
     router.push('/qrscanner' as any);
   };
 
+  const toggleApiKeyVisibility = () => {
+    setShowApiKey((prev) => !prev);
+  };
+
+  // Early return if no form data available
+  if (!formData) {
+    return (
+      <VStack className="p-4">
+        <Text className="text-typography-500">Loading gateway data...</Text>
+      </VStack>
+    );
+  }
+
   if (isEditing) {
     return (
       <VStack space="lg" className="p-2">
@@ -129,8 +158,8 @@ export function BasicsSection({
           </FormControlLabel>
           <Input>
             <InputField
-              value={formData.name}
-              onChangeText={(text) => onUpdateField('name', text)}
+              value={formData.name || ''}
+              onChangeText={(text) => updateCurrentGatewayField('name', text)}
             />
           </Input>
         </FormControl>
@@ -141,7 +170,10 @@ export function BasicsSection({
           </FormControlLabel>
           <Pressable onPress={() => setShowTypeModal(true)}>
             <Input pointerEvents="none">
-              <InputField value={getIoTGatewayTypeDisplayName(gatewayType)} editable={false} />
+              <InputField
+                value={getIoTGatewayTypeDisplayName(formData.type || 'home_assistant')}
+                editable={false}
+              />
               <InputSlot className="pr-3">
                 <InputIcon as={ChevronDown} className="text-background-500" />
               </InputSlot>
@@ -155,8 +187,8 @@ export function BasicsSection({
           </FormControlLabel>
           <Textarea>
             <TextareaInput
-              value={formData.description}
-              onChangeText={(text) => onUpdateField('description', text)}
+              value={formData.description || ''}
+              onChangeText={(text) => updateCurrentGatewayField('description', text)}
               style={{ textAlignVertical: 'top' }}
             />
           </Textarea>
@@ -168,8 +200,8 @@ export function BasicsSection({
           </FormControlLabel>
           <Input>
             <InputField
-              value={formData.api_url}
-              onChangeText={(text) => onUpdateField('api_url', text)}
+              value={formData.api_url || ''}
+              onChangeText={(text) => updateCurrentGatewayField('api_url', text)}
               autoCapitalize="none"
               placeholder="http://homeassistant.local:8123"
             />
@@ -182,8 +214,8 @@ export function BasicsSection({
           </FormControlLabel>
           <Input>
             <InputField
-              value={formData.api_key}
-              onChangeText={(text) => onUpdateField('api_key', text)}
+              value={formData.api_key || ''}
+              onChangeText={(text) => updateCurrentGatewayField('api_key', text)}
               autoCapitalize="none"
               secureTextEntry={!showApiKey}
             />
@@ -191,7 +223,7 @@ export function BasicsSection({
               <Pressable onPress={handleQRCodeScan} className="mr-2">
                 <InputIcon as={QrCode} className="text-typography-700" />
               </Pressable>
-              <Pressable onPress={onToggleApiKeyVisibility}>
+              <Pressable onPress={toggleApiKeyVisibility}>
                 <InputIcon as={showApiKey ? EyeOff : Eye} className="text-background-500" />
               </Pressable>
             </InputSlot>
@@ -204,90 +236,36 @@ export function BasicsSection({
             <Icon as={RadioTower} className="mr-2 text-typography-400" />
             <Text className="flex-1 text-lg font-semibold">Link Status</Text>
             <HStack className="items-center" space="xs">
-              <InfoBadge
-                {...getConnectionBadgeProps(
-                  isTestingConnection ? 'connecting' : connectionInfo.status
-                )}
-              />
-              {connectionInfo.latency !== undefined && connectionInfo.status === 'connected' && (
-                <CountBadge
-                  count={connectionInfo.latency}
-                  label="ms"
-                  variant="green-dark"
-                  icon={Gauge}
-                />
+              <InfoBadge {...getConnectionBadgeProps(connectionStatus)} />
+              {latency !== undefined && connectionStatus === 'connected' && (
+                <CountBadge count={latency} label="ms" variant="green-dark" icon={Gauge} />
               )}
             </HStack>
           </HStack>
 
-          {connectionInfo.status === 'connected' && connectionInfo.version && (
-            <Text className="text-sm text-typography-500">
-              HA Version: {connectionInfo.version}
-            </Text>
-          )}
-
           {/* Connection Controls */}
           <HStack space="sm" className="mt-3">
-            {gateway ? (
-              // Existing gateway - button logic based on connection state
-              <Button
-                variant="solid"
-                action="primary"
-                onPress={() => {
-                  // Don't execute if in connecting/testing state
-                  if (isTestingConnection || connectionInfo.status === 'connecting') return;
+            <Button
+              variant="solid"
+              action="primary"
+              onPress={() => {
+                // Don't execute if in connecting/testing state or missing required fields
+                if (isTestingConnection || !formData.api_url?.trim() || !formData.api_key?.trim())
+                  return;
 
-                  if (connectionInfo.status === 'connected') {
-                    onTestConnection();
-                  }
-                }}
-                className="flex-1">
-                {(isTestingConnection || connectionInfo.status === 'connecting') && (
-                  <Spinner size="small" className="mr-2 text-background-0" />
-                )}
-                {!(isTestingConnection || connectionInfo.status === 'connecting') && (
-                  <ButtonIcon as={ChevronsLeftRightEllipsis} />
-                )}
-                <ButtonText>
-                  {(isTestingConnection || connectionInfo.status === 'connecting') && 'Connecting'}
-                  {connectionInfo.status === 'connected' && !isTestingConnection && 'Test'}
-                  {connectionInfo.status === 'disconnected' && !isTestingConnection && 'Connect'}
-                </ButtonText>
-              </Button>
-            ) : (
-              // New gateway - button logic based on connection state
-              <Button
-                variant="solid"
-                action="primary"
-                onPress={() => {
-                  // Don't execute if in connecting/testing state or missing required fields
-                  if (
-                    isTestingConnection ||
-                    connectionInfo.status === 'connecting' ||
-                    !formData.api_url?.trim() ||
-                    !formData.api_key?.trim()
-                  )
-                    return;
-
-                  onTestConnection();
-                }}
-                className="flex-1">
-                {(isTestingConnection || connectionInfo.status === 'connecting') && (
-                  <Spinner size="small" className="mr-2 text-background-0" />
-                )}
-                {!(isTestingConnection || connectionInfo.status === 'connecting') && (
-                  <ButtonIcon as={ChevronsLeftRightEllipsis} />
-                )}
-                <ButtonText>
-                  {(isTestingConnection || connectionInfo.status === 'connecting') && 'Connecting'}
-                  {connectionInfo.status === 'connected' && !isTestingConnection && 'Test'}
-                  {(connectionInfo.status === 'disconnected' ||
-                    connectionInfo.status === 'unknown') &&
-                    !isTestingConnection &&
-                    'Connect'}
-                </ButtonText>
-              </Button>
-            )}
+                handleTestConnection();
+              }}
+              className="flex-1">
+              {isTestingConnection && <Spinner size="small" className="mr-2 text-background-0" />}
+              {!isTestingConnection && <ButtonIcon as={ChevronsLeftRightEllipsis} />}
+              <ButtonText>
+                {isTestingConnection && 'Connecting'}
+                {connectionStatus === 'connected' && !isTestingConnection && 'Test'}
+                {(connectionStatus === 'disconnected' || connectionStatus === 'unknown') &&
+                  !isTestingConnection &&
+                  'Connect'}
+              </ButtonText>
+            </Button>
           </HStack>
         </VStack>
 
@@ -295,20 +273,12 @@ export function BasicsSection({
         <IoTTypeSelectionModal
           isOpen={showTypeModal}
           onClose={() => setShowTypeModal(false)}
-          currentType={gatewayType}
-          onSelectType={setGatewayType}
+          currentType={formData.type || 'home_assistant'}
+          onSelectType={(type) => updateCurrentGatewayField('type', type)}
         />
       </VStack>
     );
   }
 
-  if (!gateway) {
-    return (
-      <VStack className="p-4">
-        <Text className="text-typography-500">
-          IoT Gateway data not available. Connect your gateway to get started
-        </Text>
-      </VStack>
-    );
-  }
+  return null;
 }

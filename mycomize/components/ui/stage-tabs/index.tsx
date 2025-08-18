@@ -13,7 +13,7 @@ import { TasksList } from '~/components/tek/TasksList';
 import { StageNotes } from '~/components/tek/StageNotes';
 
 // Import grow components
-import { IotControlsList } from '~/components/grow/IotControlsList';
+//import { IotControlsList } from '~/components/grow/IotControlsList';
 
 // Import tek types
 import { BulkStageData } from '~/lib/tekTypes';
@@ -167,6 +167,7 @@ export const StageTabs: React.FC<StageTabsProps> = ({
         {activeTab === 'notes' && (
           <StageNotes notes={currentBulkStageData.notes} onUpdateNotes={handleUpdateNotes} />
         )}
+        {/*
         {activeTab === 'iot' && grow?.id && stageIoTData && (
           <IotControlsList
             entities={stageIoTData.entities}
@@ -186,7 +187,8 @@ export const StageTabs: React.FC<StageTabsProps> = ({
             onToggleDomainFilter={stageIoTData.onToggleDomainFilter}
             onToggleDeviceClassFilter={stageIoTData.onToggleDeviceClassFilter}
           />
-        )}
+        )} 
+        */}
       </VStack>
     </VStack>
   );
