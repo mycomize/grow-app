@@ -21,6 +21,17 @@ interface CurrentGateway {
   latency?: number;
 }
 
+// Gateway fetch strategy result
+interface GatewayFetchStrategy {
+  shouldFetchAll: boolean;
+  shouldFetchSingle: number | null;
+  shouldTestConnections: boolean;
+  shouldTestSingleConnection: number | null;
+}
+
+// Gateway modification tracking
+type GatewayAction = 'create' | 'update' | 'delete' | 'cancel' | null;
+
 interface GatewayStore {
   // State
   gateways: IoTGateway[];
@@ -29,13 +40,26 @@ interface GatewayStore {
   connectionLatencies: Record<number, number>;
   currentGateway: CurrentGateway | null;
 
+  // Smart fetching state
+  hasInitiallyLoaded: boolean;
+  lastModifiedGatewayId: number | null;
+  lastAction: GatewayAction;
+  hasInitiallyTestedConnections: boolean;
+
   // Actions
   fetchGateways: (token: string) => Promise<void>;
+  fetchSingleGateway: (token: string, gatewayId: string) => Promise<void>;
   createGateway: (token: string, data: IoTGatewayCreate) => Promise<boolean>;
   updateGateway: (token: string, id: string, data: IoTGatewayUpdate) => Promise<boolean>;
   deleteGateway: (token: string, id: string) => Promise<boolean>;
   testConnection: (gateway: IoTGateway) => Promise<ConnectionInfo>;
+  testSingleConnection: (gatewayId: number) => Promise<void>;
   checkAllConnections: () => Promise<void>;
+
+  // Smart fetching actions
+  markGatewayModified: (gatewayId: number | null, action: GatewayAction) => void;
+  getGatewayFetchStrategy: () => GatewayFetchStrategy;
+  clearFetchingState: () => void;
 
   // Current gateway actions
   initializeCurrentGateway: (gatewayId?: string) => void;
@@ -53,6 +77,12 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
   connectionStatuses: {},
   connectionLatencies: {},
   currentGateway: null,
+
+  // Smart fetching initial state
+  hasInitiallyLoaded: false,
+  lastModifiedGatewayId: null,
+  lastAction: null,
+  hasInitiallyTestedConnections: false,
 
   // Fetch all gateways
   fetchGateways: async (token: string) => {
@@ -81,10 +111,54 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
         };
       });
 
-      set({ gateways: gatewaysWithCounts, loading: false });
+      set({
+        gateways: gatewaysWithCounts,
+        loading: false,
+        hasInitiallyLoaded: true,
+      });
     } catch (error) {
       console.error('Error fetching gateways:', error);
       set({ loading: false });
+      handleUnauthorizedError(error as Error);
+      throw error;
+    }
+  },
+
+  // Fetch single gateway (optimized selective fetch)
+  fetchSingleGateway: async (token: string, gatewayId: string) => {
+    try {
+      const data: IoTGateway = await apiClient.get(
+        `/iot-gateways/${gatewayId}`,
+        token,
+        'IoTGateway'
+      );
+
+      // Parse encrypted count values
+      const linkedCount = data.linked_entities_count
+        ? typeof data.linked_entities_count === 'string'
+          ? parseInt(data.linked_entities_count, 10)
+          : data.linked_entities_count
+        : 0;
+      const linkableCount = data.linkable_entities_count
+        ? typeof data.linkable_entities_count === 'string'
+          ? parseInt(data.linkable_entities_count, 10)
+          : data.linkable_entities_count
+        : 0;
+
+      const updatedGateway = {
+        ...data,
+        linked_entities_count: linkedCount,
+        linkable_entities_count: linkableCount,
+      };
+
+      // Update only this gateway in the array
+      set((state) => ({
+        gateways: state.gateways.map((gateway) =>
+          gateway.id.toString() === gatewayId ? updatedGateway : gateway
+        ),
+      }));
+    } catch (error) {
+      console.error('Error fetching single gateway:', error);
       handleUnauthorizedError(error as Error);
       throw error;
     }
@@ -103,6 +177,8 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
 
       set((state) => ({
         gateways: [...state.gateways, newGateway],
+        lastModifiedGatewayId: newGateway.id,
+        lastAction: 'create',
       }));
 
       return true;
@@ -128,6 +204,8 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
         gateways: state.gateways.map((gateway) =>
           gateway.id.toString() === id ? updatedGateway : gateway
         ),
+        lastModifiedGatewayId: updatedGateway.id,
+        lastAction: 'update',
       }));
 
       return true;
@@ -151,6 +229,8 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
         connectionLatencies: Object.fromEntries(
           Object.entries(state.connectionLatencies).filter(([key]) => key !== id)
         ),
+        lastModifiedGatewayId: parseInt(id, 10),
+        lastAction: 'delete',
       }));
 
       return true;
@@ -216,6 +296,16 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
     }
   },
 
+  // Test connection for a single gateway by ID
+  testSingleConnection: async (gatewayId: number) => {
+    const { gateways } = get();
+    const gateway = gateways.find((g) => g.id === gatewayId);
+
+    if (gateway) {
+      await get().testConnection(gateway);
+    }
+  },
+
   // Check all gateway connections
   checkAllConnections: async () => {
     const { gateways } = get();
@@ -230,6 +320,82 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
     });
 
     await Promise.all(statusPromises);
+
+    // Mark that we've initially tested connections
+    set((state) => ({
+      hasInitiallyTestedConnections: true,
+    }));
+  },
+
+  // Smart fetching methods
+  markGatewayModified: (gatewayId: number | null, action: GatewayAction) => {
+    set({
+      lastModifiedGatewayId: gatewayId,
+      lastAction: action,
+    });
+  },
+
+  getGatewayFetchStrategy: (): GatewayFetchStrategy => {
+    const { hasInitiallyLoaded, lastAction, lastModifiedGatewayId, hasInitiallyTestedConnections } =
+      get();
+
+    // First time loading - fetch all and test all connections
+    if (!hasInitiallyLoaded) {
+      return {
+        shouldFetchAll: true,
+        shouldFetchSingle: null,
+        shouldTestConnections: !hasInitiallyTestedConnections,
+        shouldTestSingleConnection: null,
+      };
+    }
+
+    // Handle different actions
+    switch (lastAction) {
+      case 'create':
+        // New gateway created - fetch the new one and test its connection
+        return {
+          shouldFetchAll: false,
+          shouldFetchSingle: lastModifiedGatewayId,
+          shouldTestConnections: false,
+          shouldTestSingleConnection: lastModifiedGatewayId,
+        };
+
+      case 'update':
+        // Gateway updated - fetch it and test connection (credentials might have changed)
+        return {
+          shouldFetchAll: false,
+          shouldFetchSingle: lastModifiedGatewayId,
+          shouldTestConnections: false,
+          shouldTestSingleConnection: lastModifiedGatewayId,
+        };
+
+      case 'delete':
+        // Gateway deleted - state already updated, no fetching needed
+        return {
+          shouldFetchAll: false,
+          shouldFetchSingle: null,
+          shouldTestConnections: false,
+          shouldTestSingleConnection: null,
+        };
+
+      case 'cancel':
+      case null:
+      default:
+        // No changes or cancelled - no operations needed
+        return {
+          shouldFetchAll: false,
+          shouldFetchSingle: null,
+          shouldTestConnections: false,
+          shouldTestSingleConnection: null,
+        };
+    }
+  },
+
+  clearFetchingState: () => {
+    set({
+      lastModifiedGatewayId: null,
+      lastAction: null,
+    });
   },
 
   // Initialize current gateway for editing/creating

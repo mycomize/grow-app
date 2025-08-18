@@ -204,7 +204,15 @@ export default function IoTScreen() {
   // Use Zustand store hooks
   const gateways = useGateways();
   const loading = useGatewayLoading();
-  const { fetchGateways, deleteGateway, checkAllConnections } = useGatewayStore();
+  const {
+    fetchGateways,
+    fetchSingleGateway,
+    deleteGateway,
+    checkAllConnections,
+    testSingleConnection,
+    getGatewayFetchStrategy,
+    clearFetchingState,
+  } = useGatewayStore();
   const connectionStatuses = useGatewayStore((state) => state.connectionStatuses);
   const connectionLatencies = useGatewayStore((state) => state.connectionLatencies);
 
@@ -217,17 +225,42 @@ export default function IoTScreen() {
   const [tempSortBy, setTempSortBy] = useState<string>('name');
   const [tempFilterConnectedOnly, setTempFilterConnectedOnly] = useState<boolean>(false);
 
-  // Fetch gateways using store action
-  const fetchData = useCallback(async () => {
+  // Smart fetching based on strategy
+  const performSmartFetch = useCallback(async () => {
     if (!token) return;
 
     try {
-      await fetchGateways(token);
+      const strategy = getGatewayFetchStrategy();
+
+      // Fetch data based on strategy
+      if (strategy.shouldFetchAll) {
+        await fetchGateways(token);
+      } else if (strategy.shouldFetchSingle) {
+        await fetchSingleGateway(token, strategy.shouldFetchSingle.toString());
+      }
+
+      // Test connections based on strategy
+      if (strategy.shouldTestConnections) {
+        await checkAllConnections();
+      } else if (strategy.shouldTestSingleConnection) {
+        await testSingleConnection(strategy.shouldTestSingleConnection);
+      }
+
+      // Clear the fetching state after processing
+      clearFetchingState();
     } catch (error) {
       // Error handling is done in the store, including redirect to login
-      console.error('Exception fetching IoT gateways:', error);
+      console.error('Exception with smart IoT gateway fetching:', error);
     }
-  }, [token, fetchGateways]);
+  }, [
+    token,
+    getGatewayFetchStrategy,
+    fetchGateways,
+    fetchSingleGateway,
+    checkAllConnections,
+    testSingleConnection,
+    clearFetchingState,
+  ]);
 
   // Delete handler using store action
   const handleDelete = useCallback(
@@ -331,25 +364,12 @@ export default function IoTScreen() {
     })
   );
 
-  // Use useFocusEffect to refresh data and check connections when the screen comes into focus
+  // Smart fetching with useFocusEffect - optimized approach
   useFocusEffect(
     useCallback(() => {
-      fetchData();
-
-      // No cleanup needed for useFocusEffect in this case
-      return () => {};
-    }, [fetchData])
-  );
-
-  // Check connections when gateways are loaded or when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      if (gateways.length > 0) {
-        // Only check connections for saved gateways on focus
-        checkAllConnections();
-      }
+      performSmartFetch();
       return () => {}; // No cleanup needed
-    }, [gateways, checkAllConnections])
+    }, [performSmartFetch])
   );
 
   if (loading) {

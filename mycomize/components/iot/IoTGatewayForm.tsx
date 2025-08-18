@@ -44,7 +44,12 @@ export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewa
   const currentGatewayFormData = useCurrentGatewayFormData();
   const initializeCurrentGateway = useInitializeCurrentGateway();
   const clearCurrentGateway = useClearCurrentGateway();
-  const { createGateway, updateGateway, deleteGateway: deleteGatewayAction } = useGatewayStore();
+  const {
+    createGateway,
+    updateGateway,
+    deleteGateway: deleteGatewayAction,
+    markGatewayModified,
+  } = useGatewayStore();
 
   const {
     fetchHaEntities,
@@ -169,9 +174,11 @@ export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewa
 
   // Cancel handler
   const handleCancel = useCallback(() => {
+    // Mark as cancelled so index knows not to refetch
+    markGatewayModified(null, 'cancel');
     clearCurrentGateway();
     router.replace('/iot');
-  }, [clearCurrentGateway, router]);
+  }, [markGatewayModified, clearCurrentGateway, router]);
 
   return (
     <VStack className="flex-1 bg-background-50">
