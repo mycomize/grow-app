@@ -10,6 +10,8 @@ from backend.schemas.iot import (
     IoTGateway as IoTGatewaySchema,
     IoTGatewayCreate,
     IoTGatewayUpdate,
+    CombinedGatewayCreateRequest,
+    CombinedGatewayCreateResponse,
 )
 from backend.schemas.iot_entity import (
     IoTEntity as IoTEntitySchema,
@@ -34,6 +36,97 @@ router = APIRouter(
     tags=["iot-gateways"],
     responses={401: {"detail": "Not authenticated"}},
 )
+
+
+
+@router.post("/create-with-entities", response_model=CombinedGatewayCreateResponse, status_code=status.HTTP_201_CREATED)
+async def create_gateway_with_entities(
+    request: CombinedGatewayCreateRequest,
+    db: Session = Depends(get_mycomize_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Create a new IoT gateway with entities in a single atomic transaction"""
+    
+    # Start transaction - all operations will be atomic
+    try:
+        # 1. Create the gateway
+        db_gateway = IoTGateway(
+            user_id=current_user.id,
+            type=request.gateway.type,
+            name=request.gateway.name,
+            description=request.gateway.description,
+            api_url=request.gateway.api_url,
+            api_key=request.gateway.api_key,
+        )
+        
+        db.add(db_gateway)
+        db.flush()  # Flush to get the gateway ID without committing
+        
+        # 2. Create entities with pre-set links
+        entity_mappings = {}
+        created_entities = []
+        
+        for entity_data in request.entities:
+            # Verify linked grow exists if specified
+            if entity_data.linked_grow_id:
+                grow = db.query(BulkGrow).filter(
+                    BulkGrow.id == entity_data.linked_grow_id, 
+                    BulkGrow.user_id == current_user.id
+                ).first()
+                if not grow:
+                    raise HTTPException(status_code=404, detail=f"Grow {entity_data.linked_grow_id} not found")
+            
+            # Create entity with pre-set linking
+            db_entity = IoTEntity(
+                gateway_id=db_gateway.id,
+                entity_name=entity_data.entity_name,
+                entity_type=entity_data.entity_type,
+                friendly_name=entity_data.friendly_name,
+                domain=entity_data.domain,
+                device_class=entity_data.device_class,
+                linked_grow_id=entity_data.linked_grow_id,
+                linked_stage=entity_data.linked_stage
+            )
+            
+            db.add(db_entity)
+            created_entities.append(db_entity)
+        
+        # 3. Flush entities to get their IDs
+        if created_entities:
+            db.flush()
+            
+            # Build entity name to ID mapping
+            for entity in created_entities:
+                if entity.entity_name:
+                    entity_mappings[entity.entity_name] = entity.id
+        
+        # 4. Commit all changes atomically
+        db.commit()
+        
+        # 5. Refresh gateway to get final state
+        db.refresh(db_gateway)
+        
+        # 6. Refresh affected grows if any entities were linked
+        affected_grow_ids = set()
+        for entity in created_entities:
+            if entity.linked_grow_id:
+                affected_grow_ids.add(entity.linked_grow_id)
+        
+        for grow_id in affected_grow_ids:
+            grow = db.query(BulkGrow).filter(BulkGrow.id == grow_id).first()
+            if grow:
+                db.expire(grow, ["iot_entities"])
+                db.refresh(grow)
+        
+        return CombinedGatewayCreateResponse(
+            gateway_id=db_gateway.id,
+            entity_mappings=entity_mappings
+        )
+        
+    except Exception as e:
+        # Rollback transaction on any error
+        db.rollback()
+        raise e
 
 # === IoT GATEWAY ROUTES ===
 

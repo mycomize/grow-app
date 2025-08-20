@@ -268,8 +268,8 @@ export default function TekLibraryScreen() {
 
   return publicTeks.length === 0 && privateTeks.length === 0 ? (
     <VStack className="flex-1 items-center justify-center gap-5 bg-background-50">
-      <Icon as={Layers} size="xl" className="text-typography-400" />
-      <Text className="text-center text-lg ">Create your first tek to get started!</Text>
+      <Icon as={Layers} className="h-8 w-8 text-typography-400" />
+      <Text className="text-center text-lg ">Create your first tek</Text>
       <Button
         variant="solid"
         className="h-16 w-16 rounded-full"

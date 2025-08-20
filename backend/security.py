@@ -82,7 +82,6 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_mycomize_db)):
     """Get the current user from the JWT token"""
-    print(f"Token received: {token}")
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",

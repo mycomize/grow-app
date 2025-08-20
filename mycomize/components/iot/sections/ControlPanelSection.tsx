@@ -33,12 +33,7 @@ import {
   useCurrentGatewayConnectionStatus,
 } from '~/lib/stores/iot/gatewayStore';
 
-import {
-  useEntityStore,
-  useLinkableEntities,
-  useLinkedEntities,
-  useFilteredEntities,
-} from '~/lib/stores/iot/entityStore';
+import { useEntityStore, useGatewayEntities } from '~/lib/stores/iot/entityStore';
 
 import { AuthContext } from '~/lib/AuthContext';
 import { EntityCard } from '~/components/iot/EntityCard';
@@ -54,11 +49,18 @@ export function ControlPanelSection({ gatewayId }: ControlPanelSectionProps) {
   const { trackFalse, trackTrue, thumbColor } = getSwitchColors(theme);
 
   const gateway = useGatewayById(gatewayId === 'new' ? '' : gatewayId);
-  const currentGateway = useCurrentGateway();
   const { status: connectionStatus } = useCurrentGatewayConnectionStatus();
-  const linkableEntities = useLinkableEntities();
-  const filteredLinkableEntities = useFilteredEntities();
-  const linkedEntities = useLinkedEntities();
+
+  // Use optimized gateway-scoped selector to get all entities in one call
+  const gatewayNumericId = gatewayId === 'new' ? -1 : gateway?.id || -1; // for new gateways
+  const { linkableEntities, filteredLinkableEntities, linkedEntities } =
+    useGatewayEntities(gatewayNumericId);
+
+  // Optional debug logging (can be enabled for troubleshooting)
+  // console.log(`[ControlPanelSection] Using gateway ID ${gatewayNumericId} for entity filtering`);
+  // console.log(
+  //   `[ControlPanelSection] Gateway-scoped entities: ${linkableEntities.length} linkable, ${filteredLinkableEntities.length} filtered, ${linkedEntities.length} linked`
+  // );
 
   const grows = useEntityStore((state) => state.grows);
   const filterPreferences = useEntityStore((state) => state.filterPreferences);
@@ -186,14 +188,18 @@ export function ControlPanelSection({ gatewayId }: ControlPanelSectionProps) {
     const entityIds = Array.from(linkSelection);
     if (entityIds.length === 0) return;
 
-    if (!gateway || !token) return;
+    if (!token) return;
+
+    // For new gateways, use -1 as the gateway ID; for existing gateways, require the gateway object
+    const effectiveGatewayId = gatewayId === 'new' ? '-1' : gateway?.id.toString() || '';
+    if (!effectiveGatewayId) return;
 
     if (modalMode === 'bulk') {
-      await bulkLinkEntities(token, gateway.id.toString(), entityIds, growId, stage);
+      await bulkLinkEntities(token, effectiveGatewayId, entityIds, growId, stage);
       setLinkBulkMode(false);
       setLinkSelection(new Set());
     } else if (entityIds.length === 1) {
-      await linkEntity(token, gateway.id.toString(), entityIds[0], growId, stage);
+      await linkEntity(token, effectiveGatewayId, entityIds[0], growId, stage);
     }
 
     setShowLinkingModal(false);
@@ -215,14 +221,18 @@ export function ControlPanelSection({ gatewayId }: ControlPanelSectionProps) {
     const entityIds = Array.from(unlinkSelection);
     if (entityIds.length === 0) return;
 
-    if (!gateway || !token) return;
+    if (!token) return;
+
+    // For new gateways, use -1 as the gateway ID; for existing gateways, require the gateway object
+    const effectiveGatewayId = gatewayId === 'new' ? '-1' : gateway?.id.toString() || '';
+    if (!effectiveGatewayId) return;
 
     if (modalMode === 'bulk') {
-      await bulkUnlinkEntities(token, gateway.id.toString(), entityIds);
+      await bulkUnlinkEntities(token, effectiveGatewayId, entityIds);
       setUnlinkBulkMode(false);
       setUnlinkSelection(new Set());
     } else if (entityIds.length === 1) {
-      await unlinkEntity(token, gateway.id.toString(), entityIds[0]);
+      await unlinkEntity(token, effectiveGatewayId, entityIds[0]);
     }
 
     setShowUnlinkModal(false);
@@ -273,11 +283,7 @@ export function ControlPanelSection({ gatewayId }: ControlPanelSectionProps) {
         <HStack className="items-center justify-between">
           <Text className="text-lg font-semibold text-typography-700">Linked Controls</Text>
           <HStack className="items-center" space="md">
-            <InfoBadge
-              text={`${gateway ? linkedEntities.length : 0} LINKED`}
-              variant="default"
-              size="sm"
-            />
+            <InfoBadge text={`${linkedEntities.length} LINKED`} variant="default" size="sm" />
             <Pressable onPress={() => setLinkedControlsExpanded(!linkedControlsExpanded)}>
               <Icon
                 as={linkedControlsExpanded ? ChevronDown : ChevronRight}
@@ -349,7 +355,7 @@ export function ControlPanelSection({ gatewayId }: ControlPanelSectionProps) {
                           </Text>
                         </HStack>
                         {Object.entries(entitiesByStage).map(([stageName, stageEntities]) => (
-                          <VStack key={`${growName}-${stageName}`} space="xs">
+                          <VStack key={`${growName}-${stageName}`} space="sm">
                             <Text className="text-typography-500">{stageName}</Text>
                             {stageEntities.map((entity) => (
                               <EntityCard
@@ -552,7 +558,7 @@ export function ControlPanelSection({ gatewayId }: ControlPanelSectionProps) {
                         <Text className="text-md capitalize text-typography-500">{domain}</Text>
                       </HStack>
 
-                      <VStack space="xs">
+                      <VStack space="sm">
                         {domainEntities.map((entity) => (
                           <EntityCard
                             key={entity.entity_name}

@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { apiClient, isUnauthorizedError } from '../../ApiClient';
 import { IoTGateway, IoTGatewayCreate, IoTGatewayUpdate } from '../../iot';
 import { ConnectionInfo, ConnectionStatus } from '../../iotTypes';
+import { useEntityStore } from './entityStore';
 
 // Helper function to handle unauthorized errors consistently
 const handleUnauthorizedError = (error: Error) => {
@@ -49,7 +50,8 @@ interface GatewayStore {
   // Actions
   fetchGateways: (token: string) => Promise<void>;
   fetchSingleGateway: (token: string, gatewayId: string) => Promise<void>;
-  createGateway: (token: string, data: IoTGatewayCreate) => Promise<boolean>;
+  createGateway: (token: string, data: IoTGatewayCreate) => Promise<IoTGateway | null>;
+  createGatewayWithEntities: (token: string, data: IoTGatewayCreate) => Promise<IoTGateway | null>;
   updateGateway: (token: string, id: string, data: IoTGatewayUpdate) => Promise<boolean>;
   deleteGateway: (token: string, id: string) => Promise<boolean>;
   testConnection: (gateway: IoTGateway) => Promise<ConnectionInfo>;
@@ -181,16 +183,125 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
         lastAction: 'create',
       }));
 
-      return true;
+      return newGateway;
     } catch (error) {
       console.error('Error creating gateway:', error);
       handleUnauthorizedError(error as Error);
-      return false;
+      return null;
+    }
+  },
+
+  // Create gateway with entities in single optimized call
+  createGatewayWithEntities: async (token: string, gatewayData: IoTGatewayCreate) => {
+    try {
+      console.log('[GatewayStore] Starting optimized gateway creation with entities');
+
+      // Get pending links from entity store
+      const entityStore = useEntityStore.getState();
+      const { pendingLinks, haEntities } = entityStore;
+
+      console.log(
+        `[GatewayStore] Found ${pendingLinks.size} pending links and ${haEntities.length} HA entities`
+      );
+
+      // Prepare entities with pre-set linking
+      const entitiesWithLinks = haEntities.map((haEntity) => {
+        const pendingLink = pendingLinks.get(haEntity.entity_id);
+
+        return {
+          entity_name: haEntity.entity_id,
+          entity_type: 'home_assistant',
+          friendly_name: haEntity.attributes?.friendly_name || haEntity.entity_id,
+          domain: haEntity.entity_id.split('.')[0] || '',
+          device_class: haEntity.attributes?.device_class || '',
+          linked_grow_id: pendingLink?.growId,
+          linked_stage: pendingLink?.stage,
+        };
+      });
+
+      const combinedRequest = {
+        gateway: gatewayData,
+        entities: entitiesWithLinks,
+      };
+
+      console.log(
+        `[GatewayStore] Sending combined request with gateway + ${entitiesWithLinks.length} entities`
+      );
+
+      // Call combined endpoint
+      const response = await apiClient.createIoTGatewayWithEntities(combinedRequest, token);
+
+      console.log(`[GatewayStore] Combined endpoint response:`, response);
+
+      // Create gateway object from response
+      const newGateway: IoTGateway = {
+        id: response.gateway_id,
+        ...gatewayData,
+        linked_entities_count: Object.keys(response.entity_mappings).filter((entityName) => {
+          const pendingLink = pendingLinks.get(entityName);
+          return pendingLink?.growId !== undefined;
+        }).length,
+        linkable_entities_count: Object.keys(response.entity_mappings).filter((entityName) => {
+          const pendingLink = pendingLinks.get(entityName);
+          return pendingLink?.growId === undefined;
+        }).length,
+      };
+
+      // Update gateway store
+      set((state) => ({
+        gateways: [...state.gateways, newGateway],
+        lastModifiedGatewayId: newGateway.id,
+        lastAction: 'create',
+      }));
+
+      // Create IoT entities from the mapping and update entity store
+      const createdIotEntities = entitiesWithLinks.map((entityData) => {
+        const databaseId = response.entity_mappings[entityData.entity_name];
+        const pendingLink = pendingLinks.get(entityData.entity_name);
+
+        return {
+          id: databaseId,
+          gateway_id: response.gateway_id,
+          entity_name: entityData.entity_name,
+          entity_type: entityData.entity_type,
+          friendly_name: entityData.friendly_name,
+          domain: entityData.domain,
+          device_class: entityData.device_class,
+          linked_grow_id: pendingLink?.growId,
+          linked_stage: pendingLink?.stage,
+        };
+      });
+
+      // Update entity store directly with the created entities
+      entityStore.updateTemporaryEntityIds(response.entity_mappings);
+      set((state) => {
+        entityStore.iotEntities = createdIotEntities;
+        return state;
+      });
+
+      // Clear pending links since they've been committed
+      entityStore.clearPendingLinks();
+
+      // Recompute entity lists in entity store
+      entityStore.computeAndSetEntityLists(false);
+
+      console.log(
+        `[GatewayStore] Optimized gateway creation completed successfully. Gateway ID: ${newGateway.id}`
+      );
+
+      return newGateway;
+    } catch (error) {
+      console.error('Error creating gateway with entities:', error);
+      handleUnauthorizedError(error as Error);
+      return null;
     }
   },
 
   // Update an existing gateway
   updateGateway: async (token: string, id: string, data: IoTGatewayUpdate) => {
+    const updateStart = performance.now();
+    console.log(`[GatewayStore] Starting optimized gateway update for gateway ${id}`);
+
     try {
       const updatedGateway: IoTGateway = await apiClient.put(
         `/iot-gateways/${id}`,
@@ -200,6 +311,7 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
         'IoTGateway'
       );
 
+      // Update local state directly from PUT response
       set((state) => ({
         gateways: state.gateways.map((gateway) =>
           gateway.id.toString() === id ? updatedGateway : gateway
@@ -207,6 +319,11 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
         lastModifiedGatewayId: updatedGateway.id,
         lastAction: 'update',
       }));
+
+      const updateEnd = performance.now();
+      console.log(
+        `[GatewayStore] Optimized gateway update completed in ${updateEnd - updateStart}ms - local state updated directly from PUT response`
+      );
 
       return true;
     } catch (error) {
@@ -218,9 +335,13 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
 
   // Delete a gateway
   deleteGateway: async (token: string, id: string) => {
+    const gatewayIdNum = parseInt(id, 10);
+
     try {
+      console.log(`[GatewayStore] Deleting gateway ${id} from backend`);
       await apiClient.delete(`/iot-gateways/${id}`, token);
 
+      console.log(`[GatewayStore] Backend deletion successful, updating gateway store state`);
       set((state) => ({
         gateways: state.gateways.filter((gateway) => gateway.id.toString() !== id),
         connectionStatuses: Object.fromEntries(
@@ -229,10 +350,26 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
         connectionLatencies: Object.fromEntries(
           Object.entries(state.connectionLatencies).filter(([key]) => key !== id)
         ),
-        lastModifiedGatewayId: parseInt(id, 10),
+        lastModifiedGatewayId: gatewayIdNum,
         lastAction: 'delete',
       }));
 
+      // Notify entity store to clean up entities for this gateway
+      console.log(
+        `[GatewayStore] Notifying entity store to clean up entities for gateway ${gatewayIdNum}`
+      );
+      try {
+        useEntityStore.getState().handleGatewayDeletion(gatewayIdNum);
+        console.log(`[GatewayStore] Entity store cleanup completed for gateway ${gatewayIdNum}`);
+      } catch (entityError) {
+        console.error(
+          `[GatewayStore] Error during entity cleanup for gateway ${gatewayIdNum}:`,
+          entityError
+        );
+        // Don't fail the entire deletion if entity cleanup fails
+      }
+
+      console.log(`[GatewayStore] Gateway ${id} deletion completed successfully`);
       return true;
     } catch (error) {
       console.error('Error deleting gateway:', error);

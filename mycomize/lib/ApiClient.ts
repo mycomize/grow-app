@@ -281,6 +281,16 @@ class ApiClient {
     return this.delete(`/iot-gateways/${id}`, token);
   }
 
+  async createIoTGatewayWithEntities(data: any, token: string) {
+    return this.post(
+      '/iot-gateways/create-with-entities',
+      data,
+      token,
+      'CombinedGatewayCreateRequest',
+      undefined
+    );
+  }
+
   async enableIoTGateway(id: string, token: string) {
     return this.put(`/iot-gateways/${id}/enable`, {}, token, undefined, 'IoTGateway');
   }
@@ -382,7 +392,7 @@ class ApiClient {
   }
 
   async unlinkIoTEntity(gatewayId: string, entityId: string, token: string) {
-    return this.delete(`/iot-gateways/${gatewayId}/entities/${entityId}/link`, token);
+    return this.delete(`/iot-gateways/${gatewayId}/entities/${entityId}/unlink`, token);
   }
 
   async bulkUnlinkIoTEntities(gatewayId: string, entityIds: number[], token: string) {
@@ -394,11 +404,13 @@ class ApiClient {
         token,
       },
       requestDataType: null,
+      responseDataType: 'IoTEntity',
+      isArrayResponse: true,
     });
   }
 
   async removeIoTEntityLink(gatewayId: string, entityId: string, token: string) {
-    return this.delete(`/iot-gateways/${gatewayId}/entities/${entityId}/link`, token);
+    return this.delete(`/iot-gateways/${gatewayId}/entities/${entityId}/unlink`, token);
   }
 }
 

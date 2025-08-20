@@ -2,6 +2,7 @@
 
 import { IoTEntity, IoTGateway } from './iot';
 
+export const NEW_GATEWAY_ID = -1;
 export interface ConnectionInfo {
   status: 'connected' | 'connecting' | 'disconnected' | 'unknown';
   version?: string;
@@ -63,6 +64,21 @@ export interface IoTFilterPreferences {
   showAllDomains: boolean;
   deviceClasses: string[];
   showAllDeviceClasses: boolean;
+}
+
+// Bulk entity operation results
+export interface BulkCreateResult {
+  created: IoTEntity[];
+  idMapping: Record<string, number>; // entity_name -> db_id
+}
+
+// Entity operation tracking for optimistic updates
+export interface EntityOperation {
+  type: 'link' | 'unlink' | 'delete' | 'create';
+  entityId: string;
+  gatewayId: number;
+  growId?: number;
+  stage?: string;
 }
 
 // Stage IoT data interface - used across all stage components

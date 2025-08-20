@@ -101,13 +101,15 @@ export function BasicsSection() {
     }, [updateCurrentGatewayField])
   );
 
-  // Connection test handler
+  // Connection test handler - optimized to force refresh entities
   const handleTestConnection = useCallback(async () => {
     try {
+      console.log('[BasicsSection] Starting connection test');
       const result = await testCurrentGatewayConnection();
 
-      // If connection successful, fetch HA entities for preview
+      // If connection successful, fetch HA entities with forceRefresh for immediate preview
       if (result.status === 'connected' && formData) {
+        console.log('[BasicsSection] Connection successful, fetching entities for preview');
         // Create temporary gateway object for entity fetching
         const tempGateway = {
           id: -1,
@@ -116,12 +118,34 @@ export function BasicsSection() {
           api_url: formData.api_url || '',
           api_key: formData.api_key || '',
         };
-        await fetchHaEntities(tempGateway);
+        // Force refresh to get latest entities regardless of cache
+        await fetchHaEntities(tempGateway, true);
+
+        // Compute entity lists for new gateway to make entities available in ControlPanelSection
+        const { computeAndSetEntityLists } = useEntityStore.getState();
+        computeAndSetEntityLists(true); // true = isNewGateway
+
+        console.log('[BasicsSection] Entity fetch completed for connection test');
       }
     } catch (error) {
       console.error('Connection test failed:', error);
     }
   }, [testCurrentGatewayConnection, fetchHaEntities, formData]);
+
+  // Handle credential field blur - detect potential changes for cache invalidation
+  const handleCredentialBlur = useCallback((field: 'api_url' | 'api_key', value: string) => {
+    console.log(`[BasicsSection] Credential field ${field} blur detected`);
+
+    // Note: The actual cache invalidation will be handled by the entityStore's
+    // shouldRefreshEntities method when fetchHaEntities is next called
+    // This blur handler is mainly for logging and future enhancements
+
+    if (field === 'api_url') {
+      console.log(`[BasicsSection] API URL updated: ${value.substring(0, 20)}...`);
+    } else if (field === 'api_key') {
+      console.log(`[BasicsSection] API key updated (length: ${value.length})`);
+    }
+  }, []);
 
   const getIoTGatewayTypeDisplayName = (type: string) => {
     switch (type) {
@@ -202,6 +226,7 @@ export function BasicsSection() {
             <InputField
               value={formData.api_url || ''}
               onChangeText={(text) => updateCurrentGatewayField('api_url', text)}
+              onBlur={() => handleCredentialBlur('api_url', formData.api_url || '')}
               autoCapitalize="none"
               placeholder="http://homeassistant.local:8123"
             />
@@ -216,6 +241,7 @@ export function BasicsSection() {
             <InputField
               value={formData.api_key || ''}
               onChangeText={(text) => updateCurrentGatewayField('api_key', text)}
+              onBlur={() => handleCredentialBlur('api_key', formData.api_key || '')}
               autoCapitalize="none"
               secureTextEntry={!showApiKey}
             />

@@ -46,6 +46,7 @@ export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewa
   const clearCurrentGateway = useClearCurrentGateway();
   const {
     createGateway,
+    createGatewayWithEntities,
     updateGateway,
     deleteGateway: deleteGatewayAction,
     markGatewayModified,
@@ -57,6 +58,8 @@ export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewa
     fetchGrows,
     syncIotEntities,
     computeAndSetEntityLists,
+    commitPendingLinks,
+    clearPendingLinks,
   } = useEntityStore();
 
   // Local UI state
@@ -78,29 +81,60 @@ export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewa
   // Fetch entities and grows when gateway is available
   useEffect(() => {
     const initializeGatewayData = async () => {
+      const startTime = performance.now();
+      console.log(`[IoTGatewayForm] Starting gateway data initialization for gateway ${gatewayId}`);
+
       if (gateway && token) {
-        // Fetch both HA and IoT entities, then compute entity lists once
         const promises = [];
 
         // Fetch HA entities if credentials available
         if (gateway.api_url && gateway.api_key) {
-          promises.push(fetchHaEntities(gateway));
+          console.log(
+            `[IoTGatewayForm] Adding HA entities fetch to promises (smart caching enabled)`
+          );
+          // Use forceRefresh=false to enable caching - entityStore will skip if unchanged
+          promises.push(fetchHaEntities(gateway, false));
         }
 
         // Fetch IoT entities from database
-        promises.push(fetchIotEntities(token, gateway.id.toString()));
+        console.log(
+          `[IoTGatewayForm] Adding IoT entities fetch to promises (smart caching enabled)`
+        );
+        // Use forceRefresh=false to enable caching - entityStore will skip if already fetched
+        promises.push(fetchIotEntities(token, gateway.id.toString(), false));
 
-        // Wait for both to complete
+        // Wait for both to complete (may complete instantly due to caching)
+        const entityFetchStart = performance.now();
         await Promise.all(promises);
+        const entityFetchEnd = performance.now();
+        console.log(
+          `[IoTGatewayForm] Entity fetching completed in ${entityFetchEnd - entityFetchStart}ms`
+        );
 
         // Now compute entity lists once after both are loaded
+        const computeStart = performance.now();
         computeAndSetEntityLists(false);
+        const computeEnd = performance.now();
+        console.log(
+          `[IoTGatewayForm] Entity list computation completed in ${computeEnd - computeStart}ms`
+        );
       }
 
       // Always fetch grows for linking
       if (token) {
-        fetchGrows(token);
+        const growsFetchStart = performance.now();
+        console.log(`[IoTGatewayForm] Fetching grows for linking`);
+        await fetchGrows(token);
+        const growsFetchEnd = performance.now();
+        console.log(
+          `[IoTGatewayForm] Grows fetch completed in ${growsFetchEnd - growsFetchStart}ms`
+        );
       }
+
+      const totalTime = performance.now() - startTime;
+      console.log(
+        `[IoTGatewayForm] Complete gateway data initialization finished in ${totalTime}ms`
+      );
     };
 
     initializeGatewayData();
@@ -109,6 +143,9 @@ export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewa
   // Save gateway handler
   const handleSaveGateway = useCallback(async () => {
     if (!token || !currentGatewayFormData) return;
+
+    const saveStartTime = performance.now();
+    console.log(`[IoTGatewayForm] Starting save operation for gateway ${gatewayId}`);
 
     setIsSaving(true);
     try {
@@ -121,25 +158,68 @@ export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewa
           api_url: currentGatewayFormData.api_url || '',
           api_key: currentGatewayFormData.api_key || '',
         };
-        const success = await createGateway(token, gatewayData);
-        if (success) {
+
+        const createStart = performance.now();
+        const createdGateway = await createGatewayWithEntities(token, gatewayData);
+        const createEnd = performance.now();
+        console.log(
+          `[IoTGatewayForm] Optimized gateway creation completed in ${createEnd - createStart}ms`
+        );
+
+        if (createdGateway) {
+          console.log(
+            `[IoTGatewayForm] New gateway created with ID: ${createdGateway.id} using optimized single-call approach`
+          );
+
+          const cleanupStart = performance.now();
           clearCurrentGateway();
+          const cleanupEnd = performance.now();
+          console.log(
+            `[IoTGatewayForm] Gateway cleanup completed in ${cleanupEnd - cleanupStart}ms`
+          );
+
+          const navigationStart = performance.now();
           router.back();
+          const navigationEnd = performance.now();
+          console.log(
+            `[IoTGatewayForm] Navigation completed in ${navigationEnd - navigationStart}ms`
+          );
         }
       } else if (gateway) {
         // Update existing gateway
+        const updateStart = performance.now();
         const success = await updateGateway(token, gateway.id.toString(), currentGatewayFormData);
+        const updateEnd = performance.now();
+        console.log(`[IoTGatewayForm] Gateway update completed in ${updateEnd - updateStart}ms`);
+
         if (success) {
-          // Sync entities after successful gateway save
-          const updatedGateway = { ...gateway, ...currentGatewayFormData };
-          await syncIotEntities(token, updatedGateway);
+          // Entity sync is handled by WebSocket real-time updates for existing gateways
+          // Only new gateways or those with credential changes need explicit sync
+          console.log(`[IoTGatewayForm] Skipping entity sync for existing gateway`);
+
+          // No need to call markGatewayModified - updateGateway already does this
+          const cleanupStart = performance.now();
           clearCurrentGateway();
+          const cleanupEnd = performance.now();
+          console.log(
+            `[IoTGatewayForm] Gateway cleanup completed in ${cleanupEnd - cleanupStart}ms`
+          );
+
+          const navigationStart = performance.now();
           router.back();
+          const navigationEnd = performance.now();
+          console.log(
+            `[IoTGatewayForm] Navigation completed in ${navigationEnd - navigationStart}ms`
+          );
         }
       }
     } catch (error) {
       console.error('Failed to save gateway:', error);
     } finally {
+      const saveEndTime = performance.now();
+      console.log(
+        `[IoTGatewayForm] Complete save operation finished in ${saveEndTime - saveStartTime}ms`
+      );
       setIsSaving(false);
     }
   }, [
@@ -150,9 +230,23 @@ export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewa
     createGateway,
     updateGateway,
     syncIotEntities,
+    commitPendingLinks,
     clearCurrentGateway,
     router,
   ]);
+  // Cancel handler
+  const handleCancel = useCallback(() => {
+    // Clear any pending links for new gateways
+    if (gatewayId === 'new') {
+      console.log(`[IoTGatewayForm] Clearing pending links on cancel for new gateway`);
+      clearPendingLinks();
+    }
+
+    // Mark as cancelled so index knows not to refetch
+    markGatewayModified(null, 'cancel');
+    clearCurrentGateway();
+    router.replace('/iot');
+  }, [gatewayId, clearPendingLinks, markGatewayModified, clearCurrentGateway, router]);
 
   // Delete gateway handler
   const handleDeleteGateway = useCallback(async () => {
@@ -162,6 +256,7 @@ export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewa
     try {
       const success = await deleteGatewayAction(token, gateway.id.toString());
       if (success) {
+        // No need to call markGatewayModified - deleteGateway already does this
         clearCurrentGateway();
         router.back();
       }
@@ -171,14 +266,6 @@ export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewa
       setIsDeleting(false);
     }
   }, [gateway, token, deleteGatewayAction, clearCurrentGateway, router]);
-
-  // Cancel handler
-  const handleCancel = useCallback(() => {
-    // Mark as cancelled so index knows not to refetch
-    markGatewayModified(null, 'cancel');
-    clearCurrentGateway();
-    router.replace('/iot');
-  }, [markGatewayModified, clearCurrentGateway, router]);
 
   return (
     <VStack className="flex-1 bg-background-50">

@@ -96,6 +96,17 @@ const MODEL_SPECIFIC_ALLOWLISTS = {
     // The entities field itself should remain as a list structure, but individual entities will be encrypted
     'entities',
   ] as const,
+
+  CombinedGatewayCreateRequest: [
+    // The gateway and entities fields should remain as objects/arrays, but their contents will be encrypted
+    'gateway',
+    'entities',
+  ] as const,
+
+  CombinedEntityCreate: [
+    // Backend-generated fields for entity creation with pre-set linking
+    'linked_grow_id', // Foreign key for grow assignment
+  ] as const,
 } as const;
 
 /**
@@ -152,6 +163,16 @@ export const ENCRYPTION_CONFIG = {
   BulkEntityCreateRequest: {
     encryptionStrategy: 'encrypt_all_except_allowlist' as const,
     allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.BulkEntityCreateRequest,
+  },
+
+  CombinedGatewayCreateRequest: {
+    encryptionStrategy: 'encrypt_all_except_allowlist' as const,
+    allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.CombinedGatewayCreateRequest,
+  },
+
+  CombinedEntityCreate: {
+    encryptionStrategy: 'encrypt_all_except_allowlist' as const,
+    allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.CombinedEntityCreate,
   },
 } as const;
 

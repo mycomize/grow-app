@@ -7,18 +7,12 @@ This script allows you to inspect the raw database contents to verify encryption
 import sqlite3
 import sys
 import argparse
-from typing import Dict, List, Any, Optional
-import json
+from typing import Dict, List, Any 
 from datetime import datetime
 
 # Encryption prefixes/patterns to identify encrypted fields
 ENCRYPTION_INDICATORS = [
-    'enc:',  # Common encryption prefix
     'enc_v1:',  # Versioned encryption prefix
-    'enc_v2:',  # Versioned encryption prefix
-    'encrypted:',  # Another common prefix
-    'v1.',  # Version prefix
-    'v2.',  # Version prefix
 ]
 
 def connect_to_database(db_path: str = "./backend/data/mycomize.db") -> sqlite3.Connection:
@@ -160,7 +154,7 @@ def get_expected_model_fields() -> Dict[str, Dict[str, List[str]]]:
             'user_data': ['name', 'description', 'species', 'variant', 'tags', 'stages']
         },
         'iot_gateways': {
-            'system': ['id', 'user_id', 'created_at'],
+            'system': ['id', 'user_id'],
             'user_data': ['name', 'type', 'description', 'api_url', 'api_key', 'linked_entities_count', 'linkable_entities_count']
         },
         'iot_entities': {

@@ -48,6 +48,7 @@ import { ConnectionStatus } from '~/components/ui/connection-status-badge';
 import { InfoBadge, InfoBadgeVariant } from '~/components/ui/info-badge';
 import { CountBadge } from '~/components/ui/count-badge';
 import { useGateways, useGatewayLoading, useGatewayStore } from '~/lib/stores/iot/gatewayStore';
+import { useLinkedEntitiesByGateway } from '~/lib/stores/iot/entityStore';
 
 interface AddIoTGatewayButtonProps {
   title: string;
@@ -68,7 +69,7 @@ const AddIoTGatewayButton: React.FC<AddIoTGatewayButtonProps> = ({ title, initia
         onPress={() => {
           router.push('/iot/new');
         }}>
-        <ButtonIcon as={PlusIcon} className="h-8 w-8 text-white" />
+        <ButtonIcon as={PlusIcon} className="h-6 w-6 text-white" />
       </Button>
     </>
   );
@@ -90,6 +91,7 @@ const IoTGatewayCard: React.FC<IoTGatewayCardProps> = ({
   onDelete,
 }) => {
   const router = useRouter();
+  const linkedEntities = useLinkedEntitiesByGateway(gateway.id);
 
   // Helper function to get InfoBadge props from connection status
   const getConnectionBadgeProps = (status: ConnectionStatus) => {
@@ -169,7 +171,7 @@ const IoTGatewayCard: React.FC<IoTGatewayCardProps> = ({
             <HStack className="mb-1 mt-1 items-center">
               <Text className="text-typography-600">IoT Controls</Text>
               <InfoBadge
-                text={`${gateway.linked_entities_count || 0} LINKED`}
+                text={`${linkedEntities.length} LINKED`}
                 variant="default"
                 className="ml-auto"
               />
@@ -385,10 +387,9 @@ export default function IoTScreen() {
   }
 
   return gateways.length == 0 ? (
-    <VStack className="flex-1 items-center justify-center gap-2 bg-background-50">
-      <Text className="mb-4 text-center text-lg text-typography-600">
-        Add your first IoT Gateway integration!
-      </Text>
+    <VStack className="flex-1 items-center justify-center gap-5 bg-background-50">
+      <Icon as={CircuitBoard} className="h-8 w-8 text-typography-400" />
+      <Text className="text-center text-lg text-typography-600">Add your first IoT Gateway</Text>
       <AddIoTGatewayButton title="Add IoTGateway" initial={true} />
     </VStack>
   ) : (
