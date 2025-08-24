@@ -1,11 +1,10 @@
-import { useState, useEffect, useContext, useCallback } from 'react';
+import { useState, useContext, useCallback } from 'react';
 import { Button, ButtonIcon, ButtonText } from '~/components/ui/button';
 import { Heading } from '~/components/ui/heading';
 import { Text } from '~/components/ui/text';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { ScrollView } from '~/components/ui/scroll-view';
-import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
 import { Icon } from '~/components/ui/icon';
 import { Input, InputField, InputIcon } from '~/components/ui/input';
 import { Pressable } from '~/components/ui/pressable';
@@ -14,7 +13,6 @@ import MushroomIcon from '~/components/icons/MushroomIcon';
 import { List, PlusIcon, Search, X, ArrowUpDown, Filter, CirclePlus } from 'lucide-react-native';
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '~/lib/AuthContext';
 import { BulkGrowComplete, bulkGrowStatuses, bulkGrowStages } from '~/lib/growTypes';
 import { GrowCard } from '~/components/grow/GrowCard';
@@ -22,12 +20,14 @@ import { GrowCardSkeleton } from '~/components/grow/GrowCardSkeleton';
 import { CountBadge } from '~/components/ui/count-badge';
 import { GrowFilterModal } from '~/components/modals/GrowFilterModal';
 import { GrowSortModal, SortOption } from '~/components/modals/GrowSortModal';
+import { useGrows, useGrowLoading, useGrowStore } from '~/lib/stores';
 
 export default function GrowScreen() {
   const { token } = useContext(AuthContext);
   const router = useRouter();
-  const [grows, setGrows] = useState<BulkGrowComplete[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const grows = useGrows();
+  const loading = useGrowLoading();
+  const deleteGrowFromStore = useGrowStore((state) => state.deleteGrow);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('name');
   const [filterStatus, setFilterStatus] = useState<string>('');
@@ -43,42 +43,17 @@ export default function GrowScreen() {
   const [tempFilterVariant, setTempFilterVariant] = useState<string>('');
   const [tempFilterLocation, setTempFilterLocation] = useState<string>('');
 
-  // Define the fetch function
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      // Reset grows before fetching to avoid stale data
-      setGrows([]);
-
-      const data: BulkGrowComplete[] = await apiClient.getBulkGrowsWithIoT(token!);
-      setGrows(data);
-      setLoading(false);
-    } catch (error) {
-      if (isUnauthorizedError(error as Error)) {
-        router.replace('/login');
-      } else {
-        console.error('Exception fetching grows:', error);
-      }
-      setLoading(false);
-    }
-  }, [token, router]);
-
-  // Delete grow function
+  // Delete grow function using store
   const deleteGrow = useCallback(
     async (growId: number) => {
+      if (!token) return;
       try {
-        await apiClient.deleteBulkGrow(growId.toString(), token!);
-        // Remove the grow from the local state
-        setGrows((prevGrows) => prevGrows.filter((grow) => grow.id !== growId));
+        await deleteGrowFromStore(token, growId.toString());
       } catch (error) {
-        if (isUnauthorizedError(error as Error)) {
-          router.replace('/login');
-        } else {
-          console.error('Exception deleting grow:', error);
-        }
+        console.error('Exception deleting grow:', error);
       }
     },
-    [token, router]
+    [token, deleteGrowFromStore]
   );
 
   // Modal handler functions
@@ -260,15 +235,6 @@ export default function GrowScreen() {
     })
   );
 
-  // Use useFocusEffect to refresh data when the screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      fetchData();
-
-      // No cleanup needed for useFocusEffect in this case
-      return () => {};
-    }, [fetchData])
-  );
 
   if (loading) {
     return (

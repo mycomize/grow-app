@@ -5,15 +5,17 @@ import { Textarea, TextareaInput } from '~/components/ui/textarea';
 import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
 import { TagManager } from '~/components/tek/TagManager';
 
-import { BulkGrow } from '~/lib/growTypes';
+import { useCurrentGrowFormData, useUpdateCurrentGrowField } from '~/lib/stores';
 
-interface BasicsSectionProps {
-  growData: BulkGrow;
-  updateField: (field: keyof BulkGrow, value: any) => void;
-}
-
-export const BasicsSection: React.FC<BasicsSectionProps> = ({ growData, updateField }) => {
+export const BasicsSection: React.FC = () => {
+  const growData = useCurrentGrowFormData();
+  const updateField = useUpdateCurrentGrowField();
   const [tagInput, setTagInput] = useState('');
+
+  // Don't render if no grow data
+  if (!growData) {
+    return null;
+  }
 
   const handleAddTag = () => {
     if (tagInput.trim() && !growData.tags?.includes(tagInput.trim())) {

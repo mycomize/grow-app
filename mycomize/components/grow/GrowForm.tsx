@@ -1,3 +1,5 @@
+import { useState, useEffect, useContext } from 'react';
+import { Keyboard } from 'react-native';
 import { ScrollView } from '~/components/ui/scroll-view';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
@@ -19,78 +21,212 @@ import {
   CircuitBoard,
   Trash2,
 } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import MushroomIcon from '~/components/icons/MushroomIcon';
 import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
+import { useUnifiedToast } from '~/components/ui/unified-toast';
 
-import { BulkGrow, BulkGrowFlush } from '~/lib/growTypes';
-import { IoTEntity, IoTGateway, HAEntity } from '~/lib/iot';
+import { AuthContext } from '~/lib/AuthContext';
+import {
+  useCurrentGrowFormData,
+  useCurrentGrowFlushes,
+  useUpdateCurrentGrowField,
+  useAddFlush,
+  useUpdateFlush,
+  useRemoveFlush,
+  useParseDateUtility,
+  useFormatDateForAPI,
+  useGrowStore,
+} from '~/lib/stores';
 
 // Import modular sections
 import { BasicsSection } from '~/components/grow/sections/BasicsSection';
-import { IoTGatewaySection } from '~/components/grow/sections/IoTGatewaySection';
 import { StagesSection } from '~/components/grow/sections/StagesSection';
 
 interface GrowFormProps {
-  growData: BulkGrow;
-  flushes: BulkGrowFlush[];
-  isSaving: boolean;
-  keyboardVisible: boolean;
-  showDeleteModal: boolean;
-  isDeleting: boolean;
-  activeDatePicker: string | null;
   growId?: string;
-
-  // IoT props
-  linkedEntities: IoTEntity[];
-  gateways: IoTGateway[];
-  entityStates: Record<string, HAEntity>;
-  iotLoading: boolean;
-
-  onUpdateField: (field: keyof BulkGrow, value: any) => void;
-  onAddFlush: () => void;
-  onUpdateFlush: (id: string, data: any) => void;
-  onRemoveFlush: (id: string) => void;
-  onSetActiveDatePicker: (picker: string | null) => void;
-  onHandleDateChange: (field: string, date?: Date, event?: any) => void;
-  onParseDate: (dateString?: string) => Date | null;
-  onShowDeleteModal: (show: boolean) => void;
-  onDeleteGrow: () => void;
-  onSaveGrow: () => void;
-  onUpdateEntityState: (entityId: string, newState: string) => void;
   saveButtonText?: string;
 }
 
-export function GrowForm({
-  growData,
-  flushes,
-  isSaving,
-  keyboardVisible,
-  showDeleteModal,
-  isDeleting,
-  activeDatePicker,
-  growId,
-
-  // IoT props
-  linkedEntities,
-  gateways,
-  entityStates,
-  iotLoading,
-
-  onUpdateField,
-  onAddFlush,
-  onUpdateFlush,
-  onRemoveFlush,
-  onSetActiveDatePicker,
-  onHandleDateChange,
-  onParseDate,
-  onShowDeleteModal,
-  onDeleteGrow,
-  onSaveGrow,
-  onUpdateEntityState,
-  saveButtonText = 'Save',
-}: GrowFormProps) {
+export function GrowForm({ growId, saveButtonText = 'Save' }: GrowFormProps) {
+  const { token } = useContext(AuthContext);
   const router = useRouter();
+  const { showError, showSuccess } = useUnifiedToast();
+
+  // Store hooks
+  const formData = useCurrentGrowFormData();
+  const flushes = useCurrentGrowFlushes();
+  const updateField = useUpdateCurrentGrowField();
+  const addFlush = useAddFlush();
+  const updateFlush = useUpdateFlush();
+  const removeFlush = useRemoveFlush();
+  const parseDate = useParseDateUtility();
+  const formatDateForAPI = useFormatDateForAPI();
+
+  // Store actions
+  const createGrow = useGrowStore((state) => state.createGrow);
+  const updateGrow = useGrowStore((state) => state.updateGrow);
+  const deleteGrow = useGrowStore((state) => state.deleteGrow);
+
+  // Local UI state
+  const [isSaving, setIsSaving] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [activeDatePicker, setActiveDatePicker] = useState<string | null>(null);
+
+  // Keyboard visibility tracking
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  // Date handling
+  const handleDateChange = (field: string, date?: Date, event?: any) => {
+    // If user cancelled, don't change anything
+    if (event && event.type === 'dismissed') {
+      setActiveDatePicker(null);
+      return;
+    }
+
+    setActiveDatePicker(null);
+    if (date) {
+      const formattedDate = formatDateForAPI(date);
+      
+      // Handle flush dates differently from regular grow data fields
+      if (field.startsWith('flush_')) {
+        const flushId = field.replace('flush_', '');
+        updateFlush(flushId, { harvest_date: formattedDate });
+      } else {
+        // Update regular grow field
+        updateField(field as any, formattedDate);
+      }
+    }
+  };
+
+  // Calculate total cost from stages data
+  const calculateTotalCost = () => {
+    if (!formData?.stages) return formData?.total_cost || 0;
+
+    let totalCost = 0;
+    Object.values(formData.stages).forEach((stage: any) => {
+      if (stage?.items) {
+        stage.items.forEach((item: any) => {
+          totalCost += parseFloat(item.cost || '0') || 0;
+        });
+      }
+    });
+
+    return totalCost || formData?.total_cost || 0;
+  };
+
+  // Save grow
+  const handleSaveGrow = async () => {
+    if (!formData || !token) return;
+
+    // Basic validation
+    if (!formData.name?.trim()) {
+      showError('Grow name is required');
+      return;
+    }
+
+    if (!formData.species?.trim()) {
+      showError('Species is required');
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const isEdit = growId && growId !== 'new';
+
+      if (isEdit) {
+        // Prepare data for API update (BulkGrowUpdateWithFlushes)
+        const updateData = {
+          ...formData,
+          total_cost: calculateTotalCost(),
+          flushes: flushes,
+        };
+
+        const success = await updateGrow(token, growId, updateData);
+        if (success) {
+          showSuccess('Grow updated successfully!');
+        } else {
+          showError('Failed to update grow');
+          return;
+        }
+      } else {
+        // Prepare data for API create (BulkGrowCreateWithFlushes)
+        // After validation, we know name and species are defined
+        const createData = {
+          ...formData,
+          name: formData.name!, // Non-null assertion after validation
+          species: formData.species!, // Non-null assertion after validation
+          total_cost: calculateTotalCost(),
+          flushes: flushes,
+        };
+
+        const newGrow = await createGrow(token, createData);
+        if (newGrow) {
+          showSuccess('Grow saved successfully!');
+        } else {
+          showError('Failed to save grow');
+          return;
+        }
+      }
+
+      // Navigate back to grows list after a brief delay
+      setTimeout(() => {
+        router.replace('/grows');
+      }, 500);
+    } catch (error) {
+      showError('Failed to save grow');
+      console.error('Save error:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Delete grow
+  const handleDeleteGrow = async () => {
+    if (!growId || growId === 'new' || !token) return;
+
+    setIsDeleting(true);
+
+    try {
+      const success = await deleteGrow(token, growId);
+      if (success) {
+        showSuccess('Grow deleted successfully!');
+        setShowDeleteModal(false);
+
+        // Navigate back to grows list after a brief delay
+        setTimeout(() => {
+          router.replace('/grows');
+        }, 1000);
+      } else {
+        showError('Failed to delete grow');
+      }
+    } catch (error) {
+      showError('Failed to delete grow');
+      console.error('Delete error:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Don't render if no form data
+  if (!formData) {
+    return null;
+  }
 
   return (
     <VStack className="flex-1 bg-background-50">
@@ -118,7 +254,7 @@ export function GrowForm({
                 </AccordionTrigger>
               </AccordionHeader>
               <AccordionContent>
-                <BasicsSection growData={growData} updateField={onUpdateField} />
+                <BasicsSection />
               </AccordionContent>
             </AccordionItem>
 
@@ -143,18 +279,10 @@ export function GrowForm({
               </AccordionHeader>
               <AccordionContent>
                 <StagesSection
-                  growData={growData}
-                  updateField={onUpdateField}
-                  flushCount={flushes.length}
-                  flushes={flushes}
-                  addFlush={onAddFlush}
-                  updateFlush={onUpdateFlush}
-                  removeFlush={onRemoveFlush}
                   activeDatePicker={activeDatePicker}
-                  setActiveDatePicker={onSetActiveDatePicker}
-                  handleDateChange={onHandleDateChange}
-                  parseDate={onParseDate}
-                  grow={growData}
+                  setActiveDatePicker={setActiveDatePicker}
+                  handleDateChange={handleDateChange}
+                  parseDate={parseDate}
                 />
               </AccordionContent>
             </AccordionItem>
@@ -179,14 +307,7 @@ export function GrowForm({
                 </AccordionTrigger>
               </AccordionHeader>
               <AccordionContent>
-                <IoTGatewaySection
-                  growId={growId ? parseInt(growId) : undefined}
-                  linkedEntities={linkedEntities}
-                  gateways={gateways}
-                  entityStates={entityStates}
-                  iotLoading={iotLoading}
-                  onEntityStateUpdate={onUpdateEntityState}
-                />
+              {/* IoT Gateway Section - TODO */}
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -208,7 +329,7 @@ export function GrowForm({
             <Button
               variant="solid"
               action="negative"
-              onPress={() => onShowDeleteModal(true)}
+              onPress={() => setShowDeleteModal(true)}
               isDisabled={isDeleting}
               className="h-12 flex-1">
               <ButtonIcon as={Trash2} className="text-white" />
@@ -220,7 +341,7 @@ export function GrowForm({
           <Button
             variant="solid"
             action="positive"
-            onPress={onSaveGrow}
+            onPress={handleSaveGrow}
             isDisabled={isSaving}
             className="h-12 flex-1">
             <ButtonIcon as={Save} className="text-white" />
@@ -234,8 +355,8 @@ export function GrowForm({
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         isOpen={showDeleteModal}
-        onClose={() => onShowDeleteModal(false)}
-        onConfirm={onDeleteGrow}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteGrow}
         title="Delete Grow"
         message="Are you sure you want to delete this grow? This action cannot be undone."
         isDeleting={isDeleting}

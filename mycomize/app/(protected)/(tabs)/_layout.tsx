@@ -1,12 +1,35 @@
+import { useEffect, useContext } from 'react';
 import { Tabs, useRouter, useSegments } from 'expo-router';
 import { CircuitBoard, User, FlaskConical, Layers } from 'lucide-react-native';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
 import MushroomIcon from '~/components/icons/MushroomIcon';
+import { AuthContext } from '~/lib/AuthContext';
+import { useGrowStore } from '~/lib/stores';
 
 export default function TabLayout() {
   const { theme } = useTheme();
   const router = useRouter();
   const segments = useSegments();
+  const { token } = useContext(AuthContext);
+  const fetchGrows = useGrowStore((state) => state.fetchGrows);
+
+  // Initial data fetch on app startup and redirect if no token
+  useEffect(() => {
+    const initialSetup = async () => {
+      if (!token) {
+        router.replace('/login');
+        return;
+      }
+      
+      try {
+        await fetchGrows(token);
+      } catch (error) {
+        console.error('Error fetching initial grows:', error);
+      }
+    };
+
+    initialSetup();
+  }, [token, fetchGrows, router]);
 
   // Set tab bar styles based on theme
   const tabBarStyle = {

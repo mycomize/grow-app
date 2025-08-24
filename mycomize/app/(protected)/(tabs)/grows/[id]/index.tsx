@@ -1,21 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import { useCallback, useContext } from 'react';
 import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { VStack } from '~/components/ui/vstack';
 import { Text } from '~/components/ui/text';
 import { Spinner } from '~/components/ui/spinner';
 
-import { useGrowFormLogic } from '~/lib/useGrowFormLogic';
 import { GrowForm } from '~/components/grow/GrowForm';
+import { useInitializeCurrentGrow, useCurrentGrow } from '~/lib/stores';
+import { AuthContext } from '~/lib/AuthContext';
 
 export default function GrowEditScreen() {
   const { id, fromTek } = useLocalSearchParams();
+  const { token } = useContext(AuthContext);
+  const initializeCurrentGrow = useInitializeCurrentGrow();
+  const currentGrow = useCurrentGrow();
 
-  const formLogic = useGrowFormLogic({
-    growId: id as string,
-    fromTek: fromTek as string,
-  });
+  useFocusEffect(
+    useCallback(() => {
+      // Initialize the grow store for editing existing grow
+      initializeCurrentGrow(id as string, fromTek as string, token || undefined);
+    }, [initializeCurrentGrow, id, fromTek, token])
+  );
 
-  if (formLogic.isLoading) {
+  // Show loading while initializing
+  if (!currentGrow) {
     return (
       <VStack className="flex-1 items-center justify-center bg-background-50">
         <Spinner size="large" />
@@ -24,33 +32,5 @@ export default function GrowEditScreen() {
     );
   }
 
-  return (
-    <GrowForm
-      growData={formLogic.growData}
-      flushes={formLogic.flushes}
-      isSaving={formLogic.isSaving}
-      keyboardVisible={formLogic.keyboardVisible}
-      showDeleteModal={formLogic.showDeleteModal}
-      isDeleting={formLogic.isDeleting}
-      activeDatePicker={formLogic.activeDatePicker}
-      growId={id as string}
-      // IoT props
-      linkedEntities={formLogic.linkedEntities}
-      gateways={formLogic.gateways}
-      entityStates={formLogic.entityStates}
-      iotLoading={formLogic.iotLoading}
-      onUpdateField={formLogic.updateField}
-      onAddFlush={formLogic.addFlush}
-      onUpdateFlush={formLogic.updateFlush}
-      onRemoveFlush={formLogic.removeFlush}
-      onSetActiveDatePicker={formLogic.setActiveDatePicker}
-      onHandleDateChange={formLogic.handleDateChange}
-      onParseDate={formLogic.parseDate}
-      onShowDeleteModal={formLogic.setShowDeleteModal}
-      onDeleteGrow={formLogic.deleteGrow}
-      onSaveGrow={formLogic.saveGrow}
-      onUpdateEntityState={formLogic.updateEntityState}
-      saveButtonText="Save"
-    />
-  );
+  return <GrowForm growId={id as string} saveButtonText="Save" />;
 }
