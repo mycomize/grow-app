@@ -7,7 +7,6 @@ import {
   createFilterSlice,
   createHaEntitiesSlice,
   createIotEntitiesSlice,
-  createGrowsSlice,
   createSyncComputationSlice,
   createEntityOperationsSlice,
 } from './entity/slices';
@@ -19,7 +18,6 @@ export const useEntityStore = create<EntityStore>()((set, get, api) => ({
   ...createFilterSlice(set, get, api),
   ...createHaEntitiesSlice(set, get, api),
   ...createIotEntitiesSlice(set, get, api),
-  ...createGrowsSlice(set, get, api),
   ...createSyncComputationSlice(set, get, api),
   ...createEntityOperationsSlice(set, get, api),
 
@@ -43,8 +41,6 @@ export const useEntityStore = create<EntityStore>()((set, get, api) => ({
       },
       filterEnabled: true,
       operationLoading: false,
-      grows: [],
-      growsLoading: false,
       lastCredentials: new Map(),
       webSocketInitialized: false,
       fetchedGateways: new Set(),

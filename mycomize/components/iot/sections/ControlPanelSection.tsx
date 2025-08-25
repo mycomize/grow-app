@@ -34,6 +34,7 @@ import {
 } from '~/lib/stores/iot/gatewayStore';
 
 import { useEntityStore, useGatewayEntities } from '~/lib/stores/iot/entityStore';
+import { useGrows } from '~/lib/stores';
 
 import { AuthContext } from '~/lib/AuthContext';
 import { EntityCard } from '~/components/iot/EntityCard';
@@ -62,7 +63,7 @@ export function ControlPanelSection({ gatewayId }: ControlPanelSectionProps) {
   //   `[ControlPanelSection] Gateway-scoped entities: ${linkableEntities.length} linkable, ${filteredLinkableEntities.length} filtered, ${linkedEntities.length} linked`
   // );
 
-  const grows = useEntityStore((state) => state.grows);
+  const grows = useGrows();
   const filterPreferences = useEntityStore((state) => state.filterPreferences);
   const linkEntity = useEntityStore((state) => state.linkEntity);
   const unlinkEntity = useEntityStore((state) => state.unlinkEntity);

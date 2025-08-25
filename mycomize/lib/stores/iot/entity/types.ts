@@ -75,11 +75,6 @@ export interface SyncComputationState {
   linkedEntities: IoTEntity[];
 }
 
-export interface GrowsState {
-  grows: any[];
-  growsLoading: boolean;
-}
-
 // Main EntityStore interface (maintained for backward compatibility)
 export interface EntityStore
   extends HaEntitiesState,
@@ -87,8 +82,7 @@ export interface EntityStore
     EntityOperationsState,
     SelectionState,
     FilterState,
-    SyncComputationState,
-    GrowsState {
+    SyncComputationState {
   // HA Entity management
   fetchHaEntities: (gateway: IoTGateway, forceRefresh?: boolean) => Promise<void>;
   clearHaEntities: () => void;
@@ -177,7 +171,6 @@ export interface EntityStore
   toggleShowAllDeviceClasses: () => void;
 
   // Utility
-  fetchGrows: (token: string) => Promise<void>;
   handleGatewayDeletion: (gatewayId: number) => void;
   reset: () => void;
 }

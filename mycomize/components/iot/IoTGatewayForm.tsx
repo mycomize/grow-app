@@ -24,6 +24,7 @@ import {
   useClearCurrentGateway,
 } from '~/lib/stores/iot/gatewayStore';
 import { useEntityStore } from '~/lib/stores/iot/entityStore';
+import { useGrows } from '~/lib/stores';
 import { AuthContext } from '~/lib/AuthContext';
 
 // Import modular sections
@@ -55,12 +56,14 @@ export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewa
   const {
     fetchHaEntities,
     fetchIotEntities,
-    fetchGrows,
     syncIotEntities,
     computeAndSetEntityLists,
     commitPendingLinks,
     clearPendingLinks,
   } = useEntityStore();
+
+  // Use centralized grow store
+  const grows = useGrows();
 
   // Local UI state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -120,16 +123,8 @@ export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewa
         );
       }
 
-      // Always fetch grows for linking
-      if (token) {
-        const growsFetchStart = performance.now();
-        console.log(`[IoTGatewayForm] Fetching grows for linking`);
-        await fetchGrows(token);
-        const growsFetchEnd = performance.now();
-        console.log(
-          `[IoTGatewayForm] Grows fetch completed in ${growsFetchEnd - growsFetchStart}ms`
-        );
-      }
+      // Grows are now loaded from centralized store on app startup
+      console.log(`[IoTGatewayForm] Using grows from centralized store (${grows.length} available)`);
 
       const totalTime = performance.now() - startTime;
       console.log(
@@ -138,7 +133,7 @@ export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewa
     };
 
     initializeGatewayData();
-  }, [gateway, token, fetchHaEntities, fetchIotEntities, fetchGrows, computeAndSetEntityLists]);
+  }, [gateway, token, fetchHaEntities, fetchIotEntities, computeAndSetEntityLists, grows.length]);
 
   // Save gateway handler
   const handleSaveGateway = useCallback(async () => {
