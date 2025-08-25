@@ -7,7 +7,7 @@ import { Spinner } from '~/components/ui/spinner';
 
 import { GrowForm } from '~/components/grow/GrowForm';
 import { useInitializeCurrentGrow, useCurrentGrow } from '~/lib/stores';
-import { AuthContext } from '~/lib/AuthContext';
+import { AuthContext } from '~/lib/api/AuthContext';
 
 export default function GrowEditScreen() {
   const { id, fromTek } = useLocalSearchParams();

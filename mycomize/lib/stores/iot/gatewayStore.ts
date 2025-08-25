@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { router } from 'expo-router';
-import { apiClient, isUnauthorizedError } from '../../ApiClient';
-import { IoTGateway, IoTGatewayCreate, IoTGatewayUpdate } from '../../iot';
-import { ConnectionInfo, ConnectionStatus } from '../../iotTypes';
+import { apiClient, isUnauthorizedError } from '../../api/ApiClient';
+import { IoTGateway, IoTGatewayCreate, IoTGatewayUpdate } from '../../iot/iot';
+import { ConnectionInfo, ConnectionStatus } from '../../types/iotTypes';
 import { useEntityStore } from './entityStore';
 
 // Helper function to handle unauthorized errors consistently

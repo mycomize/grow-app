@@ -16,7 +16,7 @@ import { Icon } from '~/components/ui/icon';
 import { Input, InputField, InputIcon, InputSlot } from '~/components/ui/input';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { X, ShoppingBasket, CalendarDays, Weight } from 'lucide-react-native';
-import { BulkGrowFlush } from '~/lib/growTypes';
+import { BulkGrowFlush } from '~/lib/types/growTypes';
 
 interface FlushModalProps {
   isOpen: boolean;

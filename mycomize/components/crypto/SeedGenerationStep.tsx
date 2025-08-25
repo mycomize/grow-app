@@ -8,7 +8,7 @@ import { Card } from '~/components/ui/card';
 import { Icon } from '~/components/ui/icon';
 import { Textarea, TextareaInput } from '~/components/ui/textarea';
 import { Spinner } from '~/components/ui/spinner';
-import { getEncryptionService } from '~/lib/EncryptionService';
+import { getEncryptionService } from '~/lib/crypto/EncryptionService';
 import { Lock, Dices, CheckCircle } from 'lucide-react-native';
 
 interface SeedGenerationStepProps {

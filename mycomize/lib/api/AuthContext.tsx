@@ -1,7 +1,7 @@
 import { use, createContext, type PropsWithChildren } from 'react';
 import { useStorageState } from '~/lib/useStorageState';
 import { useRouter } from 'expo-router';
-import { apiClient } from '~/lib/ApiClient';
+import { apiClient } from '~/lib/api/ApiClient';
 
 type AuthState = {
   register: (username: string, password: string) => Promise<string | null>;

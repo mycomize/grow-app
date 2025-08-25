@@ -1,9 +1,9 @@
 import type { StateCreator } from 'zustand';
 import type { EntityOperationsState, EntityStore } from '../types';
-import { HAEntity, IoTEntity, IoTGateway } from '../../../../iot';
-import { EntityOperation } from '../../../../iotTypes';
+import { HAEntity, IoTEntity, IoTGateway } from '../../../../iot/iot';
+import { EntityOperation } from '../../../../types/iotTypes';
 import { handleUnauthorizedError, createPseudoIoTEntity, createPerformanceTimer } from '../utils';
-import { apiClient } from '../../../../ApiClient';
+import { apiClient } from '../../../../api/ApiClient';
 import { haWebSocketManager } from '../../../../iot/haWebSocketManager';
 
 export interface EntityOperationsActions {

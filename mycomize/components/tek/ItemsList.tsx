@@ -8,7 +8,7 @@ import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { InfoBadge } from '~/components/ui/info-badge';
 import { Plus, Edit2, Trash2, Package, ExternalLink, Copy, DollarSign } from 'lucide-react-native';
-import { Item } from '~/lib/tekTypes';
+import { Item } from '~/lib/types/tekTypes';
 import { ItemModal } from '~/components/modals/ItemModal';
 import { DeleteConfirmationModal } from '~/components/modals/DeleteConfirmationModal';
 

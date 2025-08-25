@@ -1,6 +1,6 @@
 import React from 'react';
 import { VStack } from '~/components/ui/vstack';
-import { BulkStageData } from '~/lib/tekTypes';
+import { BulkStageData } from '~/lib/types/tekTypes';
 import { StageTabs } from '~/components/ui/stage-tabs';
 
 interface StageSectionProps {

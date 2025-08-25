@@ -9,9 +9,9 @@ import { ArrowDownToDot } from 'lucide-react-native';
 import { FlushList } from '../FlushList';
 
 // Import tek types
-import { BulkGrowFlush } from '~/lib/growTypes';
+import { BulkGrowFlush } from '~/lib/types/growTypes';
 import { StageTabs } from '~/components/ui/stage-tabs';
-import { StageIoTData } from '~/lib/iotTypes';
+import { StageIoTData } from '~/lib/types/iotTypes';
 
 interface HarvestSectionProps {
   flushes: BulkGrowFlush[];

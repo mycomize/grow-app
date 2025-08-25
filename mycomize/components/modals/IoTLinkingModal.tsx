@@ -18,7 +18,7 @@ import { Card } from '~/components/ui/card';
 import { ScrollView } from '~/components/ui/scroll-view';
 import { X, CircleIcon, CircleX, MoveRight } from 'lucide-react-native';
 import MushroomIcon from '~/components/icons/MushroomIcon';
-import { BulkGrow } from '~/lib/growTypes';
+import { BulkGrow } from '~/lib/types/growTypes';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 
 interface IoTLinkingModalProps {

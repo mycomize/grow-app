@@ -1,10 +1,10 @@
 import { Stack, Redirect } from 'expo-router';
-import { AuthContext } from '~/lib/AuthContext';
+import { AuthContext } from '~/lib/api/AuthContext';
 import { useContext } from 'react';
 import { Text } from 'react-native';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
 import { CalendarProvider } from '~/lib/CalendarContext';
-import { useEncryption } from '~/lib/EncryptionContext';
+import { useEncryption } from '~/lib/crypto/EncryptionContext';
 
 export default function ProtectedLayout() {
   const authState = useContext(AuthContext);

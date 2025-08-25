@@ -4,7 +4,7 @@ import {
   IoTFilterPreferences,
   DEFAULT_IOT_DOMAINS,
   DEFAULT_GROW_DEVICE_CLASSES,
-} from '../../../../iotTypes';
+} from '../../../../types/iotTypes';
 
 export interface FilterActions {
   // Actions - Filter management

@@ -8,7 +8,7 @@ import { Input, InputField } from '~/components/ui/input';
 import { Pressable } from '~/components/ui/pressable';
 import { Spinner } from '~/components/ui/spinner';
 import { CirclePlus, CircleMinus, Save, Calculator } from 'lucide-react-native';
-import { HAEntity, IoTEntity, IoTGateway } from '~/lib/iot';
+import { HAEntity, IoTEntity, IoTGateway } from '~/lib/iot/iot';
 
 interface NumberControlProps {
   state: HAEntity;

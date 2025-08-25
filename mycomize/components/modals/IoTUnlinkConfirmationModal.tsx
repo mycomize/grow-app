@@ -15,8 +15,8 @@ import { Button, ButtonText } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { ScrollView } from '~/components/ui/scroll-view';
 import { X, Unlink } from 'lucide-react-native';
-import { IoTEntity } from '~/lib/iot';
-import { BulkGrow, stageLabels } from '~/lib/growTypes';
+import { IoTEntity } from '~/lib/iot/iot';
+import { BulkGrow, stageLabels } from '~/lib/types/growTypes';
 
 interface IoTUnlinkConfirmationModalProps {
   isOpen: boolean;

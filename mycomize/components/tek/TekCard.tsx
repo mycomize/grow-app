@@ -11,7 +11,7 @@ import { Avatar, AvatarFallbackText, AvatarImage } from '~/components/ui/avatar'
 import { Alert } from 'react-native';
 import { RefreshCw, Users, Trash2, Lock, SquarePen } from 'lucide-react-native';
 import { getCachedProfileImage, cacheProfileImage } from '~/lib/imageCache';
-import { BulkGrowTek } from '~/lib/tekTypes';
+import { BulkGrowTek } from '~/lib/types/tekTypes';
 import { TekActionModal } from '~/components/modals/TekActionModal';
 
 interface TekCardProps {

@@ -16,7 +16,7 @@ import {
 } from '~/components/ui/modal';
 import { Check, X } from 'lucide-react-native';
 
-import { TEK_TYPES } from '~/lib/tekTypes';
+import { TEK_TYPES } from '~/lib/types/tekTypes';
 
 interface TypeSelectionModalProps {
   isOpen: boolean;

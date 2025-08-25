@@ -3,7 +3,7 @@ import {
   IoTFilterPreferences,
   DEFAULT_IOT_DOMAINS,
   DEFAULT_GROW_DEVICE_CLASSES,
-} from '~/lib/iotTypes';
+} from '~/lib/types/iotTypes';
 
 export interface TaskFilterPreferences {
   growName: string;

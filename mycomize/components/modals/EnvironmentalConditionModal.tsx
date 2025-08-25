@@ -21,7 +21,7 @@ import {
   generateId,
   ENVIRONMENTAL_CONDITION_TYPES,
   CONDITION_UNITS,
-} from '~/lib/tekTypes';
+} from '~/lib/types/tekTypes';
 
 interface EnvironmentalConditionModalProps {
   isOpen: boolean;

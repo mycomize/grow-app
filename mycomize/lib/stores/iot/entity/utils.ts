@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
-import { isUnauthorizedError } from '../../../ApiClient';
-import { HAEntity, IoTEntity, IoTEntityCreate } from '../../../iot';
+import { isUnauthorizedError } from '../../../api/ApiClient';
+import { HAEntity, IoTEntity, IoTEntityCreate } from '../../../iot/iot';
 
 // Helper function to handle unauthorized errors consistently
 export const handleUnauthorizedError = (error: Error) => {

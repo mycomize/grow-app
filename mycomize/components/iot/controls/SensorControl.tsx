@@ -5,7 +5,7 @@ import { Text } from '~/components/ui/text';
 import { Icon } from '~/components/ui/icon';
 import { Card } from '~/components/ui/card';
 import { Thermometer, Droplet, Activity } from 'lucide-react-native';
-import { HAEntity, IoTEntity } from '~/lib/iot';
+import { HAEntity, IoTEntity } from '~/lib/iot/iot';
 
 interface SensorControlProps {
   state: HAEntity;

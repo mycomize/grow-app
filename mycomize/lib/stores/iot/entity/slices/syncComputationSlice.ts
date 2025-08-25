@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand';
 import type { SyncComputationState, EntityStore, EntitySyncResult } from '../types';
-import { HAEntity, IoTEntity, IoTGateway } from '../../../../iot';
-import { NEW_GATEWAY_ID } from '../../../../iotTypes';
+import { HAEntity, IoTEntity, IoTGateway } from '../../../../iot/iot';
+import { NEW_GATEWAY_ID } from '../../../../types/iotTypes';
 import {
   handleUnauthorizedError,
   extractDomain,
@@ -9,7 +9,7 @@ import {
   createIoTEntityFromHAEntity,
   createPerformanceTimer,
 } from '../utils';
-import { apiClient } from '../../../../ApiClient';
+import { apiClient } from '../../../../api/ApiClient';
 
 export interface SyncComputationActions {
   // Actions - Entity sync computation

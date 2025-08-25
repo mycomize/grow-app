@@ -16,12 +16,12 @@ import { StageNotes } from '~/components/tek/StageNotes';
 //import { IotControlsList } from '~/components/grow/IotControlsList';
 
 // Import tek types
-import { BulkStageData } from '~/lib/tekTypes';
-import { BulkGrowComplete, bulkGrowStages } from '~/lib/growTypes';
-import { IoTEntity, IoTGateway } from '~/lib/iot';
-import { IoTFilterPreferences, StageIoTData } from '~/lib/iotTypes';
-import { AuthContext } from '~/lib/AuthContext';
-import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
+import { BulkStageData } from '~/lib/types/tekTypes';
+import { BulkGrowComplete, bulkGrowStages } from '~/lib/types/growTypes';
+import { IoTEntity, IoTGateway } from '~/lib/iot/iot';
+import { IoTFilterPreferences, StageIoTData } from '~/lib/types/iotTypes';
+import { AuthContext } from '~/lib/api/AuthContext';
+import { apiClient, isUnauthorizedError } from '~/lib/api/ApiClient';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
 
 type TabType = 'items' | 'conditions' | 'tasks' | 'notes' | 'iot';

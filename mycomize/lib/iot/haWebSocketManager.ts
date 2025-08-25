@@ -1,4 +1,4 @@
-import { HAEntity } from '../iot';
+import { HAEntity } from './iot';
 
 // Home Assistant WebSocket message types
 interface HAWebSocketMessage {

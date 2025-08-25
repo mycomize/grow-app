@@ -9,8 +9,8 @@ import {
   getTaskPriority,
   getDaysUntilDue,
   formatDateForCalendar,
-} from './calendarTypes';
-import { Task } from './tekTypes';
+} from './types/calendarTypes';
+import { Task } from './types/tekTypes';
 import { BulkGrow } from './growTypes';
 
 interface CalendarContextType {

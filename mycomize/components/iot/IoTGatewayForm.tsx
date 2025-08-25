@@ -25,7 +25,7 @@ import {
 } from '~/lib/stores/iot/gatewayStore';
 import { useEntityStore } from '~/lib/stores/iot/entityStore';
 import { useGrows } from '~/lib/stores';
-import { AuthContext } from '~/lib/AuthContext';
+import { AuthContext } from '~/lib/api/AuthContext';
 
 // Import modular sections
 import { BasicsSection } from '~/components/iot/sections/BasicsSection';

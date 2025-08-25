@@ -1,6 +1,6 @@
 // Shared IoT-related types and interfaces
 
-import { IoTEntity, IoTGateway } from './iot';
+import { IoTEntity, IoTGateway } from '../iot/iot';
 
 export const NEW_GATEWAY_ID = -1;
 export interface ConnectionInfo {

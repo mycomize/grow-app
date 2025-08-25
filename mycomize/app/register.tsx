@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { ScrollView } from '@/components/ui/scroll-view';
 import { Box } from '@/components/ui/box';
 import { useContext } from 'react';
-import { AuthContext } from '~/lib/AuthContext';
+import { AuthContext } from '~/lib/api/AuthContext';
 import { Button, ButtonIcon, ButtonText } from '~/components/ui/button';
 import { FormControl } from '@/components/ui/form-control';
 import { Heading } from '@/components/ui/heading';

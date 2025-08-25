@@ -1,8 +1,8 @@
 import type { StateCreator } from 'zustand';
 import type { IotEntitiesState, EntityStore } from '../types';
-import { HAEntity, IoTEntity } from '../../../../iot';
+import { HAEntity, IoTEntity } from '../../../../iot/iot';
 import { handleUnauthorizedError, createPerformanceTimer } from '../utils';
-import { apiClient } from '../../../../ApiClient';
+import { apiClient } from '../../../../api/ApiClient';
 
 export interface IotEntitiesActions {
   // Actions - IoT Entity management

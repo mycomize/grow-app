@@ -9,8 +9,8 @@ import { Card } from '~/components/ui/card';
 import { Icon } from '~/components/ui/icon';
 import { Button } from '~/components/ui/button';
 import { AlertCircle, Thermometer } from 'lucide-react-native';
-import { IoTGateway } from '~/lib/iot';
-import { Grow } from '~/lib/growTypes';
+import { IoTGateway } from '~/lib/iot/iot';
+import { Grow } from '~/lib/types/growTypes';
 
 interface SensorData {
   entity_id: string;

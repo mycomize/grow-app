@@ -7,7 +7,7 @@ import { Card } from '~/components/ui/card';
 import { Switch } from '~/components/ui/switch';
 import { Spinner } from '~/components/ui/spinner';
 import { Zap, ZapOff } from 'lucide-react-native';
-import { HAEntity, IoTEntity } from '~/lib/iot';
+import { HAEntity, IoTEntity } from '~/lib/iot/iot';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import { getSwitchColors } from '~/lib/switchUtils';
 

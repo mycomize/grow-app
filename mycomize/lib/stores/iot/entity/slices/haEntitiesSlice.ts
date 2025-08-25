@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand';
 import type { HaEntitiesState, EntityStore, GatewayCredentials } from '../types';
-import { HAEntity, IoTGateway } from '../../../../iot';
+import { HAEntity, IoTGateway } from '../../../../iot/iot';
 import { handleUnauthorizedError, createPerformanceTimer } from '../utils';
 import { haWebSocketManager } from '../../../../iot/haWebSocketManager';
 

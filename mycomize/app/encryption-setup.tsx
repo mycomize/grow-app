@@ -6,7 +6,7 @@ import { SafeAreaView } from '~/components/ui/safe-area-view';
 import { HStack } from '~/components/ui/hstack';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
 import { Icon } from '~/components/ui/icon';
-import { useEncryption } from '~/lib/EncryptionContext';
+import { useEncryption } from '~/lib/crypto/EncryptionContext';
 import { CheckCircle, CircleX } from 'lucide-react-native';
 import {
   IntroductionStep,

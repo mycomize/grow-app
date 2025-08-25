@@ -7,7 +7,7 @@ import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { Checkbox, CheckboxIcon, CheckboxIndicator } from '~/components/ui/checkbox';
 import { Activity, Bot, Calculator, ToggleRight, Link, Unlink, Check } from 'lucide-react-native';
-import { IoTEntity } from '~/lib/iot';
+import { IoTEntity } from '~/lib/iot/iot';
 
 interface EntityCardProps {
   entity: IoTEntity;

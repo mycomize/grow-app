@@ -6,7 +6,7 @@ import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { Plus, Edit2, Trash2, Thermometer, Copy } from 'lucide-react-native';
-import { EnvironmentalCondition } from '~/lib/tekTypes';
+import { EnvironmentalCondition } from '~/lib/types/tekTypes';
 import { EnvironmentalConditionModal } from '~/components/modals/EnvironmentalConditionModal';
 import { DeleteConfirmationModal } from '~/components/modals/DeleteConfirmationModal';
 

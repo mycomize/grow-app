@@ -16,7 +16,7 @@ import { Icon } from '~/components/ui/icon';
 import { Input, InputField } from '~/components/ui/input';
 import { Menu, MenuItem, MenuItemLabel } from '~/components/ui/menu';
 import { X, CheckSquare, ChevronDown } from 'lucide-react-native';
-import { Task, generateId } from '~/lib/tekTypes';
+import { Task, generateId } from '~/lib/types/tekTypes';
 
 interface TaskModalProps {
   isOpen: boolean;

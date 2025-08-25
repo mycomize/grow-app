@@ -5,7 +5,7 @@ import { Text } from '~/components/ui/text';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { ScrollView } from '~/components/ui/scroll-view';
-import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
+import { apiClient, isUnauthorizedError } from '~/lib/api/ApiClient';
 import { Icon } from '~/components/ui/icon';
 import { Input, InputField, InputIcon } from '~/components/ui/input';
 import { Pressable } from '~/components/ui/pressable';
@@ -36,12 +36,12 @@ import {
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { AuthContext } from '~/lib/AuthContext';
+import { AuthContext } from '~/lib/api/AuthContext';
 import { TekCard } from '~/components/tek/TekCard';
 import { TekCardSkeleton } from '~/components/tek';
 import { CountBadge } from '~/components/ui/count-badge';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
-import { BulkGrowTek } from '~/lib/tekTypes';
+import { BulkGrowTek } from '~/lib/types/tekTypes';
 
 export default function TekLibraryScreen() {
   const { token } = useContext(AuthContext);

@@ -17,7 +17,7 @@ import {
 import { Save, ChevronDown, ChevronRight, FileText, Layers } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
-import { BulkGrowTekData } from '~/lib/tekTypes';
+import { BulkGrowTekData } from '~/lib/types/tekTypes';
 import { StageAccordion } from '~/components/tek/StageAccordion';
 import { TagManager } from '~/components/tek/TagManager';
 import { ConfirmationModal } from '~/components/modals/ConfirmationModal';

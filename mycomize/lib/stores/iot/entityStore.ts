@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
-import { DEFAULT_IOT_DOMAINS, DEFAULT_GROW_DEVICE_CLASSES, NEW_GATEWAY_ID } from '../../iotTypes';
+import { DEFAULT_IOT_DOMAINS, DEFAULT_GROW_DEVICE_CLASSES, NEW_GATEWAY_ID } from '../../types/iotTypes';
 import type { EntityStore } from './entity/types';
 import {
   createSelectionSlice,

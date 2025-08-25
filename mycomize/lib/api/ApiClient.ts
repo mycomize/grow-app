@@ -5,7 +5,7 @@ import {
   encryptDataArray,
   decryptDataArray,
   DataType,
-} from './DataEncryption';
+} from '../crypto/DataEncryption';
 
 interface RequestConfig {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';

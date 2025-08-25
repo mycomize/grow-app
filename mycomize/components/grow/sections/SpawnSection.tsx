@@ -21,9 +21,9 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { ChevronDown, ArrowDownToDot, CalendarDays, X } from 'lucide-react-native';
 
 // Import tek types
-import { BulkGrow } from '~/lib/growTypes';
+import { BulkGrow } from '~/lib/types/growTypes';
 import { StageTabs } from '~/components/ui/stage-tabs';
-import { StageIoTData } from '~/lib/iotTypes';
+import { StageIoTData } from '~/lib/types/iotTypes';
 
 interface SpawnStageData {
   spawn_start_date?: string;

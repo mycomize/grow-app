@@ -1,5 +1,5 @@
-import { HAEntity, IoTEntity, IoTGateway } from '../../../iot';
-import { IoTFilterPreferences, EntityOperation } from '../../../iotTypes';
+import { HAEntity, IoTEntity, IoTGateway } from '../../../iot/iot';
+import { IoTFilterPreferences, EntityOperation } from '../../../types/iotTypes';
 
 // Re-export existing types from main store
 export interface EntitySyncResult {

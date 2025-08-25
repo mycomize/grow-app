@@ -2,9 +2,9 @@ import { useState, useEffect, useContext } from 'react';
 import { useRouter } from 'expo-router';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
 
-import { AuthContext } from '~/lib/AuthContext';
-import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
-import { BulkGrowTekData, createEmptyTekData } from '~/lib/tekTypes';
+import { AuthContext } from '~/lib/api/AuthContext';
+import { apiClient, isUnauthorizedError } from '~/lib/api/ApiClient';
+import { BulkGrowTekData, createEmptyTekData } from '~/lib/types/tekTypes';
 
 interface UseTekFormLogicProps {
   initialData?: BulkGrowTekData;

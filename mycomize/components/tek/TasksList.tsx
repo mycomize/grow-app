@@ -21,7 +21,7 @@ import {
   AlertTriangle,
   Repeat,
 } from 'lucide-react-native';
-import { Task } from '~/lib/tekTypes';
+import { Task } from '~/lib/types/tekTypes';
 import { TaskModal } from '~/components/modals/TaskModal';
 import { DeleteConfirmationModal } from '~/components/modals/DeleteConfirmationModal';
 import { useCalendar } from '~/lib/CalendarContext';

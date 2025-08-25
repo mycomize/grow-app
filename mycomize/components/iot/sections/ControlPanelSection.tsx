@@ -20,10 +20,10 @@ import {
   WifiOff,
 } from 'lucide-react-native';
 import { InfoBadge } from '~/components/ui/info-badge';
-import { IoTEntity } from '~/lib/iot';
+import { IoTEntity } from '~/lib/iot/iot';
 import { IoTLinkingModal } from '~/components/modals/IoTLinkingModal';
 import { IoTUnlinkConfirmationModal } from '~/components/modals/IoTUnlinkConfirmationModal';
-import { stageLabels } from '~/lib/growTypes';
+import { stageLabels } from '~/lib/types/growTypes';
 import { Input, InputField, InputSlot } from '~/components/ui/input';
 
 // Zustand stores
@@ -36,7 +36,7 @@ import {
 import { useEntityStore, useGatewayEntities } from '~/lib/stores/iot/entityStore';
 import { useGrows } from '~/lib/stores';
 
-import { AuthContext } from '~/lib/AuthContext';
+import { AuthContext } from '~/lib/api/AuthContext';
 import { EntityCard } from '~/components/iot/EntityCard';
 import { BulkActionBar } from '~/components/iot/BulkActionBar';
 

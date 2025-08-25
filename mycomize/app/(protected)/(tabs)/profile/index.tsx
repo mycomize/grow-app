@@ -11,9 +11,9 @@ import { Pressable } from '@/components/ui/pressable';
 import { Avatar, AvatarFallbackText, AvatarImage } from '@/components/ui/avatar';
 import { useToast, Toast } from '@/components/ui/toast';
 
-import { AuthContext } from '@/lib/AuthContext';
+import { AuthContext } from '~/lib/api/AuthContext';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
-import { apiClient, isUnauthorizedError } from '@/lib/ApiClient';
+import { apiClient, isUnauthorizedError } from '~/lib/api/ApiClient';
 import { useContext, useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { getSwitchColors } from '@/lib/switchUtils';

@@ -11,7 +11,7 @@ import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
 import { Icon } from '~/components/ui/icon';
 import { InfoBadge } from '~/components/ui/info-badge';
-import { BulkGrowTekIcon } from '~/lib/bulkGrowTypes';
+import { BulkGrowTekIcon } from '~/lib/types/bulkGrowTypes';
 import {
   ChevronDown,
   ChevronRight,
@@ -20,7 +20,7 @@ import {
   CheckSquare,
   FileText,
 } from 'lucide-react-native';
-import { BulkGrowTekData, BulkGrowCultivationStage, BULK_GROW_TEK_STAGES } from '~/lib/tekTypes';
+import { BulkGrowTekData, BulkGrowCultivationStage, BULK_GROW_TEK_STAGES } from '~/lib/types/tekTypes';
 import { StageSection } from './StageSection';
 
 interface StageAccordionProps {

@@ -21,9 +21,9 @@ import {
   Zap,
 } from 'lucide-react-native';
 
-import { AuthContext } from '~/lib/AuthContext';
-import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
-import { IoTGateway, HAEntity } from '~/lib/iot';
+import { AuthContext } from '~/lib/api/AuthContext';
+import { apiClient, isUnauthorizedError } from '~/lib/api/ApiClient';
+import { IoTGateway, HAEntity } from '~/lib/iot/iot';
 import { SensorGraph } from '~/components/charts/SensorGraph';
 
 export default function SensorDetailScreen() {

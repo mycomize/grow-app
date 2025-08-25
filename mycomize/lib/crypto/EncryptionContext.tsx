@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getEncryptionService } from '~/lib/EncryptionService';
-import { useAuthSession } from '~/lib/AuthContext';
+import { getEncryptionService } from '~/lib/crypto/EncryptionService';
+import { useAuthSession } from '~/lib/api/AuthContext';
 
 interface EncryptionState {
   isInitialized: boolean;

@@ -18,7 +18,7 @@ import {
   ModalCloseButton,
 } from '~/components/ui/modal';
 import { X, Circle, CircleCheckBig } from 'lucide-react-native';
-import { bulkGrowStatuses, bulkGrowStages, stageLabels, statusLabels } from '~/lib/growTypes';
+import { bulkGrowStatuses, bulkGrowStages, stageLabels, statusLabels } from '~/lib/types/growTypes';
 
 interface GrowFilterModalProps {
   isOpen: boolean;

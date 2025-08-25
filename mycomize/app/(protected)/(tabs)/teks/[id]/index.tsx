@@ -4,9 +4,9 @@ import { VStack } from '~/components/ui/vstack';
 import { Text } from '~/components/ui/text';
 import { Spinner } from '~/components/ui/spinner';
 
-import { AuthContext } from '~/lib/AuthContext';
-import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
-import { BulkGrowTekData, BulkGrowTek } from '~/lib/tekTypes';
+import { AuthContext } from '~/lib/api/AuthContext';
+import { apiClient, isUnauthorizedError } from '~/lib/api/ApiClient';
+import { BulkGrowTekData, BulkGrowTek } from '~/lib/types/tekTypes';
 import { useTekFormLogic } from '~/lib/useTekFormLogic';
 import { TekForm } from '~/components/tek/TekForm';
 

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { router } from 'expo-router';
-import { apiClient, isUnauthorizedError } from '../ApiClient';
+import { apiClient, isUnauthorizedError } from '../api/ApiClient';
 import {
   BulkGrowComplete,
   BulkGrowCreate,

@@ -34,7 +34,7 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import { useCalendar } from '~/lib/CalendarContext';
-import { CalendarTask, getTaskStatus, getDaysUntilDue } from '~/lib/calendarTypes';
+import { CalendarTask, getTaskStatus, getDaysUntilDue } from '~/lib/types/calendarTypes';
 import { TaskFilterModal } from '~/components/modals/TaskFilterModal';
 import { DeleteConfirmationModal } from '~/components/modals/DeleteConfirmationModal';
 import {

@@ -3,7 +3,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { GrowForm } from '~/components/grow/GrowForm';
 import { useInitializeCurrentGrow } from '~/lib/stores';
-import { AuthContext } from '~/lib/AuthContext';
+import { AuthContext } from '~/lib/api/AuthContext';
 
 export default function NewGrowScreen() {
   const { fromTek } = useLocalSearchParams();

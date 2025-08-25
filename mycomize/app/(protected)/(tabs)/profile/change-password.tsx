@@ -16,8 +16,8 @@ import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
 import { Avatar, AvatarFallbackText } from '@/components/ui/avatar';
 
-import { AuthContext } from '@/lib/AuthContext';
-import { apiClient, isUnauthorizedError } from '@/lib/ApiClient';
+import { AuthContext } from '~/lib/api/AuthContext';
+import { apiClient, isUnauthorizedError } from '~/lib/api/ApiClient';
 import { PasswordInput } from '@/components/ui/password-input';
 
 // Function to decode JWT token and extract username

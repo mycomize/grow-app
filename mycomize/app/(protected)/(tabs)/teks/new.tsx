@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { useTekFormLogic } from '~/lib/useTekFormLogic';
 import { TekForm } from '~/components/tek/TekForm';
-import { BulkGrowTekData, BulkGrowTek, createEmptyTekData, generateId } from '~/lib/tekTypes';
+import { BulkGrowTekData, BulkGrowTek, createEmptyTekData, generateId } from '~/lib/types/tekTypes';
 
 export default function NewTekScreen() {
   const { tekToCopy } = useLocalSearchParams<{ tekToCopy?: string }>();

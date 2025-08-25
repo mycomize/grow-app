@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useReducer } from 'react';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { apiClient } from '~/lib/ApiClient';
+import { apiClient } from '~/lib/api/ApiClient';
 
 type UseStateHook<T> = [[boolean, T | null], (value: T | null) => void];
 

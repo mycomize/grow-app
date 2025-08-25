@@ -26,7 +26,7 @@ import MushroomIcon from '~/components/icons/MushroomIcon';
 import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
 
-import { AuthContext } from '~/lib/AuthContext';
+import { AuthContext } from '~/lib/api/AuthContext';
 import {
   useCurrentGrowFormData,
   useCurrentGrowFlushes,

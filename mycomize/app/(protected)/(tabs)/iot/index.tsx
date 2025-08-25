@@ -41,8 +41,8 @@ import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { AuthContext } from '~/lib/AuthContext';
-import { IoTGateway, gatewayTypeLabels } from '~/lib/iot';
+import { AuthContext } from '~/lib/api/AuthContext';
+import { IoTGateway, gatewayTypeLabels } from '~/lib/iot/iot';
 import { IoTGatewayCardSkeleton } from '~/components/iot/IoTGatewayCardSkeleton';
 import { ConnectionStatus } from '~/components/ui/connection-status-badge';
 import { InfoBadge, InfoBadgeVariant } from '~/components/ui/info-badge';

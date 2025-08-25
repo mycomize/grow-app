@@ -15,7 +15,7 @@ import { Text } from '~/components/ui/text';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { X, Import, Copy, Check } from 'lucide-react-native';
-import { BulkGrowTek } from '~/lib/tekTypes';
+import { BulkGrowTek } from '~/lib/types/tekTypes';
 
 interface TekActionModalProps {
   isOpen: boolean;

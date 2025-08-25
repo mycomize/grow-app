@@ -28,13 +28,13 @@ import { SpawnSection } from './SpawnSection';
 import { BulkSection } from './BulkSection';
 import { FruitingSection } from './FruitingSection';
 import { HarvestSection } from './HarvestSection';
-import { AuthContext } from '~/lib/AuthContext';
-import { apiClient, isUnauthorizedError } from '~/lib/ApiClient';
+import { AuthContext } from '~/lib/api/AuthContext';
+import { apiClient, isUnauthorizedError } from '~/lib/api/ApiClient';
 import { useRouter } from 'expo-router';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
 
 import { useCurrentGrowFormData, useCurrentGrowFlushes, useUpdateCurrentGrowField, useCurrentGrow } from '~/lib/stores';
-import { BulkGrowUpdate } from '~/lib/growTypes';
+import { BulkGrowUpdate } from '~/lib/types/growTypes';
 
 interface StagesSectionProps {
   activeDatePicker: string | null;

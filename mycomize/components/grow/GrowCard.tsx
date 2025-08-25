@@ -25,7 +25,7 @@ import {
   MapPin,
 } from 'lucide-react-native';
 import { Spinner } from '~/components/ui/spinner';
-import { BulkGrowComplete, bulkGrowStatuses } from '~/lib/growTypes';
+import { BulkGrowComplete, bulkGrowStatuses } from '~/lib/types/growTypes';
 import { InfoBadge } from '~/components/ui/info-badge';
 //import { useGrowGateways } from '~/lib/iot-gateway/useGrowGateways';
 //import { getConnectionBadgeProps } from '~/lib/iot-gateway/connectionUtils';

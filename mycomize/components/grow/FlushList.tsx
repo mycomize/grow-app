@@ -16,7 +16,7 @@ import {
 } from 'lucide-react-native';
 import { FlushModal } from '~/components/modals/FlushModal';
 import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
-import { BulkGrowFlush } from '~/lib/growTypes';
+import { BulkGrowFlush } from '~/lib/types/growTypes';
 
 interface FlushListProps {
   flushes: BulkGrowFlush[];

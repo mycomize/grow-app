@@ -22,7 +22,7 @@ import { CalendarDays, ChevronDown, X, ArrowDownToDot } from 'lucide-react-nativ
 
 // Import tek types
 import { StageTabs } from '~/components/ui/stage-tabs';
-import { StageIoTData } from '~/lib/iotTypes';
+import { StageIoTData } from '~/lib/types/iotTypes';
 
 interface FruitingStageData {
   fruiting_start_date?: string;
