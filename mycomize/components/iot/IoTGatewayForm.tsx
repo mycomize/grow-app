@@ -1,10 +1,13 @@
-import { useState, useEffect, useContext, useCallback } from 'react';
+import { useState, useContext, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { ScrollView } from '~/components/ui/scroll-view';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
 import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
+
 import {
   Accordion,
   AccordionItem,
@@ -12,24 +15,17 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from '~/components/ui/accordion';
-import { Save, ChevronDown, ChevronRight, FileText, ServerCog, Trash2 } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
 
-import {
-  useGatewayStore,
-  useGatewayById,
-  useCurrentGatewayFormData,
-  useInitializeCurrentGateway,
-  useClearCurrentGateway,
-} from '~/lib/stores/iot/gatewayStore';
+import { Save, ChevronDown, ChevronRight, FileText, ServerCog, Trash2 } from 'lucide-react-native';
+import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
+import { useGatewayStore, useCurrentGateway } from '~/lib/stores/iot/gatewayStore';
 import { useEntityStore } from '~/lib/stores/iot/entityStore';
-import { useGrows } from '~/lib/stores';
 import { AuthContext } from '~/lib/api/AuthContext';
 
 // Import modular sections
 import { BasicsSection } from '~/components/iot/sections/BasicsSection';
 import { ControlPanelSection } from '~/components/iot/sections/ControlPanelSection';
+import { NEW_GATEWAY_ID } from '~/lib/types/iotTypes';
 
 interface IoTGatewayFormProps {
   gatewayId: string;
@@ -39,31 +35,16 @@ interface IoTGatewayFormProps {
 export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewayFormProps) {
   const { token } = useContext(AuthContext);
   const router = useRouter();
+  const currentGateway = useCurrentGateway();
 
-  // Zustand store hooks
-  const gateway = useGatewayById(gatewayId === 'new' ? '' : gatewayId);
-  const currentGatewayFormData = useCurrentGatewayFormData();
-  const initializeCurrentGateway = useInitializeCurrentGateway();
-  const clearCurrentGateway = useClearCurrentGateway();
   const {
     createGateway,
     createGatewayWithEntities,
     updateGateway,
     deleteGateway: deleteGatewayAction,
-    markGatewayModified,
   } = useGatewayStore();
 
-  const {
-    fetchHaEntities,
-    fetchIotEntities,
-    syncIotEntities,
-    computeAndSetEntityLists,
-    commitPendingLinks,
-    clearPendingLinks,
-  } = useEntityStore();
-
-  // Use centralized grow store
-  const grows = useGrows();
+  const { clearPendingLinks } = useEntityStore();
 
   // Local UI state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -71,141 +52,55 @@ export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewa
   const [isDeleting, setIsDeleting] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
-  // Initialize current gateway when component mounts
-  useEffect(() => {
-    initializeCurrentGateway(gatewayId);
-
-    // Cleanup when component unmounts or gatewayId changes
-    return () => {
-      // Don't clear on unmount, only on navigation away (handled separately)
-    };
-  }, [gatewayId, initializeCurrentGateway]);
-
-  // Fetch entities and grows when gateway is available
-  useEffect(() => {
-    const initializeGatewayData = async () => {
-      const startTime = performance.now();
-      console.log(`[IoTGatewayForm] Starting gateway data initialization for gateway ${gatewayId}`);
-
-      if (gateway && token) {
-        const promises = [];
-
-        // Fetch HA entities if credentials available
-        if (gateway.api_url && gateway.api_key) {
-          console.log(
-            `[IoTGatewayForm] Adding HA entities fetch to promises (smart caching enabled)`
-          );
-          // Use forceRefresh=false to enable caching - entityStore will skip if unchanged
-          promises.push(fetchHaEntities(gateway, false));
+  useFocusEffect(
+    useCallback(() => {
+        return () => {
+            clearPendingLinks();
         }
-
-        // Fetch IoT entities from database
-        console.log(
-          `[IoTGatewayForm] Adding IoT entities fetch to promises (smart caching enabled)`
-        );
-        // Use forceRefresh=false to enable caching - entityStore will skip if already fetched
-        promises.push(fetchIotEntities(token, gateway.id.toString(), false));
-
-        // Wait for both to complete (may complete instantly due to caching)
-        const entityFetchStart = performance.now();
-        await Promise.all(promises);
-        const entityFetchEnd = performance.now();
-        console.log(
-          `[IoTGatewayForm] Entity fetching completed in ${entityFetchEnd - entityFetchStart}ms`
-        );
-
-        // Now compute entity lists once after both are loaded
-        const computeStart = performance.now();
-        computeAndSetEntityLists(false);
-        const computeEnd = performance.now();
-        console.log(
-          `[IoTGatewayForm] Entity list computation completed in ${computeEnd - computeStart}ms`
-        );
-      }
-
-      // Grows are now loaded from centralized store on app startup
-      console.log(`[IoTGatewayForm] Using grows from centralized store (${grows.length} available)`);
-
-      const totalTime = performance.now() - startTime;
-      console.log(
-        `[IoTGatewayForm] Complete gateway data initialization finished in ${totalTime}ms`
-      );
-    };
-
-    initializeGatewayData();
-  }, [gateway, token, fetchHaEntities, fetchIotEntities, computeAndSetEntityLists, grows.length]);
-
+    }, [clearPendingLinks])
+  )
   // Save gateway handler
   const handleSaveGateway = useCallback(async () => {
-    if (!token || !currentGatewayFormData) return;
+    if (!token) {
+        router.replace('/login');
+        return;
+    }
+
+    if (!currentGateway?.formData) {
+        return;
+    }
+
+    setIsSaving(true);
 
     const saveStartTime = performance.now();
     console.log(`[IoTGatewayForm] Starting save operation for gateway ${gatewayId}`);
 
-    setIsSaving(true);
     try {
       if (gatewayId === 'new') {
         // Create new gateway - ensure all required fields are present
         const gatewayData = {
-          name: currentGatewayFormData.name || 'New Gateway',
-          type: currentGatewayFormData.type || 'home_assistant',
-          description: currentGatewayFormData.description || '',
-          api_url: currentGatewayFormData.api_url || '',
-          api_key: currentGatewayFormData.api_key || '',
+          name: currentGateway.formData.name || 'New Gateway',
+          type: currentGateway.formData.type || 'home_assistant',
+          description: currentGateway.formData.description || '',
+          api_url: currentGateway.formData.api_url || '',
+          api_key: currentGateway.formData.api_key || '',
         };
 
-        const createStart = performance.now();
-        const createdGateway = await createGatewayWithEntities(token, gatewayData);
-        const createEnd = performance.now();
-        console.log(
-          `[IoTGatewayForm] Optimized gateway creation completed in ${createEnd - createStart}ms`
-        );
-
-        if (createdGateway) {
-          console.log(
-            `[IoTGatewayForm] New gateway created with ID: ${createdGateway.id} using optimized single-call approach`
-          );
-
-          const cleanupStart = performance.now();
-          clearCurrentGateway();
-          const cleanupEnd = performance.now();
-          console.log(
-            `[IoTGatewayForm] Gateway cleanup completed in ${cleanupEnd - cleanupStart}ms`
-          );
-
-          const navigationStart = performance.now();
-          router.back();
-          const navigationEnd = performance.now();
-          console.log(
-            `[IoTGatewayForm] Navigation completed in ${navigationEnd - navigationStart}ms`
-          );
-        }
-      } else if (gateway) {
+        await createGatewayWithEntities(token, gatewayData);
+        router.back();
+      } else if (currentGateway) {
         // Update existing gateway
         const updateStart = performance.now();
-        const success = await updateGateway(token, gateway.id.toString(), currentGatewayFormData);
+        const success = await updateGateway(token, currentGateway.id.toString(), currentGateway.formData);
         const updateEnd = performance.now();
+
         console.log(`[IoTGatewayForm] Gateway update completed in ${updateEnd - updateStart}ms`);
 
         if (success) {
           // Entity sync is handled by WebSocket real-time updates for existing gateways
           // Only new gateways or those with credential changes need explicit sync
           console.log(`[IoTGatewayForm] Skipping entity sync for existing gateway`);
-
-          // No need to call markGatewayModified - updateGateway already does this
-          const cleanupStart = performance.now();
-          clearCurrentGateway();
-          const cleanupEnd = performance.now();
-          console.log(
-            `[IoTGatewayForm] Gateway cleanup completed in ${cleanupEnd - cleanupStart}ms`
-          );
-
-          const navigationStart = performance.now();
           router.back();
-          const navigationEnd = performance.now();
-          console.log(
-            `[IoTGatewayForm] Navigation completed in ${navigationEnd - navigationStart}ms`
-          );
         }
       }
     } catch (error) {
@@ -218,41 +113,37 @@ export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewa
       setIsSaving(false);
     }
   }, [
-    gateway,
+    currentGateway,
     gatewayId,
     token,
-    currentGatewayFormData,
     createGateway,
+    createGatewayWithEntities,
     updateGateway,
-    syncIotEntities,
-    commitPendingLinks,
-    clearCurrentGateway,
     router,
   ]);
+
   // Cancel handler
   const handleCancel = useCallback(() => {
-    // Clear any pending links for new gateways
-    if (gatewayId === 'new') {
-      console.log(`[IoTGatewayForm] Clearing pending links on cancel for new gateway`);
-      clearPendingLinks();
-    }
-
-    // Mark as cancelled so index knows not to refetch
-    markGatewayModified(null, 'cancel');
-    clearCurrentGateway();
-    router.replace('/iot');
-  }, [gatewayId, clearPendingLinks, markGatewayModified, clearCurrentGateway, router]);
+    router.back();
+  }, [router]);
 
   // Delete gateway handler
   const handleDeleteGateway = useCallback(async () => {
-    if (!gateway || !token) return;
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+
+    if (!currentGateway || currentGateway.id === NEW_GATEWAY_ID) {
+      return;       
+    }
 
     setIsDeleting(true);
+
     try {
-      const success = await deleteGatewayAction(token, gateway.id.toString());
+      const success = await deleteGatewayAction(token, currentGateway.id.toString());
+
       if (success) {
-        // No need to call markGatewayModified - deleteGateway already does this
-        clearCurrentGateway();
         router.back();
       }
     } catch (error) {
@@ -260,7 +151,7 @@ export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewa
     } finally {
       setIsDeleting(false);
     }
-  }, [gateway, token, deleteGatewayAction, clearCurrentGateway, router]);
+  }, [currentGateway, token, deleteGatewayAction, router]);
 
   return (
     <VStack className="flex-1 bg-background-50">

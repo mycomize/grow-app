@@ -39,7 +39,6 @@ import {
 import { Pressable } from '~/components/ui/pressable';
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
 
 import { AuthContext } from '~/lib/api/AuthContext';
 import { IoTGateway, gatewayTypeLabels } from '~/lib/iot/iot';
@@ -203,18 +202,10 @@ export default function IoTScreen() {
   const { token } = useContext(AuthContext);
   const router = useRouter();
 
-  // Use Zustand store hooks
+  // Zustand store hooks
   const gateways = useGateways();
   const loading = useGatewayLoading();
-  const {
-    fetchGateways,
-    fetchSingleGateway,
-    deleteGateway,
-    checkAllConnections,
-    testSingleConnection,
-    getGatewayFetchStrategy,
-    clearFetchingState,
-  } = useGatewayStore();
+  const { deleteGateway } = useGatewayStore();
   const connectionStatuses = useGatewayStore((state) => state.connectionStatuses);
   const connectionLatencies = useGatewayStore((state) => state.connectionLatencies);
 
@@ -226,43 +217,6 @@ export default function IoTScreen() {
   const [showFilterModal, setShowFilterModal] = useState<boolean>(false);
   const [tempSortBy, setTempSortBy] = useState<string>('name');
   const [tempFilterConnectedOnly, setTempFilterConnectedOnly] = useState<boolean>(false);
-
-  // Smart fetching based on strategy
-  const performSmartFetch = useCallback(async () => {
-    if (!token) return;
-
-    try {
-      const strategy = getGatewayFetchStrategy();
-
-      // Fetch data based on strategy
-      if (strategy.shouldFetchAll) {
-        await fetchGateways(token);
-      } else if (strategy.shouldFetchSingle) {
-        await fetchSingleGateway(token, strategy.shouldFetchSingle.toString());
-      }
-
-      // Test connections based on strategy
-      if (strategy.shouldTestConnections) {
-        await checkAllConnections();
-      } else if (strategy.shouldTestSingleConnection) {
-        await testSingleConnection(strategy.shouldTestSingleConnection);
-      }
-
-      // Clear the fetching state after processing
-      clearFetchingState();
-    } catch (error) {
-      // Error handling is done in the store, including redirect to login
-      console.error('Exception with smart IoT gateway fetching:', error);
-    }
-  }, [
-    token,
-    getGatewayFetchStrategy,
-    fetchGateways,
-    fetchSingleGateway,
-    checkAllConnections,
-    testSingleConnection,
-    clearFetchingState,
-  ]);
 
   // Delete handler using store action
   const handleDelete = useCallback(
@@ -366,13 +320,6 @@ export default function IoTScreen() {
     })
   );
 
-  // Smart fetching with useFocusEffect - optimized approach
-  useFocusEffect(
-    useCallback(() => {
-      performSmartFetch();
-      return () => {}; // No cleanup needed
-    }, [performSmartFetch])
-  );
 
   if (loading) {
     return (

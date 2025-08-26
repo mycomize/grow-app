@@ -1,11 +1,19 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { VStack } from '~/components/ui/vstack';
 import { Spinner } from '~/components/ui/spinner';
 
 import { IoTGatewayForm } from '~/components/iot/IoTGatewayForm';
+import { useInitializeCurrentGateway } from '~/lib/stores/iot/gatewayStore';
 
 export default function NewIoTGatewayScreen() {
   const [isLoading, setIsLoading] = useState(false);
+  const initializeCurrentGateway = useInitializeCurrentGateway();
+
+  // Initialize current gateway for new gateway creation when screen focuses
+  useFocusEffect(useCallback(() => {
+    initializeCurrentGateway('new');
+  }, [initializeCurrentGateway]));
 
   if (isLoading) {
     return (

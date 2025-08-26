@@ -5,6 +5,7 @@ import { useTheme } from '@/components/ui/themeprovider/themeprovider';
 import MushroomIcon from '~/components/icons/MushroomIcon';
 import { AuthContext } from '~/lib/api/AuthContext';
 import { useGrowStore } from '~/lib/stores';
+import { useGatewayStore } from '~/lib/stores/iot/gatewayStore';
 
 export default function TabLayout() {
   const { theme } = useTheme();
@@ -12,6 +13,7 @@ export default function TabLayout() {
   const segments = useSegments();
   const { token } = useContext(AuthContext);
   const fetchGrows = useGrowStore((state) => state.fetchGrows);
+  const initializeAllGatewayData = useGatewayStore((state) => state.initializeAllGatewayData);
 
   // Initial data fetch on app startup and redirect if no token
   useEffect(() => {
@@ -23,13 +25,14 @@ export default function TabLayout() {
       
       try {
         await fetchGrows(token);
+        await initializeAllGatewayData(token);
       } catch (error) {
-        console.error('Error fetching initial grows:', error);
+        console.error('Error fetching initial data:', error);
       }
     };
 
     initialSetup();
-  }, [token, fetchGrows, router]);
+  }, [token, fetchGrows, initializeAllGatewayData, router]);
 
   // Set tab bar styles based on theme
   const tabBarStyle = {
@@ -49,8 +52,6 @@ export default function TabLayout() {
   };
 
   const headerTintColor = theme === 'dark' ? '#ffffff' : '#000000';
-
-  const iconColor = theme === 'dark' ? '#ffffff' : '#000000';
 
   return (
     <Tabs

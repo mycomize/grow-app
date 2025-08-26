@@ -3,7 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { router } from 'expo-router';
 import { apiClient, isUnauthorizedError } from '../../api/ApiClient';
 import { IoTGateway, IoTGatewayCreate, IoTGatewayUpdate } from '../../iot/iot';
-import { ConnectionInfo, ConnectionStatus } from '../../types/iotTypes';
+import { ConnectionInfo, ConnectionStatus, NEW_GATEWAY_ID } from '../../types/iotTypes';
 import { useEntityStore } from './entityStore';
 
 // Helper function to handle unauthorized errors consistently
@@ -16,22 +16,11 @@ const handleUnauthorizedError = (error: Error) => {
 
 // Current gateway being edited/created
 interface CurrentGateway {
-  id?: number; // undefined for new, set for editing
+  id: number; // undefined for new, set for editing
   formData: IoTGatewayUpdate; // all form fields
   connectionStatus: ConnectionStatus;
   latency?: number;
 }
-
-// Gateway fetch strategy result
-interface GatewayFetchStrategy {
-  shouldFetchAll: boolean;
-  shouldFetchSingle: number | null;
-  shouldTestConnections: boolean;
-  shouldTestSingleConnection: number | null;
-}
-
-// Gateway modification tracking
-type GatewayAction = 'create' | 'update' | 'delete' | 'cancel' | null;
 
 interface GatewayStore {
   // State
@@ -40,12 +29,6 @@ interface GatewayStore {
   connectionStatuses: Record<number, ConnectionStatus>;
   connectionLatencies: Record<number, number>;
   currentGateway: CurrentGateway | null;
-
-  // Smart fetching state
-  hasInitiallyLoaded: boolean;
-  lastModifiedGatewayId: number | null;
-  lastAction: GatewayAction;
-  hasInitiallyTestedConnections: boolean;
 
   // Actions
   fetchGateways: (token: string) => Promise<void>;
@@ -57,17 +40,12 @@ interface GatewayStore {
   testConnection: (gateway: IoTGateway) => Promise<ConnectionInfo>;
   testSingleConnection: (gatewayId: number) => Promise<void>;
   checkAllConnections: () => Promise<void>;
-
-  // Smart fetching actions
-  markGatewayModified: (gatewayId: number | null, action: GatewayAction) => void;
-  getGatewayFetchStrategy: () => GatewayFetchStrategy;
-  clearFetchingState: () => void;
+  initializeAllGatewayData: (token: string) => Promise<void>;
 
   // Current gateway actions
   initializeCurrentGateway: (gatewayId?: string) => void;
   updateCurrentGatewayField: (field: keyof IoTGatewayUpdate, value: any) => void;
   testCurrentGatewayConnection: () => Promise<ConnectionInfo>;
-  clearCurrentGateway: () => void;
 
   reset: () => void;
 }
@@ -79,12 +57,6 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
   connectionStatuses: {},
   connectionLatencies: {},
   currentGateway: null,
-
-  // Smart fetching initial state
-  hasInitiallyLoaded: false,
-  lastModifiedGatewayId: null,
-  lastAction: null,
-  hasInitiallyTestedConnections: false,
 
   // Fetch all gateways
   fetchGateways: async (token: string) => {
@@ -116,7 +88,6 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
       set({
         gateways: gatewaysWithCounts,
         loading: false,
-        hasInitiallyLoaded: true,
       });
     } catch (error) {
       console.error('Error fetching gateways:', error);
@@ -179,8 +150,6 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
 
       set((state) => ({
         gateways: [...state.gateways, newGateway],
-        lastModifiedGatewayId: newGateway.id,
-        lastAction: 'create',
       }));
 
       return newGateway;
@@ -250,8 +219,6 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
       // Update gateway store
       set((state) => ({
         gateways: [...state.gateways, newGateway],
-        lastModifiedGatewayId: newGateway.id,
-        lastAction: 'create',
       }));
 
       // Create IoT entities from the mapping and update entity store
@@ -316,8 +283,6 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
         gateways: state.gateways.map((gateway) =>
           gateway.id.toString() === id ? updatedGateway : gateway
         ),
-        lastModifiedGatewayId: updatedGateway.id,
-        lastAction: 'update',
       }));
 
       const updateEnd = performance.now();
@@ -350,8 +315,6 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
         connectionLatencies: Object.fromEntries(
           Object.entries(state.connectionLatencies).filter(([key]) => key !== id)
         ),
-        lastModifiedGatewayId: gatewayIdNum,
-        lastAction: 'delete',
       }));
 
       // Notify entity store to clean up entities for this gateway
@@ -457,83 +420,70 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
     });
 
     await Promise.all(statusPromises);
-
-    // Mark that we've initially tested connections
-    set((state) => ({
-      hasInitiallyTestedConnections: true,
-    }));
   },
 
-  // Smart fetching methods
-  markGatewayModified: (gatewayId: number | null, action: GatewayAction) => {
-    set({
-      lastModifiedGatewayId: gatewayId,
-      lastAction: action,
-    });
-  },
+  // Initialize all gateway data on app startup
+  initializeAllGatewayData: async (token: string) => {
+    const startTime = performance.now();
+    console.log('[GatewayStore] Starting complete gateway data initialization');
 
-  getGatewayFetchStrategy: (): GatewayFetchStrategy => {
-    const { hasInitiallyLoaded, lastAction, lastModifiedGatewayId, hasInitiallyTestedConnections } =
-      get();
+    try {
+      // Fetch all gateways first
+      const fetchGatewaysStart = performance.now();
+      await get().fetchGateways(token);
+      const fetchGatewaysEnd = performance.now();
+      console.log(`[GatewayStore] Gateway fetch completed in ${fetchGatewaysEnd - fetchGatewaysStart}ms`);
 
-    // First time loading - fetch all and test all connections
-    if (!hasInitiallyLoaded) {
-      return {
-        shouldFetchAll: true,
-        shouldFetchSingle: null,
-        shouldTestConnections: !hasInitiallyTestedConnections,
-        shouldTestSingleConnection: null,
-      };
-    }
+      const { gateways } = get();
+      const entityStore = useEntityStore.getState();
 
-    // Handle different actions
-    switch (lastAction) {
-      case 'create':
-        // New gateway created - fetch the new one and test its connection
-        return {
-          shouldFetchAll: false,
-          shouldFetchSingle: lastModifiedGatewayId,
-          shouldTestConnections: false,
-          shouldTestSingleConnection: lastModifiedGatewayId,
-        };
+      if (gateways.length > 0) {
+        // Fetch entities for all gateways in parallel
+        const entityPromises = [];
 
-      case 'update':
-        // Gateway updated - fetch it and test connection (credentials might have changed)
-        return {
-          shouldFetchAll: false,
-          shouldFetchSingle: lastModifiedGatewayId,
-          shouldTestConnections: false,
-          shouldTestSingleConnection: lastModifiedGatewayId,
-        };
+        for (const gateway of gateways) {
+          // Fetch HA entities if gateway has credentials
+          if (gateway.api_url && gateway.api_key) {
+            console.log(`[GatewayStore] Adding HA entities fetch for gateway ${gateway.id}`);
+            entityPromises.push(entityStore.fetchHaEntities(gateway, false));
+          }
 
-      case 'delete':
-        // Gateway deleted - state already updated, no fetching needed
-        return {
-          shouldFetchAll: false,
-          shouldFetchSingle: null,
-          shouldTestConnections: false,
-          shouldTestSingleConnection: null,
-        };
+          // Fetch IoT entities from database
+          console.log(`[GatewayStore] Adding IoT entities fetch for gateway ${gateway.id}`);
+          entityPromises.push(entityStore.fetchIotEntities(token, gateway.id.toString(), false));
+        }
 
-      case 'cancel':
-      case null:
-      default:
-        // No changes or cancelled - no operations needed
-        return {
-          shouldFetchAll: false,
-          shouldFetchSingle: null,
-          shouldTestConnections: false,
-          shouldTestSingleConnection: null,
-        };
+        // Wait for all entity fetching to complete
+        const entityFetchStart = performance.now();
+        await Promise.all(entityPromises);
+        const entityFetchEnd = performance.now();
+        console.log(`[GatewayStore] All entity fetching completed in ${entityFetchEnd - entityFetchStart}ms`);
+
+        // Compute entity lists once after all data is loaded
+        const computeStart = performance.now();
+        entityStore.computeAndSetEntityLists(false);
+        const computeEnd = performance.now();
+        console.log(`[GatewayStore] Entity list computation completed in ${computeEnd - computeStart}ms`);
+
+        // Test all gateway connections
+        const connectionTestStart = performance.now();
+        await get().checkAllConnections();
+        const connectionTestEnd = performance.now();
+        console.log(`[GatewayStore] Connection testing completed in ${connectionTestEnd - connectionTestStart}ms`);
+      } else {
+        console.log('[GatewayStore] No gateways found, skipping entity fetching');
+      }
+
+      const totalTime = performance.now() - startTime;
+      console.log(`[GatewayStore] Complete gateway data initialization finished in ${totalTime}ms for ${gateways.length} gateways`);
+
+    } catch (error) {
+      console.error('[GatewayStore] Error during gateway data initialization:', error);
+      handleUnauthorizedError(error as Error);
+      throw error;
     }
   },
 
-  clearFetchingState: () => {
-    set({
-      lastModifiedGatewayId: null,
-      lastAction: null,
-    });
-  },
 
   // Initialize current gateway for editing/creating
   initializeCurrentGateway: (gatewayId?: string) => {
@@ -543,6 +493,7 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
       // New gateway - initialize with empty form data
       set({
         currentGateway: {
+          id: NEW_GATEWAY_ID,
           formData: {
             name: '',
             type: 'home_assistant',
@@ -679,11 +630,6 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
     }
   },
 
-  // Clear current gateway
-  clearCurrentGateway: () => {
-    set({ currentGateway: null });
-  },
-
   // Reset store state
   reset: () => {
     set({
@@ -698,17 +644,21 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
 
 // Helper selectors for optimized subscriptions
 export const useGateways = () => useGatewayStore((state) => state.gateways);
+
 export const useGatewayById = (id: string) =>
   useGatewayStore((state) => state.gateways.find((g) => g.id.toString() === id));
+
 export const useConnectionStatus = (gatewayId: number) =>
   useGatewayStore((state) => ({
     status: state.connectionStatuses[gatewayId] || 'unknown',
     latency: state.connectionLatencies[gatewayId],
   }));
+
 export const useGatewayLoading = () => useGatewayStore((state) => state.loading);
 
 // Current gateway selectors for performance optimization with proper caching
 export const useCurrentGateway = () => useGatewayStore((state) => state.currentGateway);
+
 export const useCurrentGatewayFormData = () =>
   useGatewayStore((state) => state.currentGateway?.formData);
 
@@ -729,8 +679,9 @@ export const useCurrentGatewayConnectionStatus = () =>
 // Individual action selectors to prevent infinite loops
 export const useInitializeCurrentGateway = () =>
   useGatewayStore((state) => state.initializeCurrentGateway);
+
 export const useUpdateCurrentGatewayField = () =>
   useGatewayStore((state) => state.updateCurrentGatewayField);
+
 export const useTestCurrentGatewayConnection = () =>
   useGatewayStore((state) => state.testCurrentGatewayConnection);
-export const useClearCurrentGateway = () => useGatewayStore((state) => state.clearCurrentGateway);

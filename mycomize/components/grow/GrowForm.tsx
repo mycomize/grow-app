@@ -31,9 +31,7 @@ import {
   useCurrentGrowFormData,
   useCurrentGrowFlushes,
   useUpdateCurrentGrowField,
-  useAddFlush,
   useUpdateFlush,
-  useRemoveFlush,
   useParseDateUtility,
   useFormatDateForAPI,
   useGrowStore,
@@ -57,9 +55,7 @@ export function GrowForm({ growId, saveButtonText = 'Save' }: GrowFormProps) {
   const formData = useCurrentGrowFormData();
   const flushes = useCurrentGrowFlushes();
   const updateField = useUpdateCurrentGrowField();
-  const addFlush = useAddFlush();
   const updateFlush = useUpdateFlush();
-  const removeFlush = useRemoveFlush();
   const parseDate = useParseDateUtility();
   const formatDateForAPI = useFormatDateForAPI();
 
@@ -184,10 +180,7 @@ export function GrowForm({ growId, saveButtonText = 'Save' }: GrowFormProps) {
         }
       }
 
-      // Navigate back to grows list after a brief delay
-      setTimeout(() => {
-        router.replace('/grows');
-      }, 500);
+      router.replace('/grows');
     } catch (error) {
       showError('Failed to save grow');
       console.error('Save error:', error);
@@ -207,11 +200,7 @@ export function GrowForm({ growId, saveButtonText = 'Save' }: GrowFormProps) {
       if (success) {
         showSuccess('Grow deleted successfully!');
         setShowDeleteModal(false);
-
-        // Navigate back to grows list after a brief delay
-        setTimeout(() => {
-          router.replace('/grows');
-        }, 1000);
+        router.replace('/grows');
       } else {
         showError('Failed to delete grow');
       }

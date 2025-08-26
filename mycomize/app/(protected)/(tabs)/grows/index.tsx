@@ -14,7 +14,7 @@ import { List, PlusIcon, Search, X, ArrowUpDown, Filter, CirclePlus } from 'luci
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
 import { AuthContext } from '~/lib/api/AuthContext';
-import { BulkGrowComplete, bulkGrowStatuses, bulkGrowStages } from '~/lib/types/growTypes';
+import { BulkGrowComplete, bulkGrowStatuses } from '~/lib/types/growTypes';
 import { GrowCard } from '~/components/grow/GrowCard';
 import { GrowCardSkeleton } from '~/components/grow/GrowCardSkeleton';
 import { CountBadge } from '~/components/ui/count-badge';
@@ -77,16 +77,6 @@ export default function GrowScreen() {
     setFilterVariant(tempFilterVariant);
     setFilterLocation(tempFilterLocation);
     setShowFilterModal(false);
-  };
-
-  const handleClearFiltersAndSort = () => {
-    setSortBy('name');
-    setFilterStatus('');
-    setFilterStage('');
-    setFilterSpecies('');
-    setFilterVariant('');
-    setFilterLocation('');
-    setSearchQuery('');
   };
 
   // Handle tag press - populate search query with tag
@@ -222,7 +212,7 @@ export default function GrowScreen() {
         (grow.current_stage?.toLowerCase()?.includes(searchLower) ?? false) ||
         (grow.status?.toLowerCase()?.includes(searchLower) ?? false) ||
         (grow.location?.toLowerCase()?.includes(searchLower) ?? false) ||
-        (grow.tags?.some((tag) => tag.toLowerCase().includes(searchLower)) ?? false);
+        (grow.tags?.some((tag: string) => tag.toLowerCase().includes(searchLower)) ?? false);
 
       return (
         matchesStatusFilter &&

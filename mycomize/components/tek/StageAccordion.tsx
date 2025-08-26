@@ -18,7 +18,6 @@ import {
   Package,
   Thermometer,
   CheckSquare,
-  FileText,
 } from 'lucide-react-native';
 import { BulkGrowTekData, BulkGrowCultivationStage, BULK_GROW_TEK_STAGES } from '~/lib/types/tekTypes';
 import { StageSection } from './StageSection';
