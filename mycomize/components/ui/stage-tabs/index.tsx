@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useContext } from 'react';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Button } from '~/components/ui/button';
@@ -12,17 +12,15 @@ import { EnvironmentalConditionsList } from '~/components/tek/EnvironmentalCondi
 import { TasksList } from '~/components/tek/TasksList';
 import { StageNotes } from '~/components/tek/StageNotes';
 
-// Import grow components
-//import { IotControlsList } from '~/components/grow/IotControlsList';
-
 // Import tek types
 import { BulkStageData } from '~/lib/types/tekTypes';
 import { BulkGrowComplete, bulkGrowStages } from '~/lib/types/growTypes';
-import { IoTEntity, IoTGateway } from '~/lib/iot/iot';
-import { IoTFilterPreferences, StageIoTData } from '~/lib/types/iotTypes';
+import { StageIoTData } from '~/lib/types/iotTypes';
 import { AuthContext } from '~/lib/api/AuthContext';
-import { apiClient, isUnauthorizedError } from '~/lib/api/ApiClient';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
+
+// Import grow IoT component
+import { GrowStageIoTControlList } from '~/components/grow/GrowStageIoTControlList';
 
 type TabType = 'items' | 'conditions' | 'tasks' | 'notes' | 'iot';
 
@@ -98,14 +96,25 @@ export const StageTabs: React.FC<StageTabsProps> = ({
 
   // Get stage key from stage name for API calls
   const getStageKey = (stageNameParam?: string): string => {
-    if (!stageNameParam) return bulkGrowStages.INOCULATION;
+    if (!stageNameParam) {
+      return bulkGrowStages.INOCULATION;
+    }
 
+    // Support both backend keys and human-readable names
     const stageMap: Record<string, string> = {
-      Inoculation: bulkGrowStages.INOCULATION,
+      // Human-readable format (original)
+      'Inoculation': bulkGrowStages.INOCULATION,
       'Spawn Colonization': bulkGrowStages.SPAWN_COLONIZATION,
       'Bulk Colonization': bulkGrowStages.BULK_COLONIZATION,
-      Fruiting: bulkGrowStages.FRUITING,
-      Harvest: bulkGrowStages.HARVEST,
+      'Fruiting': bulkGrowStages.FRUITING,
+      'Harvest': bulkGrowStages.HARVEST,
+      
+      // Backend key format (used by stage sections)
+      'inoculation': bulkGrowStages.INOCULATION,
+      'spawn_colonization': bulkGrowStages.SPAWN_COLONIZATION,
+      'bulk_colonization': bulkGrowStages.BULK_COLONIZATION,
+      'fruiting': bulkGrowStages.FRUITING,
+      'harvest': bulkGrowStages.HARVEST,
     };
 
     return stageMap[stageNameParam] || bulkGrowStages.INOCULATION;
@@ -167,28 +176,12 @@ export const StageTabs: React.FC<StageTabsProps> = ({
         {activeTab === 'notes' && (
           <StageNotes notes={currentBulkStageData.notes} onUpdateNotes={handleUpdateNotes} />
         )}
-        {/*
-        {activeTab === 'iot' && grow?.id && stageIoTData && (
-          <IotControlsList
-            entities={stageIoTData.entities}
-            gateways={stageIoTData.gateways}
-            entityStates={stageIoTData.entityStates}
-            loading={stageIoTData.loading}
-            grow={grow}
+        {activeTab === 'iot' && grow?.id && (
+          <GrowStageIoTControlList
             growId={grow.id}
-            stageName={stageName || 'unknown'}
-            linkableEntities={stageIoTData.linkableEntities || []}
-            onRefreshData={stageIoTData.onRefreshData || (() => {})}
-            filterPreferences={stageIoTData.filterPreferences}
-            showDomainFilters={stageIoTData.showDomainFilters}
-            showDeviceClassFilters={stageIoTData.showDeviceClassFilters}
-            onToggleShowDomainFilters={stageIoTData.onToggleShowDomainFilters}
-            onToggleShowDeviceClassFilters={stageIoTData.onToggleShowDeviceClassFilters}
-            onToggleDomainFilter={stageIoTData.onToggleDomainFilter}
-            onToggleDeviceClassFilter={stageIoTData.onToggleDeviceClassFilter}
+            stage={getStageKey(stageName)}
           />
-        )} 
-        */}
+        )}
       </VStack>
     </VStack>
   );
