@@ -104,6 +104,9 @@ export interface EntityStore
 
   // Entity state management
   fetchEntityStates: (gateway: IoTGateway, linkedEntities: IoTEntity[]) => Promise<void>;
+  updateEntityStateThrottled: (entityId: string, state: HAEntityState) => void;
+  initializeRealTimeUpdates: () => void;
+  cleanupRealTimeUpdates: () => void;
 
   // Caching and WebSocket integration
   initializeWebSocket: () => void;

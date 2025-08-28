@@ -3,10 +3,16 @@ import type { EntityStateState, EntityStore, HAEntityState } from '../types';
 import { IoTEntity, IoTGateway } from '../../../../iot/iot';
 import { handleUnauthorizedError, createPerformanceTimer } from '../utils';
 import { DEFAULT_IOT_DOMAINS } from '../../../../types/iotTypes';
+import EntityStateUpdateManager, { StateChangeListener } from '../../../../iot/entityStateUpdateManager';
 
 export interface EntityStateActions {
   // Actions - Entity state management
   fetchEntityStates: (gateway: IoTGateway, linkedEntities: IoTEntity[]) => Promise<void>;
+  
+  // Real-time state update methods
+  updateEntityStateThrottled: (entityId: string, state: HAEntityState) => void;
+  initializeRealTimeUpdates: () => void;
+  cleanupRealTimeUpdates: () => void;
 }
 
 export type EntityStateSlice = EntityStateState & EntityStateActions;
@@ -14,10 +20,18 @@ export type EntityStateSlice = EntityStateState & EntityStateActions;
 export const createEntityStateSlice: StateCreator<EntityStore, [], [], EntityStateSlice> = (
   set,
   get
-) => ({
-  // Initial state
-  entityStates: {},
-  entityStatesLoading: false,
+) => {
+  // State change listener for real-time updates
+  const stateChangeListener: StateChangeListener = (gatewayId: number, entityId: string, newState: HAEntityState) => {
+    // Get current store methods to call updateEntityStateThrottled
+    const store = get();
+    store.updateEntityStateThrottled(entityId, newState);
+  };
+
+  return {
+    // Initial state
+    entityStates: {},
+    entityStatesLoading: false,
 
   // Fetch entity states from Home Assistant API for linked entities
   fetchEntityStates: async (gateway: IoTGateway, linkedEntities: IoTEntity[]) => {
@@ -111,4 +125,29 @@ export const createEntityStateSlice: StateCreator<EntityStore, [], [], EntitySta
       throw error;
     }
   },
-});
+
+  // Update individual entity state (called by EntityStateUpdateManager after throttling)
+  updateEntityStateThrottled: (entityId: string, state: HAEntityState) => {
+    console.log(`[EntityStore] Updating throttled state for entity ${entityId}`);
+    
+    set((currentState) => ({
+      entityStates: {
+        ...currentState.entityStates,
+        [entityId]: state,
+      },
+    }));
+  },
+
+  // Initialize real-time updates by registering with EntityStateUpdateManager
+  initializeRealTimeUpdates: () => {
+    console.log('[EntityStore] Initializing real-time entity state updates');
+    EntityStateUpdateManager.addStateChangeListener(stateChangeListener);
+  },
+
+  // Cleanup real-time updates by removing listener
+  cleanupRealTimeUpdates: () => {
+    console.log('[EntityStore] Cleaning up real-time entity state updates');
+    EntityStateUpdateManager.removeStateChangeListener(stateChangeListener);
+  },
+};
+};

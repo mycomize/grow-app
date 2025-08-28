@@ -6,6 +6,8 @@ import MushroomIcon from '~/components/icons/MushroomIcon';
 import { AuthContext } from '~/lib/api/AuthContext';
 import { useGrowStore } from '~/lib/stores';
 import { useGatewayStore } from '~/lib/stores/iot/gatewayStore';
+import { useEntityStore } from '~/lib/stores/iot/entityStore';
+import { haWebSocketManager } from '~/lib/iot/haWebSocketManager';
 
 export default function TabLayout() {
   const { theme } = useTheme();
@@ -14,6 +16,8 @@ export default function TabLayout() {
   const { token } = useContext(AuthContext);
   const fetchGrows = useGrowStore((state) => state.fetchGrows);
   const initializeAllGatewayData = useGatewayStore((state) => state.initializeAllGatewayData);
+  const gateways = useGatewayStore((state) => state.gateways);
+  const linkedEntities = useEntityStore((state) => state.linkedEntities);
 
   // Initial data fetch on app startup and redirect if no token
   useEffect(() => {
@@ -33,6 +37,33 @@ export default function TabLayout() {
 
     initialSetup();
   }, [token, fetchGrows, initializeAllGatewayData, router]);
+
+  // Initial registration of real-time listeners for all linked entities after gateway data is loaded
+  useEffect(() => {
+    if (!token || gateways.length === 0 || linkedEntities.length === 0) {
+      return;
+    }
+
+    console.log(`[TabLayout] Initializing real-time listeners for ${linkedEntities.length} linked entities across ${gateways.length} gateways`);
+
+    // Group linked entities by gateway for bulk registration
+    const entitiesByGateway = new Map<number, string[]>();
+    
+    linkedEntities.forEach(entity => {
+      const gatewayEntities = entitiesByGateway.get(entity.gateway_id) || [];
+      gatewayEntities.push(entity.entity_name);
+      entitiesByGateway.set(entity.gateway_id, gatewayEntities);
+    });
+
+    // Register listeners for each gateway's linked entities
+    entitiesByGateway.forEach((entityIds, gatewayId) => {
+      console.log(`[TabLayout] Registering ${entityIds.length} entities for gateway ${gatewayId}`);
+      const results = haWebSocketManager.bulkSubscribeToEntityStates(gatewayId, entityIds);
+      console.log(`[TabLayout] Gateway ${gatewayId} initial registration results:`, results);
+    });
+
+    console.log(`[TabLayout] Completed initial real-time listener registration for ${linkedEntities.length} entities`);
+  }, [token, gateways, linkedEntities]);
 
   // Set tab bar styles based on theme
   const tabBarStyle = {

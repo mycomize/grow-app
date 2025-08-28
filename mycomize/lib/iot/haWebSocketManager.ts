@@ -1,4 +1,6 @@
 import { HAEntity } from './iot';
+import { HAEntityState } from '../stores/iot/entity/types';
+import EntityStateUpdateManager from './entityStateUpdateManager';
 
 // Home Assistant WebSocket message types
 interface HAWebSocketMessage {
@@ -41,14 +43,27 @@ type EntityEventListener = (
   entity: HAEntity
 ) => void;
 
+// State change listener callback type
+type StateChangeListener = (
+  gatewayId: number,
+  entityId: string,
+  newState: HAEntityState
+) => void;
+
 class HAWebSocketManager {
   private connections: Map<string, GatewayConnection> = new Map();
   private eventListeners: Set<EntityEventListener> = new Set();
+  private stateChangeListeners: Set<StateChangeListener> = new Set();
   private messageId: number = 1;
   private reconnectDelays = [1000, 2000, 4000, 8000, 16000, 30000]; // Exponential backoff
 
   constructor() {
     console.log('[HAWebSocketManager] WebSocket manager initialized');
+    
+    // Register EntityStateUpdateManager as a state change listener
+    this.addStateChangeListener((gatewayId, entityId, newState) => {
+      EntityStateUpdateManager.handleStateChange(gatewayId, entityId, newState);
+    });
   }
 
   // Add event listener for entity changes
@@ -65,6 +80,68 @@ class HAWebSocketManager {
     console.log(
       `[HAWebSocketManager] Event listener removed. Total listeners: ${this.eventListeners.size}`
     );
+  }
+
+  // Add state change listener for real-time updates
+  addStateChangeListener(listener: StateChangeListener) {
+    this.stateChangeListeners.add(listener);
+    console.log(
+      `[HAWebSocketManager] State change listener added. Total listeners: ${this.stateChangeListeners.size}`
+    );
+  }
+
+  // Remove state change listener
+  removeStateChangeListener(listener: StateChangeListener) {
+    this.stateChangeListeners.delete(listener);
+    console.log(
+      `[HAWebSocketManager] State change listener removed. Total listeners: ${this.stateChangeListeners.size}`
+    );
+  }
+
+  // Subscribe to state changes for specific entities (ensures one listener per entity)
+  subscribeToEntityStates(gatewayId: number, entityIds: string[]) {
+    console.log(`[HAWebSocketManager] Subscribing to state changes for ${entityIds.length} entities on gateway ${gatewayId}`);
+    
+    let newRegistrations = 0;
+    let alreadyRegistered = 0;
+    
+    for (const entityId of entityIds) {
+      if (EntityStateUpdateManager.registerEntityForUpdates(entityId, gatewayId)) {
+        newRegistrations++;
+      } else {
+        alreadyRegistered++;
+      }
+    }
+    
+    console.log(`[HAWebSocketManager] Gateway ${gatewayId} subscription results: ${newRegistrations} new, ${alreadyRegistered} already registered`);
+  }
+
+  // Unsubscribe from state changes for specific entities
+  unsubscribeFromEntityStates(gatewayId: number, entityIds: string[]) {
+    console.log(`[HAWebSocketManager] Unsubscribing from state changes for ${entityIds.length} entities on gateway ${gatewayId}`);
+    
+    let unregistered = 0;
+    let notRegistered = 0;
+    
+    for (const entityId of entityIds) {
+      if (EntityStateUpdateManager.unregisterEntityFromUpdates(entityId, gatewayId)) {
+        unregistered++;
+      } else {
+        notRegistered++;
+      }
+    }
+    
+    console.log(`[HAWebSocketManager] Gateway ${gatewayId} unsubscription results: ${unregistered} unregistered, ${notRegistered} not registered`);
+  }
+
+  // Bulk subscription method using the EntityStateUpdateManager's bulk operation
+  bulkSubscribeToEntityStates(gatewayId: number, entityIds: string[]) {
+    console.log(`[HAWebSocketManager] Bulk subscribing to state changes for ${entityIds.length} entities on gateway ${gatewayId}`);
+    
+    const results = EntityStateUpdateManager.registerMultipleEntitiesForUpdates(entityIds, gatewayId);
+    console.log(`[HAWebSocketManager] Bulk subscription results for gateway ${gatewayId}: ${results.registered} new, ${results.alreadyRegistered} already registered`);
+    
+    return results;
   }
 
   // Connect to a Home Assistant instance
@@ -289,10 +366,30 @@ class HAWebSocketManager {
       );
       this.notifyListeners(connection.gatewayId, 'removed', old_state);
     }
-    // Regular state updates (not addition/removal) - ignore for now
+    // Regular state updates (not addition/removal) - now process these for real-time updates
     else if (old_state && new_state) {
-      // Uncomment for very verbose logging:
-      // console.log(`[HAWebSocketManager] Gateway ${connection.gatewayId} entity UPDATED: ${entity_id}`);
+      // Convert HAEntity to HAEntityState format
+      const entityState: HAEntityState = {
+        entity_id: new_state.entity_id,
+        state: new_state.state,
+        attributes: new_state.attributes,
+        last_changed: new_state.last_changed,
+        last_updated: new_state.last_updated,
+      };
+
+      // Notify state change listeners (including EntityStateUpdateManager)
+      this.notifyStateChangeListeners(connection.gatewayId, entity_id, entityState);
+    }
+  }
+
+  // Notify all state change listeners about entity state updates
+  private notifyStateChangeListeners(gatewayId: number, entityId: string, newState: HAEntityState) {
+    for (const listener of this.stateChangeListeners) {
+      try {
+        listener(gatewayId, entityId, newState);
+      } catch (error) {
+        console.error(`[HAWebSocketManager] Error in state change listener:`, error);
+      }
     }
   }
 
@@ -341,6 +438,8 @@ class HAWebSocketManager {
 
     this.connections.clear();
     this.eventListeners.clear();
+    this.stateChangeListeners.clear();
+    EntityStateUpdateManager.clearAllTrackedEntities();
   }
 }
 

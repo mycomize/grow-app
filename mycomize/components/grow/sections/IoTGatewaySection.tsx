@@ -9,7 +9,7 @@ import { useEntityStore } from '~/lib/stores/iot/entityStore';
 import { useGatewayStore } from '~/lib/stores/iot/gatewayStore';
 import { InfoBadge, InfoBadgeVariant } from '~/components/ui/info-badge';
 import { ConnectionStatus, DEFAULT_IOT_DOMAINS } from '~/lib/types/iotTypes';
-import { IoTEntity, IoTGateway } from '~/lib/iot/iot';
+import { IoTEntity } from '~/lib/iot/iot';
 import { HAEntityState } from '~/lib/stores/iot/entity/types';
 import { AutomationControl } from '~/components/iot/controls/hass/AutomationControl';
 import { NumberControl } from '~/components/iot/controls/hass/NumberControl';
@@ -36,15 +36,15 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({ growId, st
   const connectionStatuses = useGatewayStore((state) => state.connectionStatuses);
 
   // Debug logging
-  console.log(`[IoTGatewaySection] Debug - growId: ${growId}, stage: "${stage}"`);
-  console.log(`[IoTGatewaySection] Debug - linkedEntities count: ${linkedEntities.length}`);
-  console.log(`[IoTGatewaySection] Debug - entityStates count: ${Object.keys(entityStates).length}`);
-  console.log(`[IoTGatewaySection] Debug - linkedEntities:`, linkedEntities.map(e => ({
-    name: e.entity_name,
-    domain: e.domain,
-    linked_grow_id: e.linked_grow_id,
-    linked_stage: e.linked_stage
-  })));
+//  console.log(`[IoTGatewaySection] Debug - growId: ${growId}, stage: "${stage}"`);
+//  console.log(`[IoTGatewaySection] Debug - linkedEntities count: ${linkedEntities.length}`);
+//  console.log(`[IoTGatewaySection] Debug - entityStates count: ${Object.keys(entityStates).length}`);
+//  console.log(`[IoTGatewaySection] Debug - linkedEntities:`, linkedEntities.map(e => ({
+//    name: e.entity_name,
+//    domain: e.domain,
+//    linked_grow_id: e.linked_grow_id,
+//    linked_stage: e.linked_stage
+//  })));
 
   // Local state for control operations
   const [controllingEntities, setControllingEntities] = useState<Set<string>>(new Set());
@@ -54,6 +54,7 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({ growId, st
   const updateEntityStateOptimistically = useCallback((entityId: string, newState: string) => {
     const entityStore = useEntityStore.getState();
     const currentStates = entityStore.entityStates;
+
     const updatedStates = {
       ...currentStates,
       [entityId]: {
@@ -207,7 +208,7 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({ growId, st
 
   // Filter entities for this specific grow and stage
   const stageLinkedEntities = linkedEntities.filter((entity) => {
-    console.log(`[IoTGatewaySection] Filtering entity ${entity.entity_name}: linked_grow_id=${entity.linked_grow_id}, target_growId=${growId}, linked_stage="${entity.linked_stage}", target_stage="${stage}"`);
+    //console.log(`[IoTGatewaySection] Filtering entity ${entity.entity_name}: linked_grow_id=${entity.linked_grow_id}, target_growId=${growId}, linked_stage="${entity.linked_stage}", target_stage="${stage}"`);
     
     if (entity.linked_grow_id !== growId) {
       return false;
@@ -215,21 +216,21 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({ growId, st
     
     // If no stage is specified or stage is empty, show all entities for this grow
     if (!stage || stage === "") {
-      console.log(`[IoTGatewaySection] Entity ${entity.entity_name} accepted - empty stage filter`);
+      //console.log(`[IoTGatewaySection] Entity ${entity.entity_name} accepted - empty stage filter`);
       return true;
     }
     
     // Otherwise, filter by specific stage
     const matches = entity.linked_stage === stage;
-    console.log(`[IoTGatewaySection] Entity ${entity.entity_name} ${matches ? 'accepted' : 'filtered out'} - stage match: ${matches}`);
+    //console.log(`[IoTGatewaySection] Entity ${entity.entity_name} ${matches ? 'accepted' : 'filtered out'} - stage match: ${matches}`);
     return matches;
   });
 
-  console.log(`[IoTGatewaySection] After filtering: ${stageLinkedEntities.length} entities`);
-  console.log(`[IoTGatewaySection] Filtered entities:`, stageLinkedEntities.map(e => ({
-    name: e.entity_name,
-    domain: e.domain
-  })));
+  //console.log(`[IoTGatewaySection] After filtering: ${stageLinkedEntities.length} entities`);
+  //console.log(`[IoTGatewaySection] Filtered entities:`, stageLinkedEntities.map(e => ({
+  //  name: e.entity_name,
+  //  domain: e.domain
+  //})));
 
   // Helper function to get InfoBadge props from connection status
   const getConnectionBadgeProps = (status: ConnectionStatus) => {
@@ -267,59 +268,6 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({ growId, st
       entity,
       state: entityStates[entity.entity_name],
     }));
-  };
-
-  // Group entities by gateway and domain
-  const groupEntitiesByGatewayAndDomain = (entitiesWithState: EntityWithState[]) => {
-    console.log(`[IoTGatewaySection] Grouping ${entitiesWithState.length} entities with states`);
-    console.log(`[IoTGatewaySection] DEFAULT_IOT_DOMAINS:`, DEFAULT_IOT_DOMAINS);
-    
-    const grouped: Record<
-      string,
-      {
-        gateway: { id: number; name: string; connectionStatus: ConnectionStatus };
-        domains: Record<string, EntityWithState[]>;
-      }
-    > = {};
-
-    entitiesWithState.forEach(({ entity, state }) => {
-      // Filter by allowed domains
-      const domain = entity.domain;
-      console.log(`[IoTGatewaySection] Processing entity ${entity.entity_name} (domain: ${domain})`);
-      
-      if (!DEFAULT_IOT_DOMAINS.includes(domain)) {
-        console.log(`[IoTGatewaySection] Entity ${entity.entity_name} filtered out - domain ${domain} not in allowed list`);
-        return;
-      }
-      
-      console.log(`[IoTGatewaySection] Entity ${entity.entity_name} domain accepted`);
-
-      const gateway = gateways.find((g) => g.id === entity.gateway_id);
-      const gatewayName = gateway?.name || 'Unknown Gateway';
-      const gatewayId = entity.gateway_id;
-      const connectionStatus = connectionStatuses[gatewayId] || 'unknown';
-
-      if (!grouped[gatewayName]) {
-        grouped[gatewayName] = {
-          gateway: { id: gatewayId, name: gatewayName, connectionStatus },
-          domains: {},
-        };
-      }
-
-      if (!grouped[gatewayName].domains[domain]) {
-        grouped[gatewayName].domains[domain] = [];
-      }
-
-      grouped[gatewayName].domains[domain].push({ entity, state });
-      console.log(`[IoTGatewaySection] Entity ${entity.entity_name} added to group ${gatewayName}/${domain}`);
-    });
-
-    console.log(`[IoTGatewaySection] Final grouped entities:`, Object.keys(grouped).map(gw => ({
-      gateway: gw,
-      domainCounts: Object.keys(grouped[gw].domains).map(d => `${d}:${grouped[gw].domains[d].length}`).join(', ')
-    })));
-
-    return grouped;
   };
 
   // Group entities by stage

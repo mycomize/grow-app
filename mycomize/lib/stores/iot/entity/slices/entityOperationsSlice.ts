@@ -359,6 +359,10 @@ export const createEntityOperationsSlice: StateCreator<
       await apiClient.linkIoTEntity(gatewayId, entityToLink.id.toString(), growId, stage, token);
       timer.log('Background API call completed');
 
+      // Register for real-time state updates after successful link
+      console.log(`[EntityStore] Registering real-time listener for linked entity ${entityId}`);
+      haWebSocketManager.subscribeToEntityStates(gatewayIdNum, [entityId]);
+
       set({ operationLoading: false });
       timer.end('Link operation completed successfully');
       return true;
@@ -443,6 +447,10 @@ export const createEntityOperationsSlice: StateCreator<
       );
       await apiClient.unlinkIoTEntity(gatewayId, entityToUnlink.id.toString(), token);
       timer.log('Background unlink API call completed');
+
+      // Unregister from real-time state updates after successful unlink
+      console.log(`[EntityStore] Unregistering real-time listener for unlinked entity ${entityId}`);
+      haWebSocketManager.unsubscribeFromEntityStates(gatewayIdNum, [entityId]);
 
       set({ operationLoading: false });
       timer.end('Unlink operation completed successfully');
@@ -550,6 +558,10 @@ export const createEntityOperationsSlice: StateCreator<
       );
       await apiClient.bulkLinkIoTEntities(gatewayId, databaseEntityIds, growId, stage, token);
       timer.log('Background bulk link API call completed');
+
+      // Register for real-time state updates for all successfully linked entities
+      console.log(`[EntityStore] Registering real-time listeners for ${entityIds.length} bulk linked entities`);
+      haWebSocketManager.subscribeToEntityStates(gatewayIdNum, entityIds);
 
       set({ operationLoading: false });
       timer.end(`Bulk link operation completed successfully for ${entityIds.length} entities`);
@@ -660,6 +672,10 @@ export const createEntityOperationsSlice: StateCreator<
       );
       await apiClient.bulkUnlinkIoTEntities(gatewayId, databaseEntityIds, token);
       timer.log('Background bulk unlink API call completed');
+
+      // Unregister from real-time state updates for all successfully unlinked entities
+      console.log(`[EntityStore] Unregistering real-time listeners for ${entityIds.length} bulk unlinked entities`);
+      haWebSocketManager.unsubscribeFromEntityStates(gatewayIdNum, entityIds);
 
       set({ operationLoading: false });
       timer.end(`Bulk unlink operation completed successfully for ${entityIds.length} entities`);

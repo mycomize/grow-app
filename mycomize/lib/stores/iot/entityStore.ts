@@ -13,46 +13,53 @@ import {
 } from './entity/slices';
 
 // Create the main store by composing all slices
-export const useEntityStore = create<EntityStore>()((set, get, api) => ({
-  // Compose all slices
-  ...createSelectionSlice(set, get, api),
-  ...createFilterSlice(set, get, api),
-  ...createHaEntitiesSlice(set, get, api),
-  ...createIotEntitiesSlice(set, get, api),
-  ...createSyncComputationSlice(set, get, api),
-  ...createEntityOperationsSlice(set, get, api),
-  ...createEntityStateSlice(set, get, api),
+export const useEntityStore = create<EntityStore>()((set, get, api) => {
+  const store = {
+    // Compose all slices
+    ...createSelectionSlice(set, get, api),
+    ...createFilterSlice(set, get, api),
+    ...createHaEntitiesSlice(set, get, api),
+    ...createIotEntitiesSlice(set, get, api),
+    ...createSyncComputationSlice(set, get, api),
+    ...createEntityOperationsSlice(set, get, api),
+    ...createEntityStateSlice(set, get, api),
 
-  // Override the reset function to reset all slices
-  reset: () => {
-    set({
-      // Reset all state to initial values
-      haEntities: [],
-      haEntitiesLoading: false,
-      iotEntities: [],
-      iotEntitiesLoading: false,
-      linkableEntities: [],
-      linkedEntities: [],
-      selectedEntityIds: new Set<string>(),
-      bulkSelectionMode: false,
-      filterPreferences: {
-        domains: DEFAULT_IOT_DOMAINS,
-        showAllDomains: false,
-        deviceClasses: DEFAULT_GROW_DEVICE_CLASSES,
-        showAllDeviceClasses: false,
-      },
-      filterEnabled: true,
-      operationLoading: false,
-      lastCredentials: new Map(),
-      webSocketInitialized: false,
-      fetchedGateways: new Set(),
-      pendingOperations: new Map(),
-      pendingLinks: new Map(),
-      entityStates: {},
-      entityStatesLoading: false,
-    });
-  },
-}));
+    // Override the reset function to reset all slices
+    reset: () => {
+      set({
+        // Reset all state to initial values
+        haEntities: [],
+        haEntitiesLoading: false,
+        iotEntities: [],
+        iotEntitiesLoading: false,
+        linkableEntities: [],
+        linkedEntities: [],
+        selectedEntityIds: new Set<string>(),
+        bulkSelectionMode: false,
+        filterPreferences: {
+          domains: DEFAULT_IOT_DOMAINS,
+          showAllDomains: false,
+          deviceClasses: DEFAULT_GROW_DEVICE_CLASSES,
+          showAllDeviceClasses: false,
+        },
+        filterEnabled: true,
+        operationLoading: false,
+        lastCredentials: new Map(),
+        webSocketInitialized: false,
+        fetchedGateways: new Set(),
+        pendingOperations: new Map(),
+        pendingLinks: new Map(),
+        entityStates: {},
+        entityStatesLoading: false,
+      });
+    },
+  };
+
+  // Initialize real-time updates after store creation
+  store.initializeRealTimeUpdates();
+
+  return store;
+});
 
 // Helper selectors for optimized subscriptions (maintaining exact same exports)
 export const useHaEntities = () => useEntityStore((state) => state.haEntities);

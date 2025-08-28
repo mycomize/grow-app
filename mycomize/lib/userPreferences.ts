@@ -10,9 +10,14 @@ export interface TaskFilterPreferences {
   stage: string;
 }
 
+export interface StateUpdatePreferences {
+  entityStateUpdateCadenceMinutes: number;
+}
+
 export interface UserPreferences {
   iotFilters: IoTFilterPreferences;
   taskFilters: TaskFilterPreferences;
+  stateUpdates: StateUpdatePreferences;
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -25,6 +30,9 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   taskFilters: {
     growName: '',
     stage: '',
+  },
+  stateUpdates: {
+    entityStateUpdateCadenceMinutes: 1, // Default: 1 minute
   },
 };
 
@@ -47,6 +55,10 @@ export const getUserPreferences = async (): Promise<UserPreferences> => {
         taskFilters: {
           ...DEFAULT_PREFERENCES.taskFilters,
           ...parsed.taskFilters,
+        },
+        stateUpdates: {
+          ...DEFAULT_PREFERENCES.stateUpdates,
+          ...parsed.stateUpdates,
         },
       };
     }
@@ -126,4 +138,23 @@ export const removeGrowName = async (growName: string): Promise<void> => {
   const currentNames = await getGrowNames();
   const filtered = currentNames.filter((name) => name !== growName);
   await saveGrowNames(filtered);
+};
+
+export const updateStateUpdatePreferences = async (
+  preferences: Partial<StateUpdatePreferences>
+): Promise<void> => {
+  const current = await getUserPreferences();
+  const updated = {
+    ...current,
+    stateUpdates: {
+      ...current.stateUpdates,
+      ...preferences,
+    },
+  };
+  await saveUserPreferences(updated);
+};
+
+export const getEntityStateUpdateCadenceMinutes = async (): Promise<number> => {
+  const preferences = await getUserPreferences();
+  return preferences.stateUpdates.entityStateUpdateCadenceMinutes;
 };
