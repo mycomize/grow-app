@@ -1,10 +1,9 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Button } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
-import { Package, Thermometer, CheckSquare, FileText, CircuitBoard } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { Package, Thermometer, CheckSquare, FileText } from 'lucide-react-native';
 
 // Import tek components
 import { ItemsList } from '~/components/tek/ItemsList';
@@ -14,15 +13,10 @@ import { StageNotes } from '~/components/tek/StageNotes';
 
 // Import tek types
 import { BulkStageData } from '~/lib/types/tekTypes';
-import { BulkGrowComplete, bulkGrowStages } from '~/lib/types/growTypes';
+import { BulkGrowComplete } from '~/lib/types/growTypes';
 import { StageIoTData } from '~/lib/types/iotTypes';
-import { AuthContext } from '~/lib/api/AuthContext';
-import { useUnifiedToast } from '~/components/ui/unified-toast';
 
-// Import grow IoT component
-import { GrowStageIoTControlList } from '~/components/grow/GrowStageIoTControlList';
-
-type TabType = 'items' | 'conditions' | 'tasks' | 'notes' | 'iot';
+type TabType = 'items' | 'conditions' | 'tasks' | 'notes';
 
 interface StageTabsProps {
   stageData?: BulkStageData;
@@ -39,12 +33,8 @@ export const StageTabs: React.FC<StageTabsProps> = ({
   grow,
   stageName,
   stageStartDate,
-  stageIoTData,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('items');
-  const { token } = useContext(AuthContext);
-  const router = useRouter();
-  const { showError, showSuccess } = useUnifiedToast();
 
   // Initialize empty stage data if not provided
   const defaultBulkStageData: BulkStageData = {
@@ -94,39 +84,11 @@ export const StageTabs: React.FC<StageTabsProps> = ({
     }
   };
 
-  // Get stage key from stage name for API calls
-  const getStageKey = (stageNameParam?: string): string => {
-    if (!stageNameParam) {
-      return bulkGrowStages.INOCULATION;
-    }
-
-    // Support both backend keys and human-readable names
-    const stageMap: Record<string, string> = {
-      // Human-readable format (original)
-      'Inoculation': bulkGrowStages.INOCULATION,
-      'Spawn Colonization': bulkGrowStages.SPAWN_COLONIZATION,
-      'Bulk Colonization': bulkGrowStages.BULK_COLONIZATION,
-      'Fruiting': bulkGrowStages.FRUITING,
-      'Harvest': bulkGrowStages.HARVEST,
-      
-      // Backend key format (used by stage sections)
-      'inoculation': bulkGrowStages.INOCULATION,
-      'spawn_colonization': bulkGrowStages.SPAWN_COLONIZATION,
-      'bulk_colonization': bulkGrowStages.BULK_COLONIZATION,
-      'fruiting': bulkGrowStages.FRUITING,
-      'harvest': bulkGrowStages.HARVEST,
-    };
-
-    return stageMap[stageNameParam] || bulkGrowStages.INOCULATION;
-  };
-
   const tabs = [
     { id: 'items' as TabType, icon: Package },
     { id: 'conditions' as TabType, icon: Thermometer },
     { id: 'tasks' as TabType, icon: CheckSquare },
     { id: 'notes' as TabType, icon: FileText },
-    // Only show IoT tab for actual grows (when grow prop exists and has an ID)
-    ...(grow?.id ? [{ id: 'iot' as TabType, icon: CircuitBoard }] : []),
   ];
 
   return (
@@ -175,12 +137,6 @@ export const StageTabs: React.FC<StageTabsProps> = ({
         )}
         {activeTab === 'notes' && (
           <StageNotes notes={currentBulkStageData.notes} onUpdateNotes={handleUpdateNotes} />
-        )}
-        {activeTab === 'iot' && grow?.id && (
-          <GrowStageIoTControlList
-            growId={grow.id}
-            stage={getStageKey(stageName)}
-          />
         )}
       </VStack>
     </VStack>

@@ -22,24 +22,6 @@ import { cacheProfileImage } from '@/lib/imageCache';
 
 import { ChevronRight, Camera, AlertCircle, CheckCircle } from 'lucide-react-native';
 
-// Function to decode JWT token and extract username
-function getUsernameFromToken(token: string | null | undefined): string {
-  if (!token) return 'User';
-
-  try {
-    // JWT tokens have 3 parts separated by dots: header.payload.signature
-    const payload = token.split('.')[1];
-    if (!payload) return 'User';
-
-    // Decode base64 payload
-    const decodedPayload = JSON.parse(atob(payload));
-    return decodedPayload.sub || decodedPayload.username || 'User';
-  } catch (error) {
-    console.error('Error decoding token:', error);
-    return 'User';
-  }
-}
-
 export default function ProfileScreen() {
   const { signOut, token } = useContext(AuthContext);
   const { theme, toggleTheme } = useTheme();
