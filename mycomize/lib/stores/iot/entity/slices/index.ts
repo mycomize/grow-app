@@ -4,3 +4,4 @@ export { createHaEntitiesSlice, type HaEntitiesSlice } from './haEntitiesSlice';
 export { createIotEntitiesSlice, type IotEntitiesSlice } from './iotEntitiesSlice';
 export { createSyncComputationSlice, type SyncComputationSlice } from './syncComputationSlice';
 export { createEntityOperationsSlice, type EntityOperationsSlice } from './entityOperationsSlice';
+export { createEntityStateSlice, type EntityStateSlice } from './entityStateSlice';

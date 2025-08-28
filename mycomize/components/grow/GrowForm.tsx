@@ -40,6 +40,7 @@ import {
 // Import modular sections
 import { BasicsSection } from '~/components/grow/sections/BasicsSection';
 import { StagesSection } from '~/components/grow/sections/StagesSection';
+import { IoTGatewaySection } from '~/components/grow/sections/IoTGatewaySection';
 
 interface GrowFormProps {
   growId?: string;
@@ -296,7 +297,21 @@ export function GrowForm({ growId, saveButtonText = 'Save' }: GrowFormProps) {
                 </AccordionTrigger>
               </AccordionHeader>
               <AccordionContent>
-              {/* IoT Gateway Section - TODO */}
+                {((growId && growId !== 'new') || formData.id) && (
+                  <IoTGatewaySection 
+                    growId={growId && growId !== 'new' ? parseInt(growId) : formData.id!} 
+                    stage="" 
+                  />
+                )}
+                {!((growId && growId !== 'new') || formData.id) && (
+                  <VStack className="items-center p-8" space="sm">
+                    <Icon as={CircuitBoard} size="xl" className="text-typography-400" />
+                    <Text className="text-center text-typography-500">
+                      IoT Gateway controls will be available after saving this grow. Save the grow
+                      then link controls from the the IoT tab.
+                    </Text>
+                  </VStack>
+                )}
               </AccordionContent>
             </AccordionItem>
           </Accordion>

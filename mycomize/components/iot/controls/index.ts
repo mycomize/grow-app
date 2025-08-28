@@ -1,4 +1,4 @@
-export { SensorControl } from './SensorControl';
-export { SwitchControl } from './SwitchControl';
-export { NumberControl } from './NumberControl';
-export { AutomationControl } from './AutomationControl';
+export { SensorControl } from './hass/SensorControl';
+export { SwitchControl } from './hass/SwitchControl';
+export { NumberControl } from './hass/NumberControl';
+export { AutomationControl } from './hass/AutomationControl';

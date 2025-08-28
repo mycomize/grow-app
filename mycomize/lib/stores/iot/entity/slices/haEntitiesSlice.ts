@@ -224,7 +224,26 @@ export const createHaEntitiesSlice: StateCreator<EntityStore, [], [], HaEntities
       timer.log('JSON parsing completed');
       console.log(`[EntityStore] Received ${haEntities.length} HA entities from Home Assistant`);
 
-      set({ haEntitiesLoading: false, haEntities });
+      // Also capture entity states since the /api/states endpoint returns both entity definitions and their current states
+      timer.log('Processing entity states');
+      const entityStates: Record<string, any> = {};
+      haEntities.forEach(entity => {
+        entityStates[entity.entity_id] = {
+          entity_id: entity.entity_id,
+          state: entity.state,
+          attributes: entity.attributes,
+          last_changed: entity.last_changed,
+          last_updated: entity.last_updated,
+        };
+      });
+      timer.log('Entity states processing completed');
+      console.log(`[EntityStore] Captured ${Object.keys(entityStates).length} entity states from HA response`);
+
+      set((state) => ({ 
+        haEntitiesLoading: false, 
+        haEntities,
+        entityStates: { ...state.entityStates, ...entityStates }
+      }));
 
       // Update credentials cache after successful fetch
       get().updateCredentialsCache(gateway);

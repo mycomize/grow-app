@@ -9,6 +9,7 @@ import {
   createIotEntitiesSlice,
   createSyncComputationSlice,
   createEntityOperationsSlice,
+  createEntityStateSlice,
 } from './entity/slices';
 
 // Create the main store by composing all slices
@@ -20,6 +21,7 @@ export const useEntityStore = create<EntityStore>()((set, get, api) => ({
   ...createIotEntitiesSlice(set, get, api),
   ...createSyncComputationSlice(set, get, api),
   ...createEntityOperationsSlice(set, get, api),
+  ...createEntityStateSlice(set, get, api),
 
   // Override the reset function to reset all slices
   reset: () => {
@@ -46,6 +48,8 @@ export const useEntityStore = create<EntityStore>()((set, get, api) => ({
       fetchedGateways: new Set(),
       pendingOperations: new Map(),
       pendingLinks: new Map(),
+      entityStates: {},
+      entityStatesLoading: false,
     });
   },
 }));

@@ -40,12 +40,26 @@ export interface EntityListOutput {
   orphanedEntities: IoTEntity[];
 }
 
+// Home Assistant entity state type
+export interface HAEntityState {
+  entity_id: string;
+  state: string;
+  attributes: Record<string, any>;
+  last_changed: string;
+  last_updated: string;
+}
+
 // Individual Slice State Types
 export interface HaEntitiesState {
   haEntities: HAEntity[];
   haEntitiesLoading: boolean;
   webSocketInitialized: boolean;
   lastCredentials: Map<number, GatewayCredentials>;
+}
+
+export interface EntityStateState {
+  entityStates: Record<string, HAEntityState>;
+  entityStatesLoading: boolean;
 }
 
 export interface IotEntitiesState {
@@ -82,10 +96,14 @@ export interface EntityStore
     EntityOperationsState,
     SelectionState,
     FilterState,
-    SyncComputationState {
+    SyncComputationState,
+    EntityStateState {
   // HA Entity management
   fetchHaEntities: (gateway: IoTGateway, forceRefresh?: boolean) => Promise<void>;
   clearHaEntities: () => void;
+
+  // Entity state management
+  fetchEntityStates: (gateway: IoTGateway, linkedEntities: IoTEntity[]) => Promise<void>;
 
   // Caching and WebSocket integration
   initializeWebSocket: () => void;

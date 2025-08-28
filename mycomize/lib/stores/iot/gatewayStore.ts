@@ -459,11 +459,14 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
         const entityFetchEnd = performance.now();
         console.log(`[GatewayStore] All entity fetching completed in ${entityFetchEnd - entityFetchStart}ms`);
 
-        // Compute entity lists once after all data is loaded
+        // Compute entity lists once after all data is loaded using proper state updates
         const computeStart = performance.now();
         entityStore.computeAndSetEntityLists(false);
         const computeEnd = performance.now();
         console.log(`[GatewayStore] Entity list computation completed in ${computeEnd - computeStart}ms`);
+        
+        // Note: Entity states are now captured as part of fetchHaEntities, so no separate fetchEntityStates call needed
+        console.log(`[GatewayStore] Entity states already captured during HA entities fetch - optimization complete`);
 
         // Test all gateway connections
         const connectionTestStart = performance.now();

@@ -6,7 +6,7 @@ import { Card } from '~/components/ui/card';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { Checkbox, CheckboxIcon, CheckboxIndicator } from '~/components/ui/checkbox';
-import { Activity, Bot, Calculator, ToggleRight, Link, Unlink, Check } from 'lucide-react-native';
+import { Thermometer, Droplet, Activity, Bot, Calculator, ToggleRight, Link, Unlink, Check } from 'lucide-react-native';
 import { IoTEntity } from '~/lib/iot/iot';
 
 interface EntityCardProps {
@@ -39,9 +39,17 @@ export const EntityCard: React.FC<EntityCardProps> = ({
   const friendlyName = entity.friendly_name || entity.entity_name;
 
   // Get domain icon
-  const getDomainIcon = (domain: string) => {
+  const getDomainIcon = (domain: string, device_class: string) => {
     switch (domain) {
       case 'sensor':
+        if (device_class === 'temperature') {
+            return Thermometer;
+        }
+
+        if (device_class === 'humidity') {
+            return Droplet; 
+        }
+
         return Activity;
       case 'automation':
         return Bot;
@@ -54,7 +62,7 @@ export const EntityCard: React.FC<EntityCardProps> = ({
     }
   };
 
-  const DomainIcon = getDomainIcon(entity.domain);
+  const DomainIcon = getDomainIcon(entity.domain, entity.device_class);
 
   return (
     <Card className="bg-background-0 p-0.5">

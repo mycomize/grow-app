@@ -5,19 +5,15 @@ import { Text } from '~/components/ui/text';
 import { Icon } from '~/components/ui/icon';
 import { Card } from '~/components/ui/card';
 import { Thermometer, Droplet, Activity } from 'lucide-react-native';
-import { HAEntity, IoTEntity, IoTGateway } from '~/lib/iot/iot';
+import { HAEntity, IoTEntity } from '~/lib/iot/iot';
 
 interface SensorControlProps {
   state: HAEntity;
-  gateway?: IoTGateway;
+  entity?: IoTEntity;
   showCard?: boolean;
 }
 
-export const SensorControl: React.FC<SensorControlProps> = ({
-  state,
-  gateway,
-  showCard = true,
-}) => {
+export const SensorControl: React.FC<SensorControlProps> = ({ state, entity, showCard = true }) => {
   const friendlyName = state.attributes.friendly_name || state.entity_id;
   const deviceClass = state.attributes.device_class;
 
@@ -32,23 +28,26 @@ export const SensorControl: React.FC<SensorControlProps> = ({
     }
   };
 
+  const formatStateValue = (value: string): string => {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      // Format to max 2 decimal places, removing trailing zeros
+      return parseFloat(numValue.toFixed(2)).toString();
+    }
+    return value;
+  };
+
   const DeviceIcon = getDeviceClassIcon();
 
   const content = (
-    <HStack className="items-center justify-between" space="sm">
-      {/* Entity Name */}
-      <VStack className="flex-1">
-        <Text className="font-medium">{friendlyName}</Text>
-      </VStack>
-
-      {/* Device Icon and State Value */}
-      <HStack className="items-center" space="sm">
-        <Icon as={DeviceIcon} className="text-typography-500" />
-        <Text className="text-typography-500">
-          {state.state}
-          {state.attributes.unit_of_measurement && ` ${state.attributes.unit_of_measurement}`}
-        </Text>
-      </HStack>
+    <HStack className="items-center">
+      <Icon as={DeviceIcon} className="text-typography-400" />
+      <VStack>
+      <Text numberOfLines={1} className="font-medium text-typography-600 ml-2">{friendlyName}</Text>
+      <Text className="ml-2 text-typography-500">
+        {formatStateValue(state.state)}
+        {state.attributes.unit_of_measurement && ` ${state.attributes.unit_of_measurement}`}
+      </Text></VStack>
     </HStack>
   );
 
@@ -56,5 +55,5 @@ export const SensorControl: React.FC<SensorControlProps> = ({
     return content;
   }
 
-  return <Card className="bg-background-0 p-3">{content}</Card>;
+  return <Card className="bg-background-0 p-0">{content}</Card>;
 };

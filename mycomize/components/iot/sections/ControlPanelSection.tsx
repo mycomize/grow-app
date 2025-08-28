@@ -356,8 +356,8 @@ export function ControlPanelSection({ gatewayId }: ControlPanelSectionProps) {
                           </Text>
                         </HStack>
                         {Object.entries(entitiesByStage).map(([stageName, stageEntities]) => (
-                          <VStack key={`${growName}-${stageName}`} space="sm">
-                            <Text className="text-typography-500">{stageName}</Text>
+                          <VStack key={`${growName}-${stageName}`} space="md">
+                            <Text className="text-typography-500 mt-1">{stageName}</Text>
                             {stageEntities.map((entity) => (
                               <EntityCard
                                 key={entity.entity_name}
@@ -554,12 +554,12 @@ export function ControlPanelSection({ gatewayId }: ControlPanelSectionProps) {
                       {} as Record<string, IoTEntity[]>
                     )
                   ).map(([domain, domainEntities]) => (
-                    <VStack key={domain} space="xs">
+                    <VStack key={domain} space="sm">
                       <HStack className="items-center">
-                        <Text className="text-md capitalize text-typography-500">{domain}</Text>
+                        <Text className="text-md capitalize text-typography-500 my-1">{domain}</Text>
                       </HStack>
 
-                      <VStack space="sm">
+                      <VStack space="md">
                         {domainEntities.map((entity) => (
                           <EntityCard
                             key={entity.entity_name}
