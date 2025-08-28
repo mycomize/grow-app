@@ -484,9 +484,6 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({ growId, st
 
   return (
     <VStack space="md" className="px-0 py-2">
-      {/* Header */}
-      <Text className="text-lg font-semibold text-typography-600">Linked Gateways</Text>
-      
       {/* Gateway Summary */}
       <VStack space="sm">
         {linkedGateways.map((gateway) => (
