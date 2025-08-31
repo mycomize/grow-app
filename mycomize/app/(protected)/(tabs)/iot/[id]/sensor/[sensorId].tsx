@@ -1,10 +1,7 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView } from '~/components/ui/scroll-view';
 import { VStack } from '~/components/ui/vstack';
-import { HStack } from '~/components/ui/hstack';
-import { Card } from '~/components/ui/card';
-import { Heading } from '~/components/ui/heading';
 import { Text } from '~/components/ui/text';
 import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
@@ -25,6 +22,20 @@ import { AuthContext } from '~/lib/api/AuthContext';
 import { apiClient, isUnauthorizedError } from '~/lib/api/ApiClient';
 import { IoTGateway, HAEntity } from '~/lib/iot/iot';
 import { SensorGraph } from '~/components/charts/SensorGraph';
+import { useGrows } from '~/lib/stores/growStore';
+import { useEntityStore } from '~/lib/stores/iot/entityStore';
+import { stageLabels } from '~/lib/types/growTypes';
+
+// TypeScript interface for sensor metadata
+interface SensorMetadata {
+  growName: string;
+  growStage: string;
+  friendlyName: string;
+  currentValue: string;
+  deviceClass: string;
+  lastUpdated: string;
+  unitOfMeasurement?: string;
+}
 
 export default function SensorDetailScreen() {
   const { id, sensorId } = useLocalSearchParams();
@@ -34,6 +45,59 @@ export default function SensorDetailScreen() {
   const [sensorState, setSensorState] = useState<HAEntity | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Zustand store hooks
+  const grows = useGrows();
+  const linkedEntities = useEntityStore((state) => state.linkedEntities);
+  const entityStates = useEntityStore((state) => state.entityStates);
+
+  // Extract sensor metadata from zustand stores
+  const getSensorMetadata = (sensorId: string, gatewayId: string): SensorMetadata | null => {
+    // Find the linked entity for this sensor
+    const linkedEntity = linkedEntities.find(
+      (entity) => entity.entity_name === sensorId && entity.gateway_id === parseInt(gatewayId)
+    );
+
+    if (!linkedEntity) {
+      return null;
+    }
+
+    // Find the grow this sensor is linked to
+    const grow = grows.find((g) => g.id === linkedEntity.linked_grow_id);
+    
+    if (!grow) {
+      return null;
+    }
+
+    // Get current sensor state from entity store
+    const currentState = entityStates[sensorId] || sensorState;
+
+    // Get human-readable stage label
+    const stageKey = grow.current_stage as keyof typeof stageLabels;
+    const humanReadableStage = stageLabels[stageKey] || grow.current_stage || 'Unknown Stage';
+
+    return {
+      growName: grow.name || 'Unknown Grow',
+      growStage: humanReadableStage,
+      friendlyName: linkedEntity.friendly_name || currentState?.attributes?.friendly_name || sensorId,
+      currentValue: currentState?.state || 'N/A',
+      deviceClass: linkedEntity.device_class || currentState?.attributes?.device_class || 'Unknown',
+      lastUpdated: currentState?.last_updated ? new Date(currentState.last_updated).toLocaleString() : 'Unknown',
+      unitOfMeasurement: currentState?.attributes?.unit_of_measurement,
+    };
+  };
+
+  // Memoize sensor metadata to avoid recalculation
+  const sensorMetadata = useMemo(() => {
+    if (!gateway || !sensorId) return null;
+    return getSensorMetadata(sensorId as string, id as string);
+  }, [gateway, sensorId, id, linkedEntities, grows, entityStates, sensorState]);
+
+  // Memoize grow data for SensorGraph
+  const growData = useMemo(() => {
+    if (!sensorMetadata) return undefined;
+    return grows.find((g) => g.name === sensorMetadata.growName);
+  }, [grows, sensorMetadata]);
 
   // Get icon based on device class
   const getSensorIcon = (deviceClass?: string) => {
@@ -130,52 +194,16 @@ export default function SensorDetailScreen() {
     );
   }
 
-  const IconComponent = getSensorIcon(sensorState.attributes.device_class);
-  const friendlyName = sensorState.attributes.friendly_name || sensorState.entity_id;
-  const unitOfMeasurement = sensorState.attributes.unit_of_measurement;
-
   return (
     <ScrollView className="flex-1 bg-background-50">
       <VStack className="p-4" space="md">
-        {/* Sensor Info Card */}
-        <Card className="bg-background-0">
-          <VStack className="p-1" space="md">
-            <HStack className="items-center" space="md">
-              <Icon as={IconComponent} className="text-typography-600" size="xl" />
-              <VStack className="flex-1">
-                <Text className="text-lg font-semibold">{friendlyName}</Text>
-                <Text className="text-sm text-typography-500">{sensorState.entity_id}</Text>
-              </VStack>
-              <HStack className="items-end">
-                <Text className="text-2xl font-bold text-typography-600">
-                  {parseFloat(sensorState.state).toFixed(2)}
-                </Text>
-                {unitOfMeasurement && (
-                  <Text className="text-lg text-typography-600"> {unitOfMeasurement}</Text>
-                )}
-              </HStack>
-            </HStack>
-
-            {sensorState.attributes.device_class && (
-              <HStack className="items-center" space="sm">
-                <Text className="text-sm font-medium text-typography-600">Device Class:</Text>
-                <Text className="text-sm capitalize text-typography-500">
-                  {sensorState.attributes.device_class}
-                </Text>
-              </HStack>
-            )}
-
-            <HStack className="items-center" space="sm">
-              <Text className="text-sm font-medium text-typography-600">Last Updated:</Text>
-              <Text className="text-sm text-typography-500">
-                {new Date(sensorState.last_updated).toLocaleString()}
-              </Text>
-            </HStack>
-          </VStack>
-        </Card>
-
         {/* Sensor Graph */}
-        <SensorGraph gateway={gateway} sensorEntityId={sensorId as string} />
+        <SensorGraph 
+          gateway={gateway} 
+          sensorEntityId={sensorId as string}
+          grow={growData}
+          sensorMetadata={sensorMetadata}
+        />
       </VStack>
     </ScrollView>
   );

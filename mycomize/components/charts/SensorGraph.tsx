@@ -8,9 +8,21 @@ import { Spinner } from '~/components/ui/spinner';
 import { Card } from '~/components/ui/card';
 import { Icon } from '~/components/ui/icon';
 import { Button } from '~/components/ui/button';
-import { AlertCircle, Thermometer } from 'lucide-react-native';
+import { AlertCircle, Thermometer, Droplet, Activity, Clock } from 'lucide-react-native';
 import { IoTGateway } from '~/lib/iot/iot';
 import { Grow } from '~/lib/types/growTypes';
+import { useEntityStore } from '~/lib/stores/iot/entityStore';
+
+// TypeScript interface for sensor metadata
+interface SensorMetadata {
+  growName: string;
+  growStage: string;
+  friendlyName: string;
+  currentValue: string;
+  deviceClass: string;
+  lastUpdated: string;
+  unitOfMeasurement?: string;
+}
 
 interface SensorData {
   entity_id: string;
@@ -30,7 +42,69 @@ interface SensorGraphProps {
   gateway: IoTGateway;
   sensorEntityId?: string; // Optional: if provided, show only this sensor
   grow?: Grow; // Optional: if provided, use inoculation date for MAX time scale
+  sensorMetadata?: SensorMetadata | null; // Optional: sensor metadata for header display
 }
+
+// Inline sensor header component
+interface SensorHeaderProps {
+  sensorMetadata: SensorMetadata;
+}
+
+function getDeviceClassIcon(device_class: string) {
+    if (device_class === 'temperature') {
+        return Thermometer;
+    }
+    
+    if (device_class === 'humidity') {
+        return Droplet;
+    }
+    
+    return Activity;
+}
+
+const SensorHeader: React.FC<SensorHeaderProps> = ({ sensorMetadata }) => {
+  const formatStateValue = (value: string): string => {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      // Format to max 2 decimal places, removing trailing zeros
+      return parseFloat(numValue.toFixed(2)).toString();
+    }
+    return value;
+  };
+
+  return (
+    <VStack space="sm" className="p-2 pb-0">
+      {/* Title bar - friendly name, current value*/}
+      <HStack className="items-center justify-between">
+        <Text className="text-xl font-medium text-typography-600">{sensorMetadata.friendlyName}</Text>
+        <HStack className="ml-auto items-center" space="sm">
+          <Text className="text-xl font-bold text-typography-600">{formatStateValue(sensorMetadata.currentValue)}</Text>
+          {sensorMetadata.unitOfMeasurement && (
+            <Text className="text-lg text-typography-500">{sensorMetadata.unitOfMeasurement}</Text>
+          )}
+        </HStack>
+      </HStack>
+      <HStack className="items-center mt-2" space="md">
+        <Icon as={getDeviceClassIcon(sensorMetadata.deviceClass)} className="text-typography-400" size="sm"/>
+        <Text className="text-md text-typography-400 capitalize">{sensorMetadata.deviceClass} sensor</Text>
+      </HStack>
+      <HStack className="items-center mt-1" space="md">
+        <Icon as={Clock} className="text-typography-400" size="sm"/>
+        <Text className="text-md text-typography-400">
+          Last Updated: {sensorMetadata.lastUpdated}
+        </Text>
+      </HStack>
+
+      {/* Grow Information */}
+      <HStack className="flex-1 items-center mt-4" space="xs">
+        <Text className="text-lg text-typography-600">Grow:</Text>
+        <Text className="text-lg font-medium text-typography-600">{sensorMetadata.growName}</Text>
+        <Text className="ml-auto text-md text-typography-500 italic">{sensorMetadata.growStage}</Text>
+      </HStack>
+
+    </VStack>
+  );
+};
 
 // Time scale options
 type TimeScale = '1D' | '1W' | 'MAX';
@@ -47,17 +121,20 @@ const SENSOR_COLORS = [
   '#48DBFB',
 ];
 
-export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityId, grow }) => {
+export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityId, grow, sensorMetadata }) => {
   const [sensorData, setSensorData] = useState<SensorData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
   const [selectedTimeScale, setSelectedTimeScale] = useState<TimeScale>('1D');
 
+  // Zustand store hooks
+  const entityStates = useEntityStore((state) => state.entityStates);
+
   const chartWidth = useMemo(() => screenWidth - 100, [screenWidth]);
 
   // Memoize expensive y-axis calculations (must be before any conditional returns)
-  const { yMin, yMax, stepHeight } = useMemo(() => {
+  const { yMin } = useMemo(() => {
     if (sensorData.length === 0) return { yMin: 0, yMax: 30, stepHeight: 6 };
 
     const allValues = sensorData.flatMap((sensor) => sensor.data.map((d) => d.value));
@@ -92,21 +169,26 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
         let sensorsToFetch: any[] = [];
 
         if (sensorEntityId) {
-          // Fetch specific sensor
-          const stateResponse = await fetch(`${gateway.api_url}/api/states/${sensorEntityId}`, {
-            headers: {
-              Authorization: `Bearer ${gateway.api_key}`,
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (!stateResponse.ok) {
-            throw new Error('Failed to fetch sensor state from Home Assistant');
-          }
-
-          const sensorState = await stateResponse.json();
-          if (sensorState.state !== 'unavailable' && sensorState.state !== 'unknown') {
+          // Get current sensor state from zustand store instead of API call
+          const sensorState = entityStates[sensorEntityId];
+          
+          if (sensorState && sensorState.state !== 'unavailable' && sensorState.state !== 'unknown') {
             sensorsToFetch = [sensorState];
+          } else {
+            // Fallback: fetch from API if not in store
+            const stateResponse = await fetch(`${gateway.api_url}/api/states/${sensorEntityId}`, {
+              headers: {
+                Authorization: `Bearer ${gateway.api_key}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (stateResponse.ok) {
+              const apiSensorState = await stateResponse.json();
+              if (apiSensorState.state !== 'unavailable' && apiSensorState.state !== 'unknown') {
+                sensorsToFetch = [apiSensorState];
+              }
+            }
           }
         }
 
@@ -129,13 +211,10 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
             break;
           case 'MAX':
             // Use grow inoculation date if available, otherwise default to 1 month ago
-            if (grow && (grow.inoculationDate || grow.inoculation_date)) {
-              // Handle both possible date field names and formats
-              const inoculationDate =
-                grow.inoculationDate ||
-                (grow.inoculation_date ? new Date(grow.inoculation_date) : null);
+            if (grow && grow.inoculation_date) {
+              const inoculationDate = new Date(grow.inoculation_date);
 
-              if (inoculationDate instanceof Date && !isNaN(inoculationDate.getTime())) {
+              if (!isNaN(inoculationDate.getTime())) {
                 startTime = inoculationDate;
               } else {
                 // Fallback to 1 month ago if inoculation date is invalid
@@ -150,7 +229,7 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
             startTime = new Date(endTime.getTime() - 24 * 60 * 60 * 1000);
         }
 
-        // Fetch history for each sensor
+        // Fetch history for each sensor (there should just be one sensor per SensorGraph)
         const historyPromises = sensorsToFetch.map(async (sensor: any, index: number) => {
           const historyUrl = `${gateway.api_url}/api/history/period/${startTime.toISOString()}?filter_entity_id=${sensor.entity_id}&end_time=${endTime.toISOString()}&minimal_response&no_attributes`;
 
@@ -241,10 +320,10 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
   );
 
   useEffect(() => {
-    if (gateway.type === 'home_assistant' && gateway.is_active) {
+    if (gateway.type === 'home_assistant') {
       fetchSensorHistory(selectedTimeScale);
     }
-  }, [gateway.type, gateway.is_active, fetchSensorHistory, selectedTimeScale]);
+  }, [gateway.type, fetchSensorHistory, selectedTimeScale]);
 
   // Sample data every N minutes
   const sampleDataEveryNMinutes = (
@@ -369,16 +448,6 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
     [pointerLabelComponent]
   );
 
-  if (!gateway.is_active) {
-    return (
-      <Card className="bg-background-50 p-4">
-        <HStack className="items-center" space="sm">
-          <Icon as={AlertCircle} className="text-warning-600" size="sm" />
-          <Text className="text-typography-600">Gateway is not active</Text>
-        </HStack>
-      </Card>
-    );
-  }
 
   if (isLoading) {
     return (
@@ -415,10 +484,13 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
     );
   }
 
-  return (
-    <Card className="bg-background-0">
-      <VStack space="md">
-        <View style={{ width: chartWidth, alignSelf: 'flex-start' }} className="mx-auto mt-6">
+    return (
+      <Card className="bg-background-0">
+        <VStack space="md">
+          {/* Sensor Metadata Header */}
+          {sensorMetadata && <SensorHeader sensorMetadata={sensorMetadata} />}
+          
+          <View style={{ width: chartWidth, alignSelf: 'flex-start' }} className={`mx-auto ${sensorMetadata ? 'mt-4' : 'mt-6'}`}>
           <LineChart
             data={sensorData[0].data}
             data2={sensorData[1]?.data}

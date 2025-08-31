@@ -348,6 +348,7 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({ growId, st
             state={haEntity}
             entity={entity}
             showCard={true}
+            gatewayId={entity.gateway_id}
           />
         );
       case 'switch':
@@ -438,7 +439,7 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({ growId, st
           <HStack key={gateway.id} className="items-center justify-between">
             <VStack space="xs" className="flex-1">
               <Text className="text-lg font-semibold text-typography-700">{gateway.name}</Text>
-              <Text className="text-xs text-typography-500">{gateway.api_url}</Text>
+              <Text className="text-md text-typography-500">{gateway.api_url}</Text>
             </VStack>
             <InfoBadge {...getConnectionBadgeProps(gateway.connectionStatus)} size="sm" />
           </HStack>
@@ -463,7 +464,7 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({ growId, st
           showsVerticalScrollIndicator={true}
           nestedScrollEnabled={true}
         >
-          <VStack space="lg" className="pb-6">
+          <VStack space="lg" className="pb-4">
             {getSortedStages(groupedByStage).map((stage) => (
               <VStack key={stage} space="sm">
                 {/* Stage Header */}

@@ -128,8 +128,6 @@ export const createEntityStateSlice: StateCreator<EntityStore, [], [], EntitySta
 
   // Update individual entity state (called by EntityStateUpdateManager after throttling)
   updateEntityStateThrottled: (entityId: string, state: HAEntityState) => {
-    console.log(`[EntityStore] Updating throttled state for entity ${entityId}`);
-    
     set((currentState) => ({
       entityStates: {
         ...currentState.entityStates,

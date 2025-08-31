@@ -6,7 +6,7 @@ import { Icon } from '~/components/ui/icon';
 import { Card } from '~/components/ui/card';
 import { Switch } from '~/components/ui/switch';
 import { Spinner } from '~/components/ui/spinner';
-import { Bot } from 'lucide-react-native';
+import { Bot, BotOff } from 'lucide-react-native';
 import { HAEntity, IoTEntity } from '~/lib/iot/iot';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import { getSwitchColors } from '~/lib/switchUtils';
@@ -38,7 +38,7 @@ export const AutomationControl: React.FC<AutomationControlProps> = ({
       {isOn ? (
         <Icon as={Bot} size="lg" className="text-green-500" />
       ) : (
-        <Icon as={Bot} size="lg" className="text-typography-400" />
+        <Icon as={BotOff} size="lg" className="text-typography-400" />
       )}
 
       {/* Entity Name */}
