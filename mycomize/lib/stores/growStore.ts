@@ -7,7 +7,7 @@ import {
   BulkGrowCreate,
   BulkGrowUpdate,
   BulkGrowFlush,
-} from '../growTypes';
+} from '../types/growTypes';
 
 // Helper function to handle unauthorized errors consistently
 const handleUnauthorizedError = (error: Error) => {
