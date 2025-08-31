@@ -5,6 +5,7 @@ import { apiClient, isUnauthorizedError } from '../../api/ApiClient';
 import { IoTGateway, IoTGatewayCreate, IoTGatewayUpdate } from '../../iot/iot';
 import { ConnectionInfo, ConnectionStatus, NEW_GATEWAY_ID } from '../../types/iotTypes';
 import { useEntityStore } from './entityStore';
+import { sensorHistoryCache } from '../../iot/cache/SensorHistoryCache';
 
 // Helper function to handle unauthorized errors consistently
 const handleUnauthorizedError = (error: Error) => {
@@ -316,6 +317,29 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
           Object.entries(state.connectionLatencies).filter(([key]) => key !== id)
         ),
       }));
+
+      // Clean up sensor cache for this gateway
+      console.log(`[GatewayStore] Cleaning up sensor cache for gateway ${gatewayIdNum}`);
+      try {
+        const cacheCleanupResult = await sensorHistoryCache.deleteGatewayCache(gatewayIdNum);
+        console.log(
+          `[GatewayStore] Sensor cache cleanup completed for gateway ${gatewayIdNum}: ` +
+          `${cacheCleanupResult.entitiesCleaned} entities, ${cacheCleanupResult.dataPointsRemoved} data points removed`
+        );
+        
+        if (cacheCleanupResult.errors.length > 0) {
+          console.warn(
+            `[GatewayStore] Cache cleanup had ${cacheCleanupResult.errors.length} errors:`,
+            cacheCleanupResult.errors
+          );
+        }
+      } catch (cacheError) {
+        console.error(
+          `[GatewayStore] Error during sensor cache cleanup for gateway ${gatewayIdNum}:`,
+          cacheError
+        );
+        // Don't fail the entire deletion if cache cleanup fails
+      }
 
       // Notify entity store to clean up entities for this gateway
       console.log(

@@ -12,6 +12,9 @@ import { AlertCircle, Thermometer, Droplet, Activity, Clock } from 'lucide-react
 import { IoTGateway } from '~/lib/iot/iot';
 import { Grow } from '~/lib/types/growTypes';
 import { useEntityStore } from '~/lib/stores/iot/entityStore';
+import { sensorHistoryCache } from '~/lib/iot/cache/SensorHistoryCache';
+import { calculateTimeRange, convertHADataToCachedFormat } from '~/lib/iot/cache/utils';
+import { TimeScale } from '~/lib/iot/cache/types';
 
 // TypeScript interface for sensor metadata
 interface SensorMetadata {
@@ -41,8 +44,9 @@ interface SensorData {
 interface SensorGraphProps {
   gateway: IoTGateway;
   sensorEntityId?: string; // Optional: if provided, show only this sensor
-  grow?: Grow; // Optional: if provided, use inoculation date for MAX time scale
+  grow?: Grow; // Optional: if provided, use inoculation date and stage data
   sensorMetadata?: SensorMetadata | null; // Optional: sensor metadata for header display
+  stageStartDate?: string; // Optional: stage start date for STAGE time scale
 }
 
 // Inline sensor header component
@@ -85,12 +89,12 @@ const SensorHeader: React.FC<SensorHeaderProps> = ({ sensorMetadata }) => {
         </HStack>
       </HStack>
       <HStack className="items-center mt-2" space="md">
-        <Icon as={getDeviceClassIcon(sensorMetadata.deviceClass)} className="text-typography-400" size="sm"/>
-        <Text className="text-md text-typography-400 capitalize">{sensorMetadata.deviceClass} sensor</Text>
+        <Icon as={getDeviceClassIcon(sensorMetadata.deviceClass)} className="text-typography-500" size="md"/>
+        <Text className="text-md text-typography-500 capitalize">{sensorMetadata.deviceClass} sensor</Text>
       </HStack>
       <HStack className="items-center mt-1" space="md">
-        <Icon as={Clock} className="text-typography-400" size="sm"/>
-        <Text className="text-md text-typography-400">
+        <Icon as={Clock} className="text-typography-500" size="md"/>
+        <Text className="text-md text-typography-500">
           Last Updated: {sensorMetadata.lastUpdated}
         </Text>
       </HStack>
@@ -106,8 +110,6 @@ const SensorHeader: React.FC<SensorHeaderProps> = ({ sensorMetadata }) => {
   );
 };
 
-// Time scale options
-type TimeScale = '1D' | '1W' | 'MAX';
 
 // Color palette for multiple sensors
 const SENSOR_COLORS = [
@@ -121,7 +123,7 @@ const SENSOR_COLORS = [
   '#48DBFB',
 ];
 
-export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityId, grow, sensorMetadata }) => {
+export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityId, grow, sensorMetadata, stageStartDate }) => {
   const [sensorData, setSensorData] = useState<SensorData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -198,61 +200,183 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
           return;
         }
 
-        // Calculate time range based on selected time scale
-        const endTime = new Date();
-        let startTime: Date;
+        // Calculate time range using cache utility for consistency
+        const timeRange = calculateTimeRange(
+          timeScale, 
+          new Date(), 
+          grow?.inoculation_date,
+          stageStartDate
+        );
 
-        switch (timeScale) {
-          case '1D':
-            startTime = new Date(endTime.getTime() - 24 * 60 * 60 * 1000); // 24 hours ago
-            break;
-          case '1W':
-            startTime = new Date(endTime.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
-            break;
-          case 'MAX':
-            // Use grow inoculation date if available, otherwise default to 1 month ago
-            if (grow && grow.inoculation_date) {
-              const inoculationDate = new Date(grow.inoculation_date);
+        // Initialize cache system
+        await sensorHistoryCache.initialize();
 
-              if (!isNaN(inoculationDate.getTime())) {
-                startTime = inoculationDate;
+        // Process each sensor with cache-first approach
+        const historyPromises = sensorsToFetch.map(async (sensor: any, index: number) => {
+          console.log(`[SensorGraph] Processing sensor ${sensor.entity_id} with cache-first approach`);
+
+          // Step 1: Query cache for existing data
+          const cacheResult = await sensorHistoryCache.getCachedData(sensor.entity_id, timeRange);
+          
+          let allHistoryData: any[] = [];
+          
+          // Step 2: Check if we need to fetch additional data from API
+          if (cacheResult.needsFetch && cacheResult.fetchRange) {
+            console.log(`[SensorGraph] Cache hit ratio: ${(cacheResult.cacheHitRatio * 100).toFixed(1)}% - fetching additional data`);
+            console.log(`[SensorGraph] Fetch range: ${cacheResult.fetchRange.start.toISOString()} to ${cacheResult.fetchRange.end.toISOString()}`);
+            console.log(`[SensorGraph] Cached data points: ${cacheResult.cachedData.length}`);
+            
+            // Fetch only the missing time range (differential loading)
+            const historyUrl = `${gateway.api_url}/api/history/period/${cacheResult.fetchRange.start.toISOString()}?filter_entity_id=${sensor.entity_id}&end_time=${cacheResult.fetchRange.end.toISOString()}&minimal_response&no_attributes`;
+            console.log(`[SensorGraph] API URL: ${historyUrl}`);
+
+            const historyResponse = await fetch(historyUrl, {
+              headers: {
+                Authorization: `Bearer ${gateway.api_key}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            console.log(`[SensorGraph] API Response status: ${historyResponse.status} ${historyResponse.statusText}`);
+            
+            if (historyResponse.ok) {
+              const freshHistoryData = await historyResponse.json();
+              console.log(`[SensorGraph] Fresh API data points: ${freshHistoryData?.[0]?.length || 0}`);
+              
+              // If no data returned, try a smaller time range to test Home Assistant's limits
+              if (!freshHistoryData || !freshHistoryData[0] || freshHistoryData[0].length === 0) {
+                console.warn(`[SensorGraph] No data returned for range ${cacheResult.fetchRange.start.toISOString()} to ${cacheResult.fetchRange.end.toISOString()}`);
+                console.log(`[SensorGraph] This may indicate Home Assistant's history retention limit has been exceeded`);
+                
+                // Try a test query for just the last 48 hours to see if API is working
+                const testStart = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+                const testEnd = new Date().toISOString();
+                const testUrl = `${gateway.api_url}/api/history/period/${testStart}?filter_entity_id=${sensor.entity_id}&end_time=${testEnd}&minimal_response&no_attributes`;
+                
+                try {
+                  const testResponse = await fetch(testUrl, {
+                    headers: {
+                      Authorization: `Bearer ${gateway.api_key}`,
+                      'Content-Type': 'application/json',
+                    },
+                  });
+                  
+                  if (testResponse.ok) {
+                    const testData = await testResponse.json();
+                    console.log(`[SensorGraph] Test query (last 48h) returned: ${testData?.[0]?.length || 0} points`);
+                  }
+                } catch (testError) {
+                  console.warn(`[SensorGraph] Test query failed:`, testError);
+                }
+              }
+              
+              if (freshHistoryData && freshHistoryData[0]) {
+                // Step 3: Merge cached and fresh data using cache utility
+                const mergedData = await sensorHistoryCache.mergeCachedAndFreshData(
+                  sensor.entity_id,
+                  cacheResult.cachedData,
+                  freshHistoryData[0]
+                );
+                console.log(`[SensorGraph] Merged data points: ${mergedData.length}`);
+
+                // Step 4: Update cache with new data
+                const freshCachedData = convertHADataToCachedFormat(freshHistoryData[0]);
+                if (freshCachedData.length > 0) {
+                  await sensorHistoryCache.cacheData(
+                    sensor.entity_id,
+                    gateway.id,
+                    freshCachedData,
+                    {
+                      unit_of_measurement: sensor.attributes.unit_of_measurement,
+                      device_class: sensor.attributes.device_class,
+                      friendly_name: sensor.attributes.friendly_name,
+                    }
+                  );
+                }
+
+                // Convert merged cache format back to chart format
+                allHistoryData = mergedData.map((point: any) => ({
+                  last_changed: point.timestamp,
+                  state: point.state,
+                }));
+                console.log(`[SensorGraph] Final allHistoryData points: ${allHistoryData.length}`);
+                
+                // Debug: check date range of final data
+                if (allHistoryData.length > 0) {
+                  const sortedData = allHistoryData.sort((a: any, b: any) => new Date(a.last_changed).getTime() - new Date(b.last_changed).getTime());
+                  console.log(`[SensorGraph] Data range: ${sortedData[0].last_changed} to ${sortedData[sortedData.length - 1].last_changed}`);
+                }
               } else {
-                // Fallback to 1 month ago if inoculation date is invalid
-                startTime = new Date(endTime.getTime() - 30 * 24 * 60 * 60 * 1000);
+                console.log(`[SensorGraph] No fresh data from API, using cached data only`);
+                // No fresh data, use cached data only
+                allHistoryData = cacheResult.cachedData.map((point: any) => ({
+                  last_changed: point.timestamp,
+                  state: point.state,
+                }));
               }
             } else {
-              // Default to 1 month ago if no grow data or inoculation date
-              startTime = new Date(endTime.getTime() - 30 * 24 * 60 * 60 * 1000);
+              const errorText = await historyResponse.text();
+              console.error(`[SensorGraph] API Error ${historyResponse.status}: ${errorText}`);
+              console.warn(`[SensorGraph] Failed to fetch additional data for ${sensor.entity_id}, using cache only`);
+              // API failed, use cached data only
+              allHistoryData = cacheResult.cachedData.map((point: any) => ({
+                last_changed: point.timestamp,
+                state: point.state,
+              }));
             }
-            break;
-          default:
-            startTime = new Date(endTime.getTime() - 24 * 60 * 60 * 1000);
-        }
+          } else {
+            console.log(`[SensorGraph] Cache hit ratio: ${(cacheResult.cacheHitRatio * 100).toFixed(1)}% - using cache only`);
+            // Use cached data only
+            allHistoryData = cacheResult.cachedData.map((point: any) => ({
+              last_changed: point.timestamp,
+              state: point.state,
+            }));
+          }
 
-        // Fetch history for each sensor (there should just be one sensor per SensorGraph)
-        const historyPromises = sensorsToFetch.map(async (sensor: any, index: number) => {
-          const historyUrl = `${gateway.api_url}/api/history/period/${startTime.toISOString()}?filter_entity_id=${sensor.entity_id}&end_time=${endTime.toISOString()}&minimal_response&no_attributes`;
+          // Handle case where no data is available at all
+          if (allHistoryData.length === 0) {
+            console.log(`[SensorGraph] No data available for ${sensor.entity_id}, falling back to direct API call`);
+            
+            // Fallback: direct API call for the full range (original behavior)
+            const fallbackUrl = `${gateway.api_url}/api/history/period/${timeRange.start.toISOString()}?filter_entity_id=${sensor.entity_id}&end_time=${timeRange.end.toISOString()}&minimal_response&no_attributes`;
+            
+            const fallbackResponse = await fetch(fallbackUrl, {
+              headers: {
+                Authorization: `Bearer ${gateway.api_key}`,
+                'Content-Type': 'application/json',
+              },
+            });
 
-          const historyResponse = await fetch(historyUrl, {
-            headers: {
-              Authorization: `Bearer ${gateway.api_key}`,
-              'Content-Type': 'application/json',
-            },
-          });
+            if (fallbackResponse.ok) {
+              const fallbackData = await fallbackResponse.json();
+              if (fallbackData && fallbackData[0]) {
+                allHistoryData = fallbackData[0];
+                
+                // Cache this data for future use
+                const cachedData = convertHADataToCachedFormat(fallbackData[0]);
+                if (cachedData.length > 0) {
+                  await sensorHistoryCache.cacheData(
+                    sensor.entity_id,
+                    gateway.id,
+                    cachedData,
+                    {
+                      unit_of_measurement: sensor.attributes.unit_of_measurement,
+                      device_class: sensor.attributes.device_class,
+                      friendly_name: sensor.attributes.friendly_name,
+                    }
+                  );
+                }
+              }
+            }
+          }
 
-          if (!historyResponse.ok) {
-            console.error(`Failed to fetch history for ${sensor.entity_id}`);
+          if (allHistoryData.length === 0) {
+            console.warn(`[SensorGraph] No history data found for ${sensor.entity_id}`);
             return null;
           }
 
-          const historyData = await historyResponse.json();
-
-          if (!historyData || !historyData[0] || historyData[0].length === 0) {
-            return null;
-          }
-
-          // Process history data
-          const processedData = historyData[0]
+          // Process history data (same as before)
+          const processedData = allHistoryData
             .filter((point: any) => {
               const value = parseFloat(point.state);
               return !isNaN(value) && point.state !== 'unavailable' && point.state !== 'unknown';
@@ -262,24 +386,58 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
               value: parseFloat(point.state),
             }))
             .sort((a: any, b: any) => a.time.getTime() - b.time.getTime());
+            
+          console.log(`[SensorGraph] Processed data points: ${processedData.length}`);
+          if (processedData.length > 0) {
+            console.log(`[SensorGraph] Processed data range: ${processedData[0].time.toISOString()} to ${processedData[processedData.length - 1].time.toISOString()}`);
+          }
 
-          // Sample data based on time scale for optimal performance and data coverage
+          // Sample data based on actual data range to achieve ~150 data points
+          // Calculate sampling interval dynamically based on available data
           let samplingInterval: number;
-          switch (timeScale) {
-            case '1D':
-              samplingInterval = 10; // 10 minutes
-              break;
-            case '1W':
-              samplingInterval = 70; // 60 minutes
-              break;
-            case 'MAX':
-              samplingInterval = 240; // 240 minutes
-              break;
-            default:
-              samplingInterval = 10;
+          
+          if (processedData.length > 0) {
+            // Calculate actual data duration in minutes
+            const actualStartTime = processedData[0].time.getTime();
+            const actualEndTime = processedData[processedData.length - 1].time.getTime();
+            const actualDurationMinutes = (actualEndTime - actualStartTime) / (1000 * 60);
+            
+            // Target ~150 points, but with sensible min/max intervals
+            const targetPoints = 150;
+            const calculatedInterval = Math.floor(actualDurationMinutes / targetPoints);
+            
+            // Apply time scale constraints for performance and data quality
+            switch (timeScale) {
+              case '1D':
+                samplingInterval = Math.max(5, Math.min(calculatedInterval, 15)); // 5-15 min range
+                break;
+              case '1W':
+                samplingInterval = Math.max(30, Math.min(calculatedInterval, 120)); // 30min-2hr range
+                break;
+              case '1M':
+                samplingInterval = Math.max(60, Math.min(calculatedInterval, 360)); // 1-6hr range
+                break;
+              case 'STAGE':
+                samplingInterval = Math.max(10, Math.min(calculatedInterval, 480)); // 10min-8hr range
+                break;
+              default:
+                samplingInterval = Math.max(10, calculatedInterval);
+            }
+            
+            console.log(`[SensorGraph] Actual data duration: ${(actualDurationMinutes / 60).toFixed(1)}h, calculated interval: ${calculatedInterval}min, final interval: ${samplingInterval}min`);
+          } else {
+            // Fallback intervals if no processed data
+            switch (timeScale) {
+              case '1D': samplingInterval = 10; break;
+              case '1W': samplingInterval = 70; break;
+              case '1M': samplingInterval = 300; break;
+              case 'STAGE': samplingInterval = 240; break;
+              default: samplingInterval = 10;
+            }
           }
 
           const sampledData = sampleDataEveryNMinutes(processedData, samplingInterval);
+          console.log(`[SensorGraph] Sampled data points (${samplingInterval}min interval): ${sampledData.length}`);
 
           // Format data for gifted-charts with x-axis labels
           const chartData = sampledData.map((point: { time: Date; value: number }, idx: number) => {
@@ -292,6 +450,8 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
               timeString: formatFullTimeLabel(date), // Store formatted time string instead of Date object
             };
           });
+          
+          console.log(`[SensorGraph] Final chart data points: ${chartData.length}`);
 
           return {
             entity_id: sensor.entity_id,
@@ -316,7 +476,7 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
         setIsLoading(false);
       }
     },
-    [gateway.api_url, gateway.api_key, sensorEntityId]
+    [gateway.api_url, gateway.api_key, gateway.id, sensorEntityId, grow?.inoculation_date]
   );
 
   useEffect(() => {
@@ -449,103 +609,116 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
   );
 
 
-  if (isLoading) {
-    return (
-      <Card className="bg-background-0 p-4">
-        <VStack className="items-center py-8" space="md">
+  // Render the main component structure
+  const renderGraphArea = () => {
+    if (isLoading) {
+      return (
+        <VStack className="items-center justify-center py-16" space="md" style={{ height: 250 }}>
           <Spinner size="large" />
           <Text className="text-typography-500">Loading sensor data...</Text>
         </VStack>
-      </Card>
-    );
-  }
+      );
+    }
 
-  if (error) {
-    return (
-      <Card className="bg-background-0 p-4">
-        <HStack className="items-center" space="sm">
-          <Icon as={AlertCircle} className="text-error-600" size="sm" />
-          <Text className="text-error-700">{error}</Text>
-        </HStack>
-      </Card>
-    );
-  }
+    if (error) {
+      return (
+        <VStack className="items-center justify-center py-16" space="sm" style={{ height: 250 }}>
+          <Icon as={AlertCircle} className="text-error-600" size="lg" />
+          <Text className="text-error-700 text-center">{error}</Text>
+        </VStack>
+      );
+    }
 
-  if (sensorData.length === 0) {
-    return (
-      <Card className="bg-background-50 p-4">
-        <VStack className="items-center py-4" space="sm">
+    if (sensorData.length === 0) {
+      return (
+        <VStack className="items-center justify-center py-16" space="sm" style={{ height: 250 }}>
           <Icon as={Thermometer} className="text-typography-400" size="lg" />
           <Text className="text-center text-typography-500">
-            No temperature sensor data available for the past 24 hours
+            No temperature sensor data available for the selected time period
           </Text>
         </VStack>
-      </Card>
-    );
-  }
+      );
+    }
 
     return (
-      <Card className="bg-background-0">
-        <VStack space="md">
-          {/* Sensor Metadata Header */}
-          {sensorMetadata && <SensorHeader sensorMetadata={sensorMetadata} />}
-          
-          <View style={{ width: chartWidth, alignSelf: 'flex-start' }} className={`mx-auto ${sensorMetadata ? 'mt-4' : 'mt-6'}`}>
-          <LineChart
-            data={sensorData[0].data}
-            data2={sensorData[1]?.data}
-            data3={sensorData[2]?.data}
-            data4={sensorData[3]?.data}
-            color={sensorData[0].color}
-            color2={sensorData[1]?.color}
-            color3={sensorData[2]?.color}
-            color4={sensorData[3]?.color}
-            thickness={2}
-            thickness2={2}
-            thickness3={2}
-            thickness4={2}
-            width={chartWidth}
-            height={250}
-            adjustToWidth
-            yAxisLabelWidth={30}
-            yAxisOffset={yMin - 2}
-            formatYLabel={formatYLabel}
-            yAxisTextStyle={{ color: '#9F9F9F', fontSize: 10 }}
-            showXAxisIndices={false}
-            showFractionalValues={false}
-            yAxisColor="#E5E7EB"
-            xAxisColor="#E5E7EB"
-            hideRules
-            dataPointsRadius={0}
-            hideDataPoints
-            curved
-            animateOnDataChange
-            animationDuration={750}
-            spacing={Math.max(2, (chartWidth - 120) / Math.max(1, sensorData[0].data.length - 1))}
-            initialSpacing={10}
-            endSpacing={10}
-            hideYAxisText={false}
-            yAxisThickness={1}
-            xAxisThickness={1}
-            xAxisLength={320}
-            xAxisLabelsVerticalShift={-5}
-            hideOrigin
-            // Disable default strip, only use pointer
-            focusEnabled={false}
-            showStripOnFocus={false}
-            pointerConfig={pointerConfig}
-          />
+      <View style={{ width: chartWidth, alignSelf: 'flex-start' }} className="mx-auto">
+        <LineChart
+          data={sensorData[0].data}
+          data2={sensorData[1]?.data}
+          data3={sensorData[2]?.data}
+          data4={sensorData[3]?.data}
+          color={sensorData[0].color}
+          color2={sensorData[1]?.color}
+          color3={sensorData[2]?.color}
+          color4={sensorData[3]?.color}
+          thickness={2}
+          thickness2={2}
+          thickness3={2}
+          thickness4={2}
+          width={chartWidth}
+          height={250}
+          adjustToWidth
+          yAxisLabelWidth={30}
+          yAxisOffset={yMin - 2}
+          formatYLabel={formatYLabel}
+          yAxisTextStyle={{ color: '#9F9F9F', fontSize: 10 }}
+          showXAxisIndices={false}
+          showFractionalValues={false}
+          yAxisColor="#E5E7EB"
+          xAxisColor="#E5E7EB"
+          hideRules
+          dataPointsRadius={0}
+          hideDataPoints
+          curved
+          animateOnDataChange
+          animationDuration={750}
+          spacing={Math.max(2, (chartWidth - 120) / Math.max(1, sensorData[0].data.length - 1))}
+          initialSpacing={10}
+          endSpacing={10}
+          hideYAxisText={false}
+          yAxisThickness={1}
+          xAxisThickness={1}
+          xAxisLength={320}
+          xAxisLabelsVerticalShift={-5}
+          hideOrigin
+          // Disable default strip, only use pointer
+          focusEnabled={false}
+          showStripOnFocus={false}
+          pointerConfig={pointerConfig}
+        />
+      </View>
+    );
+  };
+
+  return (
+    <Card className="bg-background-0">
+      <VStack space="md">
+        {/* Sensor Metadata Header - Always visible */}
+        {sensorMetadata && <SensorHeader sensorMetadata={sensorMetadata} />}
+        
+        {/* Graph Area - Shows spinner, error, or chart */}
+        <View className={`${sensorMetadata ? 'mt-4' : 'mt-6'}`}>
+          {renderGraphArea()}
         </View>
 
-        {/* Time Scale Selector */}
+        {/* Time Scale Selector - Always visible */}
         <HStack space="sm" className="justify-center pb-4">
-          {(['1D', '1W', 'MAX'] as TimeScale[]).map((timeScale) => (
+          {(() => {
+            // Build array of available time scales
+            const baseScales: TimeScale[] = ['1D', '1W', '1M'];
+            // Add STAGE button only if stageStartDate is provided
+            if (stageStartDate) {
+              baseScales.push('STAGE');
+            }
+            return baseScales;
+          })().map((timeScale) => (
             <Button
               key={timeScale}
               size="sm"
               variant={selectedTimeScale === timeScale ? 'solid' : 'outline'}
               action={selectedTimeScale === timeScale ? 'positive' : 'secondary'}
               onPress={() => setSelectedTimeScale(timeScale)}
+              disabled={isLoading}
               className={
                 selectedTimeScale === timeScale ? 'min-w-16' : 'min-w-16 border-typography-200'
               }>
