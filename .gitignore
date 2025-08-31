@@ -4,3 +4,4 @@
 backend/config
 backend/data
 **/node_modules
+implementation_plan.md
