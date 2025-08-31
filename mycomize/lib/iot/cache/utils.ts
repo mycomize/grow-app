@@ -350,9 +350,19 @@ export const findDataGap = (
     console.log(`  Cached: ${cachedStart.toISOString()} to ${cachedEnd.toISOString()}`);
     console.log(`  Requested duration: ${(requestedDuration / (1000 * 60 * 60)).toFixed(1)}h`);
     
-    // Define tolerance for "close enough" boundaries (5 minutes)
-    // This accounts for sensors that might not have data at exact requested boundaries
-    const BOUNDARY_TOLERANCE_MS = 5 * 60 * 1000;
+    // Define base tolerance for "close enough" boundaries (5 minutes)
+    const BASE_BOUNDARY_TOLERANCE_MS = 5 * 60 * 1000;
+    
+    // Calculate adaptive tolerance based on requested duration
+    // For longer time ranges, allow larger gaps to avoid fetching tiny amounts
+    // Use 0.5% of requested duration, but cap it at reasonable limits
+    const adaptiveTolerance = Math.min(
+      requestedDuration * 0.005, // 0.5% of requested duration
+      60 * 60 * 1000 // Max 1 hour
+    );
+    const BOUNDARY_TOLERANCE_MS = Math.max(BASE_BOUNDARY_TOLERANCE_MS, adaptiveTolerance);
+    
+    console.log(`  Boundary tolerance: ${(BOUNDARY_TOLERANCE_MS / (1000 * 60)).toFixed(1)}min (${(BOUNDARY_TOLERANCE_MS / requestedDuration * 100).toFixed(2)}% of duration)`);
     
     // Calculate how much of the requested range is actually covered by cache
     const coverageStart = Math.max(cachedStart.getTime(), requestedRange.start.getTime());
@@ -363,40 +373,69 @@ export const findDataGap = (
     
     console.log(`  Coverage: ${(coverageRatio * 100).toFixed(1)}% (${(coveredDuration / (1000 * 60 * 60)).toFixed(1)}h covered)`);
     
-    // If we have good coverage (>95%), consider it fully cached
-    // This handles cases where sensor data doesn't exist at exact boundaries
-    if (coverageRatio >= 0.95) {
-      console.log(`  Coverage >= 95%, no gap needed`);
-      return null;
-    }
-    
-    // Check for significant gaps that justify an API call
+    // Check for gaps that justify an API call
     const startGap = requestedRange.start.getTime() - cachedStart.getTime();
     const endGap = requestedRange.end.getTime() - cachedEnd.getTime();
     
     console.log(`  Start gap: ${(startGap / (1000 * 60 * 60)).toFixed(1)}h, End gap: ${(endGap / (1000 * 60 * 60)).toFixed(1)}h`);
     
-    // Check if we need newer data (significant gap at the end)
+    // Smart gap analysis considering Home Assistant retention limits
+    
+    // Case 1: Check if we need newer data (gap at the end)
     if (endGap > BOUNDARY_TOLERANCE_MS) {
-      const gapRange = {
-        start: new Date(Math.max(cachedEnd.getTime(), requestedRange.start.getTime())),
-        end: requestedRange.end
-      };
-      console.log(`  Returning newer data gap: ${gapRange.start.toISOString()} to ${gapRange.end.toISOString()}`);
-      return gapRange;
+      const gapDuration = endGap;
+      const gapPercentage = (gapDuration / requestedDuration) * 100;
+      
+      // Only fetch if the gap is significant enough relative to the request
+      // AND we're not dealing with a tiny gap in a large time range
+      if (gapPercentage >= 1.0) { // Gap must be at least 1% of requested duration
+        const gapRange = {
+          start: new Date(Math.max(cachedEnd.getTime(), requestedRange.start.getTime())),
+          end: requestedRange.end
+        };
+        console.log(`  Returning newer data gap: ${gapRange.start.toISOString()} to ${gapRange.end.toISOString()} (${gapPercentage.toFixed(1)}% of request)`);
+        return gapRange;
+      } else {
+        console.log(`  End gap too small (${gapPercentage.toFixed(2)}% < 1.0%), skipping fetch`);
+      }
     }
     
-    // Check if we need older data (significant gap at the start)
+    // Case 2: Check if we need older data (gap at the start)  
     if (startGap < -BOUNDARY_TOLERANCE_MS) {
-      const gapRange = {
-        start: requestedRange.start,
-        end: new Date(Math.min(cachedStart.getTime(), requestedRange.end.getTime()))
-      };
-      console.log(`  Returning older data gap: ${gapRange.start.toISOString()} to ${gapRange.end.toISOString()}`);
-      return gapRange;
+      const gapDuration = Math.abs(startGap);
+      const gapPercentage = (gapDuration / requestedDuration) * 100;
+      
+      // For older data, be more lenient since HA may not have it due to retention limits
+      // Only fetch if gap is significant (>10% of request) to avoid wasting API calls
+      // on data that doesn't exist due to HA retention policies
+      if (gapPercentage >= 10.0) { // Higher threshold for historical data
+        const gapRange = {
+          start: requestedRange.start,
+          end: new Date(Math.min(cachedStart.getTime(), requestedRange.end.getTime()))
+        };
+        console.log(`  Returning older data gap: ${gapRange.start.toISOString()} to ${gapRange.end.toISOString()} (${gapPercentage.toFixed(1)}% of request)`);
+        return gapRange;
+      } else {
+        console.log(`  Start gap likely due to HA retention limits (${gapPercentage.toFixed(1)}% < 10.0%), skipping fetch`);
+      }
     }
     
-    console.log(`  No significant gaps found, no fetch needed`);
+    // Case 3: High coverage ratio indicates we have most available data
+    if (coverageRatio >= 0.95) {
+      console.log(`  High coverage ratio (${(coverageRatio * 100).toFixed(1)}% >= 95%), no gap needed`);
+      return null;
+    }
+    
+    // Case 4: Even with low coverage, if gaps are small, don't fetch
+    const totalGapDuration = Math.abs(startGap) + Math.abs(endGap);
+    const totalGapPercentage = (totalGapDuration / requestedDuration) * 100;
+    
+    if (totalGapPercentage < 2.0) { // Combined gaps < 2% of total request
+      console.log(`  Total gaps too small (${totalGapPercentage.toFixed(2)}% < 2.0%), no fetch needed`);
+      return null;
+    }
+    
+    console.log(`  No significant gaps found after smart analysis, no fetch needed`);
     return null;
   } catch (error) {
     console.warn('[CacheUtils] Error finding data gap:', error);

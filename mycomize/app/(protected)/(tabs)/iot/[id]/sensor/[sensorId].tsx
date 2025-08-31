@@ -99,6 +99,51 @@ export default function SensorDetailScreen() {
     return grows.find((g) => g.name === sensorMetadata.growName);
   }, [grows, sensorMetadata]);
 
+  // Calculate stage start date based on current stage
+  const stageStartDate = useMemo(() => {
+    if (!growData || !growData.current_stage) {
+      console.log(`[SensorDetailScreen] No stageStartDate - growData: ${!!growData}, current_stage: ${growData?.current_stage}`);
+      return undefined;
+    }
+    
+    let calculatedDate: string | undefined;
+    
+    switch (growData.current_stage) {
+      case 'inoculation':
+        calculatedDate = growData.inoculation_date;
+        break;
+      case 'spawn_colonization':
+        calculatedDate = growData.spawn_start_date;
+        break;
+      case 'bulk_colonization':
+        calculatedDate = growData.bulk_start_date;
+        break;
+      case 'fruiting':
+        calculatedDate = growData.fruiting_start_date;
+        break;
+      case 'harvest':
+        // For harvest stage, use the last stage that had a start date
+        calculatedDate = growData.fruiting_start_date || growData.bulk_start_date || growData.spawn_start_date || growData.inoculation_date;
+        break;
+      default:
+        calculatedDate = undefined;
+    }
+    
+    console.log(`[SensorDetailScreen] Stage start date calculation:`, {
+      current_stage: growData.current_stage,
+      grow_name: growData.name,
+      calculatedDate,
+      available_dates: {
+        inoculation_date: growData.inoculation_date,
+        spawn_start_date: growData.spawn_start_date,
+        bulk_start_date: growData.bulk_start_date,
+        fruiting_start_date: growData.fruiting_start_date,
+      }
+    });
+    
+    return calculatedDate;
+  }, [growData]);
+
   // Get icon based on device class
   const getSensorIcon = (deviceClass?: string) => {
     switch (deviceClass) {
@@ -203,6 +248,7 @@ export default function SensorDetailScreen() {
           sensorEntityId={sensorId as string}
           grow={growData}
           sensorMetadata={sensorMetadata}
+          stageStartDate={stageStartDate}
         />
       </VStack>
     </ScrollView>

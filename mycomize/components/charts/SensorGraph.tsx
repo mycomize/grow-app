@@ -15,6 +15,8 @@ import { useEntityStore } from '~/lib/stores/iot/entityStore';
 import { sensorHistoryCache } from '~/lib/iot/cache/SensorHistoryCache';
 import { calculateTimeRange, convertHADataToCachedFormat } from '~/lib/iot/cache/utils';
 import { TimeScale } from '~/lib/iot/cache/types';
+import { calculateSensorStatistics, SensorStatistics as SensorStatisticsData } from '~/lib/utils/statisticsUtils';
+import { SensorStatistics } from '~/components/charts/SensorStatistics';
 
 // TypeScript interface for sensor metadata
 interface SensorMetadata {
@@ -39,6 +41,7 @@ interface SensorData {
   }>;
   color: string;
   lastValue: number;
+  statistics: SensorStatisticsData;
 }
 
 interface SensorGraphProps {
@@ -113,14 +116,7 @@ const SensorHeader: React.FC<SensorHeaderProps> = ({ sensorMetadata }) => {
 
 // Color palette for multiple sensors
 const SENSOR_COLORS = [
-  '#FF6B6B',
-  '#4ECDC4',
-  '#45B7D1',
-  '#FFA07A',
-  '#98D8C8',
-  '#6C5CE7',
-  '#FECA57',
-  '#48DBFB',
+  '#E37D2F',
 ];
 
 export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityId, grow, sensorMetadata, stageStartDate }) => {
@@ -129,6 +125,7 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
   const [error, setError] = useState<string | null>(null);
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
   const [selectedTimeScale, setSelectedTimeScale] = useState<TimeScale>('1D');
+  const [statistics, setStatistics] = useState<SensorStatisticsData | null>(null);
 
   // Zustand store hooks
   const entityStates = useEntityStore((state) => state.entityStates);
@@ -137,7 +134,9 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
 
   // Memoize expensive y-axis calculations (must be before any conditional returns)
   const { yMin } = useMemo(() => {
-    if (sensorData.length === 0) return { yMin: 0, yMax: 30, stepHeight: 6 };
+    if (sensorData.length === 0) {
+      return { yMin: 0, yMax: 30, stepHeight: 6 };
+    }
 
     const allValues = sensorData.flatMap((sensor) => sensor.data.map((d) => d.value));
     const dataMin = Math.min(...allValues);
@@ -228,8 +227,6 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
             
             // Fetch only the missing time range (differential loading)
             const historyUrl = `${gateway.api_url}/api/history/period/${cacheResult.fetchRange.start.toISOString()}?filter_entity_id=${sensor.entity_id}&end_time=${cacheResult.fetchRange.end.toISOString()}&minimal_response&no_attributes`;
-            console.log(`[SensorGraph] API URL: ${historyUrl}`);
-
             const historyResponse = await fetch(historyUrl, {
               headers: {
                 Authorization: `Bearer ${gateway.api_key}`,
@@ -237,38 +234,9 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
               },
             });
 
-            console.log(`[SensorGraph] API Response status: ${historyResponse.status} ${historyResponse.statusText}`);
-            
             if (historyResponse.ok) {
               const freshHistoryData = await historyResponse.json();
               console.log(`[SensorGraph] Fresh API data points: ${freshHistoryData?.[0]?.length || 0}`);
-              
-              // If no data returned, try a smaller time range to test Home Assistant's limits
-              if (!freshHistoryData || !freshHistoryData[0] || freshHistoryData[0].length === 0) {
-                console.warn(`[SensorGraph] No data returned for range ${cacheResult.fetchRange.start.toISOString()} to ${cacheResult.fetchRange.end.toISOString()}`);
-                console.log(`[SensorGraph] This may indicate Home Assistant's history retention limit has been exceeded`);
-                
-                // Try a test query for just the last 48 hours to see if API is working
-                const testStart = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
-                const testEnd = new Date().toISOString();
-                const testUrl = `${gateway.api_url}/api/history/period/${testStart}?filter_entity_id=${sensor.entity_id}&end_time=${testEnd}&minimal_response&no_attributes`;
-                
-                try {
-                  const testResponse = await fetch(testUrl, {
-                    headers: {
-                      Authorization: `Bearer ${gateway.api_key}`,
-                      'Content-Type': 'application/json',
-                    },
-                  });
-                  
-                  if (testResponse.ok) {
-                    const testData = await testResponse.json();
-                    console.log(`[SensorGraph] Test query (last 48h) returned: ${testData?.[0]?.length || 0} points`);
-                  }
-                } catch (testError) {
-                  console.warn(`[SensorGraph] Test query failed:`, testError);
-                }
-              }
               
               if (freshHistoryData && freshHistoryData[0]) {
                 // Step 3: Merge cached and fresh data using cache utility
@@ -392,6 +360,13 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
             console.log(`[SensorGraph] Processed data range: ${processedData[0].time.toISOString()} to ${processedData[processedData.length - 1].time.toISOString()}`);
           }
 
+          // Calculate statistics from ALL cached data (not sampled data)
+          const sensorStats = calculateSensorStatistics(
+            processedData,
+            sensor.attributes.unit_of_measurement
+          );
+          console.log(`[SensorGraph] Statistics calculated: mean=${sensorStats.mean.toFixed(2)}, median=${sensorStats.median.toFixed(2)}, min=${sensorStats.min.toFixed(2)}, max=${sensorStats.max.toFixed(2)}`);
+
           // Sample data based on actual data range to achieve ~150 data points
           // Calculate sampling interval dynamically based on available data
           let samplingInterval: number;
@@ -460,6 +435,7 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
             data: chartData,
             color: SENSOR_COLORS[index % SENSOR_COLORS.length],
             lastValue: processedData[processedData.length - 1]?.value || 0,
+            statistics: sensorStats,
           };
         });
 
@@ -469,6 +445,13 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
         ) as SensorData[];
 
         setSensorData(validResults);
+        
+        // Set statistics from the first sensor (primary sensor)
+        if (validResults.length > 0) {
+          setStatistics(validResults[0].statistics);
+        } else {
+          setStatistics(null);
+        }
       } catch (err) {
         console.error('Error fetching sensor history:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch sensor data');
@@ -614,7 +597,7 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
     if (isLoading) {
       return (
         <VStack className="items-center justify-center py-16" space="md" style={{ height: 250 }}>
-          <Spinner size="large" />
+          <Spinner size="large" color="orange" />
           <Text className="text-typography-500">Loading sensor data...</Text>
         </VStack>
       );
@@ -644,24 +627,15 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
       <View style={{ width: chartWidth, alignSelf: 'flex-start' }} className="mx-auto">
         <LineChart
           data={sensorData[0].data}
-          data2={sensorData[1]?.data}
-          data3={sensorData[2]?.data}
-          data4={sensorData[3]?.data}
           color={sensorData[0].color}
-          color2={sensorData[1]?.color}
-          color3={sensorData[2]?.color}
-          color4={sensorData[3]?.color}
           thickness={2}
-          thickness2={2}
-          thickness3={2}
-          thickness4={2}
           width={chartWidth}
           height={250}
           adjustToWidth
           yAxisLabelWidth={30}
           yAxisOffset={yMin - 2}
           formatYLabel={formatYLabel}
-          yAxisTextStyle={{ color: '#9F9F9F', fontSize: 10 }}
+          yAxisTextStyle={{ color: '#b8b8b8', fontSize: 11 }}
           showXAxisIndices={false}
           showFractionalValues={false}
           yAxisColor="#E5E7EB"
@@ -702,7 +676,7 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
         </View>
 
         {/* Time Scale Selector - Always visible */}
-        <HStack space="sm" className="justify-center pb-4">
+        <HStack space="sm" className="justify-center">
           {(() => {
             // Build array of available time scales
             const baseScales: TimeScale[] = ['1D', '1W', '1M'];
@@ -731,6 +705,9 @@ export const SensorGraph: React.FC<SensorGraphProps> = ({ gateway, sensorEntityI
             </Button>
           ))}
         </HStack>
+
+        {/* Statistics Section - Positioned below time scale selector */}
+        <SensorStatistics statistics={statistics} isLoading={isLoading} />
       </VStack>
     </Card>
   );
