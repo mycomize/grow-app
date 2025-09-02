@@ -27,12 +27,6 @@ interface CurrentGrow {
   flushes: BulkGrowFlush[];
 }
 
-// Grow fetch strategy result
-interface GrowFetchStrategy {
-  shouldFetchAll: boolean;
-  shouldFetchSingle: number | null;
-}
-
 // Grow modification tracking
 type GrowAction = 'create' | 'update' | 'delete' | 'cancel' | null;
 
@@ -58,7 +52,6 @@ interface GrowStore {
 
   // CRUD Actions
   fetchGrows: (token: string) => Promise<void>;
-  fetchSingleGrow: (token: string, growId: string) => Promise<void>;
   createGrow: (token: string, data: BulkGrowCreateWithFlushes) => Promise<BulkGrowComplete | null>;
   updateGrow: (token: string, id: string, data: BulkGrowUpdateWithFlushes) => Promise<boolean>;
   deleteGrow: (token: string, id: string) => Promise<boolean>;
@@ -76,11 +69,6 @@ interface GrowStore {
   // Date handling utilities
   parseDate: (dateString?: string) => Date | null;
   formatDateForAPI: (date: Date | null) => string | undefined;
-
-  // Smart fetching actions
-  markGrowModified: (growId: number | null, action: GrowAction) => void;
-  getGrowFetchStrategy: () => GrowFetchStrategy;
-  clearFetchingState: () => void;
 
   reset: () => void;
 }
@@ -152,24 +140,6 @@ export const useGrowStore = create<GrowStore>((set, get) => ({
     } catch (error) {
       console.error('Error fetching grows:', error);
       set({ loading: false });
-      handleUnauthorizedError(error as Error);
-      throw error;
-    }
-  },
-
-  // Fetch single grow (optimized selective fetch)
-  fetchSingleGrow: async (token: string, growId: string) => {
-    try {
-      const data: BulkGrowComplete = await apiClient.getBulkGrow(growId, token);
-
-      // Update only this grow in the array
-      set((state) => ({
-        grows: state.grows.map((grow) =>
-          grow.id.toString() === growId ? data : grow
-        ),
-      }));
-    } catch (error) {
-      console.error('Error fetching single grow:', error);
       handleUnauthorizedError(error as Error);
       throw error;
     }
@@ -517,66 +487,6 @@ export const useGrowStore = create<GrowStore>((set, get) => ({
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
-  },
-
-  // Smart fetching methods
-  markGrowModified: (growId: number | null, action: GrowAction) => {
-    set({
-      lastModifiedGrowId: growId,
-      lastAction: action,
-    });
-  },
-
-  getGrowFetchStrategy: (): GrowFetchStrategy => {
-    const { hasInitiallyLoaded, lastAction, lastModifiedGrowId } = get();
-
-    // First time loading - fetch all
-    if (!hasInitiallyLoaded) {
-      return {
-        shouldFetchAll: true,
-        shouldFetchSingle: null,
-      };
-    }
-
-    // Handle different actions
-    switch (lastAction) {
-      case 'create':
-        // New grow created - fetch the new one
-        return {
-          shouldFetchAll: false,
-          shouldFetchSingle: lastModifiedGrowId,
-        };
-
-      case 'update':
-        // Grow updated - fetch it
-        return {
-          shouldFetchAll: false,
-          shouldFetchSingle: lastModifiedGrowId,
-        };
-
-      case 'delete':
-        // Grow deleted - state already updated, no fetching needed
-        return {
-          shouldFetchAll: false,
-          shouldFetchSingle: null,
-        };
-
-      case 'cancel':
-      case null:
-      default:
-        // No changes or cancelled - no operations needed
-        return {
-          shouldFetchAll: false,
-          shouldFetchSingle: null,
-        };
-    }
-  },
-
-  clearFetchingState: () => {
-    set({
-      lastModifiedGrowId: null,
-      lastAction: null,
-    });
   },
 
   // Reset store state
