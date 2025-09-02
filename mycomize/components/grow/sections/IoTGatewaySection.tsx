@@ -454,7 +454,7 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({ growId, st
           <Icon as={ListX} size="xl" className="text-typography-400" />
           <VStack space="sm" className="items-center">
             <Text className="text-center text-typography-500">
-              No IoT entities available for this grow in the allowed domains ({DEFAULT_IOT_DOMAINS.join(', ')})
+              No linked IoT Gateway controls. Save this grow then link controls from the IoT tab.
             </Text>
           </VStack>
         </VStack>

@@ -1,3 +1,4 @@
+import { useState, useContext } from 'react';
 import { ScrollView } from '~/components/ui/scroll-view';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
@@ -16,52 +17,141 @@ import {
 } from '~/components/ui/accordion';
 import { Save, ChevronDown, ChevronRight, FileText, Layers } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useUnifiedToast } from '~/components/ui/unified-toast';
 
-import { BulkGrowTekData } from '~/lib/types/tekTypes';
 import { StageAccordion } from '~/components/tek/StageAccordion';
 import { TagManager } from '~/components/tek/TagManager';
 import { ConfirmationModal } from '~/components/modals/ConfirmationModal';
+import { AuthContext } from '~/lib/api/AuthContext';
+import {
+  useCurrentTekFormData,
+  useCurrentTekId,
+  useUpdateCurrentTekField,
+  useAddTag,
+  useRemoveTag,
+  useCreateTek,
+  useUpdateTek,
+  useTekSaving,
+  NEW_TEK_ID,
+} from '~/lib/stores';
 
 interface TekFormProps {
-  tekData: BulkGrowTekData;
-  isSaving: boolean;
-  tagInput: string;
-  showTypeModal: boolean;
-  tempSelectedType: string;
-  showMakePublicModal: boolean;
-  isExistingPublicTek: boolean;
-  onUpdateField: (field: keyof BulkGrowTekData, value: any) => void;
-  onSetTekData: (data: BulkGrowTekData) => void;
-  onTagInputChange: (value: string) => void;
-  onAddTag: () => void;
-  onRemoveTag: (tag: string) => void;
-  onShowTypeModal: (show: boolean) => void;
-  onTempSelectedTypeChange: (type: string) => void;
-  onHandlePublicToggle: (value: boolean) => void;
-  onConfirmMakePublic: () => void;
-  onSetShowMakePublicModal: (show: boolean) => void;
-  onSaveTek: () => void;
+  tekId?: string;
   saveButtonText?: string;
 }
 
-export function TekForm({
-  tekData,
-  isSaving,
-  tagInput,
-  showMakePublicModal,
-  isExistingPublicTek,
-  onUpdateField,
-  onSetTekData,
-  onTagInputChange,
-  onAddTag,
-  onRemoveTag,
-  onHandlePublicToggle,
-  onConfirmMakePublic,
-  onSetShowMakePublicModal,
-  onSaveTek,
-  saveButtonText = 'Save Tek',
-}: TekFormProps) {
+export function TekForm({ tekId, saveButtonText = 'Save Tek' }: TekFormProps) {
+  const { token } = useContext(AuthContext);
   const router = useRouter();
+  const { showError, showSuccess } = useUnifiedToast();
+
+  // Store subscriptions
+  const tekData = useCurrentTekFormData();
+  const currentTekId = useCurrentTekId();
+  const isSaving = useTekSaving();
+
+  // Store actions
+  const updateField = useUpdateCurrentTekField();
+  const addTag = useAddTag();
+  const removeTag = useRemoveTag();
+  const createTek = useCreateTek();
+  const updateTek = useUpdateTek();
+
+  // Local UI state
+  const [tagInput, setTagInput] = useState('');
+  const [showMakePublicModal, setShowMakePublicModal] = useState(false);
+
+  // Check if this is an existing public tek
+  const isExistingPublicTek = !!(tekId && tekId !== 'new' && tekData?.is_public);
+
+  // Handle public switch toggle with confirmation modal
+  const handlePublicToggle = (value: boolean) => {
+    if (value && !tekData?.is_public) {
+      // User is trying to make tek public, show confirmation modal
+      setShowMakePublicModal(true);
+    } else {
+      // User is turning off public or tek is already public (should be disabled anyway)
+      updateField('is_public', value);
+    }
+  };
+
+  // Confirm making tek public
+  const confirmMakePublic = () => {
+    updateField('is_public', true);
+    setShowMakePublicModal(false);
+  };
+
+  // Add tag
+  const handleAddTag = () => {
+    if (tagInput.trim()) {
+      addTag(tagInput.trim());
+      setTagInput('');
+    }
+  };
+
+  // Update entire tek data (for StageAccordion)
+  const handleUpdateTekData = (newTekData: any) => {
+    // Update individual fields through the store
+    Object.keys(newTekData).forEach((key) => {
+      if (key !== 'stages' && tekData && newTekData[key] !== tekData[key as keyof typeof tekData]) {
+        updateField(key as keyof typeof tekData, newTekData[key]);
+      }
+    });
+    
+    // Handle stages specially
+    if (newTekData.stages) {
+      updateField('stages', newTekData.stages);
+    }
+  };
+
+  // Save tek
+  const handleSaveTek = async () => {
+    if (!tekData || !token) return;
+
+    // Basic validation
+    if (!tekData.name.trim()) {
+      showError('Tek name is required');
+      return;
+    }
+    if (!tekData.species.trim()) {
+      showError('Species is required');
+      return;
+    }
+
+    try {
+      const isEdit = tekId && tekId !== 'new';
+
+      if (isEdit) {
+        // Update existing tek
+        const success = await updateTek(token, tekId, tekData);
+        if (success) {
+          showSuccess('Tek updated successfully!');
+        } else {
+          showError('Failed to update tek');
+          return;
+        }
+      } else {
+        // Create new tek
+        const newTek = await createTek(token, tekData);
+        if (newTek) {
+          showSuccess('Tek saved successfully!');
+        } else {
+          showError('Failed to save tek');
+          return;
+        }
+      }
+
+      router.replace('/teks');
+    } catch (error) {
+      showError('Failed to save tek');
+      console.error('Save error:', error);
+    }
+  };
+
+  // Don't render if no form data
+  if (!tekData) {
+    return null;
+  }
 
   return (
     <VStack className="flex-1 bg-background-50">
@@ -96,7 +186,7 @@ export function TekForm({
                     <Input>
                       <InputField
                         value={tekData.name}
-                        onChangeText={(value) => onUpdateField('name', value)}
+                        onChangeText={(value) => updateField('name', value)}
                         maxLength={120}
                       />
                     </Input>
@@ -108,7 +198,7 @@ export function TekForm({
                     <Textarea>
                       <TextareaInput
                         value={tekData.description}
-                        onChangeText={(value) => onUpdateField('description', value)}
+                        onChangeText={(value) => updateField('description', value)}
                         style={{ textAlignVertical: 'top' }}
                         maxLength={500}
                       />
@@ -122,7 +212,7 @@ export function TekForm({
                       <Input>
                         <InputField
                           value={tekData.species}
-                          onChangeText={(value) => onUpdateField('species', value)}
+                          onChangeText={(value) => updateField('species', value)}
                           maxLength={50}
                         />
                       </Input>
@@ -132,7 +222,7 @@ export function TekForm({
                       <Input>
                         <InputField
                           value={tekData.variant}
-                          onChangeText={(value) => onUpdateField('variant', value)}
+                          onChangeText={(value) => updateField('variant', value)}
                           maxLength={50}
                         />
                       </Input>
@@ -157,7 +247,7 @@ export function TekForm({
                       </VStack>
                       <Switch
                         value={tekData.is_public}
-                        onValueChange={onHandlePublicToggle}
+                        onValueChange={handlePublicToggle}
                         isDisabled={isExistingPublicTek}
                       />
                     </HStack>
@@ -167,9 +257,9 @@ export function TekForm({
                   <TagManager
                     tags={tekData.tags}
                     tagInput={tagInput}
-                    onTagInputChange={onTagInputChange}
-                    onAddTag={onAddTag}
-                    onRemoveTag={onRemoveTag}
+                    onTagInputChange={setTagInput}
+                    onAddTag={handleAddTag}
+                    onRemoveTag={removeTag}
                   />
                 </VStack>
               </AccordionContent>
@@ -196,7 +286,7 @@ export function TekForm({
               </AccordionHeader>
               <AccordionContent>
                 <VStack space="md">
-                  <StageAccordion tekData={tekData} onUpdateTekData={onSetTekData} />
+                  <StageAccordion tekData={tekData} onUpdateTekData={handleUpdateTekData} />
                 </VStack>
               </AccordionContent>
             </AccordionItem>
@@ -216,7 +306,7 @@ export function TekForm({
         <Button
           variant="solid"
           action="positive"
-          onPress={onSaveTek}
+          onPress={handleSaveTek}
           isDisabled={isSaving}
           className="h-12 flex-1">
           <ButtonIcon as={Save} className="text-white" />
@@ -227,8 +317,8 @@ export function TekForm({
       {/* Make Public Confirmation Modal */}
       <ConfirmationModal
         isOpen={showMakePublicModal}
-        onClose={() => onSetShowMakePublicModal(false)}
-        onConfirm={onConfirmMakePublic}
+        onClose={() => setShowMakePublicModal(false)}
+        onConfirm={confirmMakePublic}
         type="make-public"
         title="Make Tek Public"
         message="Are you sure you want to make this tek public? Once public, it cannot be made private again. All of the tek's data will be visible to all mycomize users."

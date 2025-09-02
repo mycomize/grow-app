@@ -4,7 +4,7 @@ import { CircuitBoard, User, FlaskConical, Layers } from 'lucide-react-native';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
 import MushroomIcon from '~/components/icons/MushroomIcon';
 import { AuthContext } from '~/lib/api/AuthContext';
-import { useGrowStore } from '~/lib/stores';
+import { useGrowStore, useTeksStore } from '~/lib/stores';
 import { useGatewayStore } from '~/lib/stores/iot/gatewayStore';
 import { useEntityStore } from '~/lib/stores/iot/entityStore';
 import { haWebSocketManager } from '~/lib/iot/haWebSocketManager';
@@ -15,6 +15,7 @@ export default function TabLayout() {
   const segments = useSegments();
   const { token } = useContext(AuthContext);
   const fetchGrows = useGrowStore((state) => state.fetchGrows);
+  const fetchTeks = useTeksStore((state) => state.fetchTeks);
   const initializeAllGatewayData = useGatewayStore((state) => state.initializeAllGatewayData);
   const gateways = useGatewayStore((state) => state.gateways);
   const linkedEntities = useEntityStore((state) => state.linkedEntities);
@@ -30,13 +31,14 @@ export default function TabLayout() {
       try {
         await fetchGrows(token);
         await initializeAllGatewayData(token);
+        await fetchTeks(token);
       } catch (error) {
         console.error('Error fetching initial data:', error);
       }
     };
 
     initialSetup();
-  }, [token, fetchGrows, initializeAllGatewayData, router]);
+  }, [token, fetchGrows, fetchTeks, initializeAllGatewayData, router]);
 
   // Initial registration of real-time listeners for all linked entities after gateway data is loaded
   useEffect(() => {

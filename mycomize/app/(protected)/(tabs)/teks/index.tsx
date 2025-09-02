@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Button, ButtonIcon, ButtonText } from '~/components/ui/button';
 import { Heading } from '~/components/ui/heading';
 import { Text } from '~/components/ui/text';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { ScrollView } from '~/components/ui/scroll-view';
-import { apiClient, isUnauthorizedError } from '~/lib/api/ApiClient';
 import { Icon } from '~/components/ui/icon';
 import { Input, InputField, InputIcon } from '~/components/ui/input';
 import { Pressable } from '~/components/ui/pressable';
@@ -33,21 +32,24 @@ import {
 } from 'lucide-react-native';
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '~/lib/api/AuthContext';
 import { TekCard } from '~/components/tek/TekCard';
 import { TekCardSkeleton } from '~/components/tek';
 import { CountBadge } from '~/components/ui/count-badge';
 import { BulkGrowTek } from '~/lib/types/tekTypes';
+import { useTeks, useTekLoading, useDeleteTek } from '~/lib/stores';
 
 export default function TekLibraryScreen() {
   const { token } = useContext(AuthContext);
   const router = useRouter();
   const { showError, showSuccess } = useUnifiedToast();
 
-  const [teks, setTeks] = useState<BulkGrowTek[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  // Store subscriptions
+  const teks = useTeks();
+  const loading = useTekLoading();
+  const deleteTek = useDeleteTek();
+
+  // Local UI state
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<string>('name');
   const [filterBy, setFilterBy] = useState<string>('all'); // 'all', 'public', 'private'
@@ -55,27 +57,6 @@ export default function TekLibraryScreen() {
   const [showFilterModal, setShowFilterModal] = useState<boolean>(false);
   const [tempSortBy, setTempSortBy] = useState<string>('name');
   const [tempFilterBy, setTempFilterBy] = useState<string>('all');
-
-  // Define the fetch function
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      setTeks([]);
-
-      // Load teks using the encrypted API client
-      const allTeks = await apiClient.getBulkGrowTeks(token!);
-      setTeks(allTeks);
-    } catch (err) {
-      if (isUnauthorizedError(err as Error)) {
-        router.replace('/login');
-        return;
-      }
-      setError(err instanceof Error ? err.message : 'Failed to load teks');
-    } finally {
-      setLoading(false);
-    }
-  }, [token, router]);
 
   // Modal handler functions
   const handleSortModalOpen = () => {
@@ -146,13 +127,6 @@ export default function TekLibraryScreen() {
     })
   );
 
-  useEffect(() => {
-    if (error) {
-      showError(error);
-      setError(null);
-    }
-  }, [error, showError]);
-
   const handleTekPress = (tek: BulkGrowTek) => {
     router.push(`/teks/${tek.id}`);
   };
@@ -167,14 +141,11 @@ export default function TekLibraryScreen() {
 
   const handleDeleteTek = async (tek: BulkGrowTek) => {
     try {
-      await apiClient.deleteBulkGrowTek(tek.id.toString(), token!);
-      showSuccess('Tek deleted successfully');
-      await fetchData(); // Refresh the list
-    } catch (err) {
-      if (isUnauthorizedError(err as Error)) {
-        router.replace('/login');
-        return;
+      const success = await deleteTek(token!, tek.id.toString());
+      if (success) {
+        showSuccess('Tek deleted successfully');
       }
+    } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to delete tek');
     }
   };
@@ -186,22 +157,11 @@ export default function TekLibraryScreen() {
     });
   };
 
-  const handleCopyToNewTek = async (tek: BulkGrowTek) => {
-    try {
-      // Fetch the full tek data including stages
-      const fullTek = await apiClient.getBulkGrowTek(tek.id.toString(), token!);
-
-      router.push({
-        pathname: '/teks/new',
-        params: { tekToCopy: JSON.stringify(fullTek) },
-      });
-    } catch (err) {
-      if (isUnauthorizedError(err as Error)) {
-        router.replace('/login');
-        return;
-      }
-      showError(err instanceof Error ? err.message : 'Failed to load tek for copying');
-    }
+  const handleCopyToNewTek = (tek: BulkGrowTek) => {
+    router.push({
+      pathname: '/teks/new',
+      params: { tekToCopy: JSON.stringify(tek) },
+    });
   };
 
   const handleTagPress = (tag: string) => {
@@ -218,14 +178,6 @@ export default function TekLibraryScreen() {
         return 'All Teks';
     }
   };
-
-  // Use useFocusEffect to refresh data when the screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      fetchData();
-      return () => {};
-    }, [fetchData])
-  );
 
   if (loading) {
     return (
