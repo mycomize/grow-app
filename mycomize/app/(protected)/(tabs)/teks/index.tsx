@@ -30,8 +30,6 @@ import {
   Filter,
   Check,
   Layers,
-  AlertCircle,
-  CheckCircle,
 } from 'lucide-react-native';
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
@@ -40,7 +38,6 @@ import { AuthContext } from '~/lib/api/AuthContext';
 import { TekCard } from '~/components/tek/TekCard';
 import { TekCardSkeleton } from '~/components/tek';
 import { CountBadge } from '~/components/ui/count-badge';
-import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import { BulkGrowTek } from '~/lib/types/tekTypes';
 
 export default function TekLibraryScreen() {
@@ -109,8 +106,6 @@ export default function TekLibraryScreen() {
           return (a.name || '').localeCompare(b.name || '');
         case 'species':
           return (a.species || '').localeCompare(b.species || '');
-        case 'created_at':
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); // Most recent first
         case 'usage_count':
           return b.usage_count - a.usage_count; // Most used first
         default:
@@ -374,7 +369,6 @@ export default function TekLibraryScreen() {
                 {[
                   { value: 'name', label: 'Name' },
                   { value: 'species', label: 'Species' },
-                  { value: 'created_at', label: 'Created Date' },
                   { value: 'usage_count', label: 'Usage Count' },
                 ].map((option) => (
                   <Pressable

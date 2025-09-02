@@ -150,7 +150,7 @@ def get_expected_model_fields() -> Dict[str, Dict[str, List[str]]]:
             'user_data': ['harvest_date', 'wet_yield_grams', 'dry_yield_grams', 'concentration_mg_per_gram']
         },
         'bulk_grow_teks': {
-            'system': ['id', 'created_by', 'created_at', 'updated_at', 'is_public'],
+            'system': ['id', 'created_by', 'is_public'],
             'user_data': ['name', 'description', 'species', 'variant', 'tags', 'stages']
         },
         'iot_gateways': {

@@ -34,15 +34,12 @@ async def get_all_teks(
             BulkGrowTek.is_public == True,
             BulkGrowTek.created_by == current_user.id
         )
-    ).options(joinedload(BulkGrowTek.creator)).order_by(
-        desc(BulkGrowTek.updated_at)
-    ).offset(offset).limit(limit).all()
+    ).options(joinedload(BulkGrowTek.creator)).offset(offset).limit(limit).all()
 
     result = []
     for tek in teks:
         tek_dict = {
             "id": tek.id,
-            "created_at": tek.created_at,
             "creator_name": tek.creator.username if tek.creator else "Unknown",
             "creator_profile_image": tek.creator.profile_image if tek.creator else None,
             "name": tek.name,
@@ -72,13 +69,22 @@ async def create_tek(
     db.commit()
     db.refresh(tek)
 
-    # Return with creator name
+    # Load the creator relationship to ensure consistent response format
+    tek_with_creator = db.query(BulkGrowTek).options(joinedload(BulkGrowTek.creator)).filter(
+        BulkGrowTek.id == tek.id
+    ).first()
+
+    # Return with consistent structure
     result_dict = {
-        **tek_dict,
-        "id": tek.id,
-        "created_at": tek.created_at,
-        "updated_at": tek.updated_at,
-        "creator_name": current_user.username
+        "id": tek_with_creator.id,
+        "name": tek_with_creator.name,
+        "description": tek_with_creator.description,
+        "species": tek_with_creator.species,
+        "variant": tek_with_creator.variant,
+        "tags": tek_with_creator.tags,
+        "stages": tek_with_creator.stages,
+        "is_public": tek_with_creator.is_public,
+        "creator_name": tek_with_creator.creator.username if tek_with_creator.creator else "Unknown"
     }
 
     return BulkGrowTekSchema(**result_dict)
@@ -110,9 +116,6 @@ async def get_tek(
         "tags": tek.tags,
         "is_public": tek.is_public,
         "stages": tek.stages,
-        "created_at": tek.created_at,
-        "updated_at": tek.updated_at,
-        "usage_count": tek.usage_count,
         "creator_name": tek.creator.username if tek.creator else "Unknown"
     }
 
@@ -148,7 +151,6 @@ async def update_tek(
     for field, value in update_data.items():
         setattr(tek, field, value)
 
-    tek.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(tek)
 
@@ -162,9 +164,6 @@ async def update_tek(
         "tags": tek.tags,
         "is_public": tek.is_public,
         "stages": tek.stages,
-        "created_at": tek.created_at,
-        "updated_at": tek.updated_at,
-        "usage_count": tek.usage_count,
         "creator_name": current_user.username
     }
 

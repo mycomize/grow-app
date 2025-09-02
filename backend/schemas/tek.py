@@ -35,9 +35,6 @@ class BulkGrowTekUpdate(BaseModel):
 class BulkGrowTek(BulkGrowTekBase):
     """Schema for returning a bulk_grow tek"""
     id: int
-    created_at: datetime
-    updated_at: datetime
-    created_by: int = Field(exclude=True)
     creator_name: str  # Will be populated from user relationship
 
     class Config:

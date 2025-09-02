@@ -10,8 +10,6 @@ class BulkGrowTek(Base):
     # Backend-generated fields are unencrypted
     id = Column(Integer, primary_key=True, index=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     # This field is plaintext to differentiate private from public teks
     is_public = Column(Boolean, default=False, index=True)

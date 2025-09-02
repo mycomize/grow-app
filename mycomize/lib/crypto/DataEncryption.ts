@@ -48,8 +48,6 @@ const MODEL_SPECIFIC_ALLOWLISTS = {
   BulkGrowTek: [
     // Backend-generated fields present in BulkGrowTek model
     'id',
-    'created_at',
-    'updated_at',
     'is_public',
     'usage_count',
     // SQLAlchemy relationships present in BulkGrowTek model

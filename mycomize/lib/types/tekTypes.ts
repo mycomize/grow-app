@@ -121,8 +121,6 @@ export interface BulkGrowTek {
   variant?: string;
   tags?: string[];
   is_public: boolean;
-  created_at: string;
-  updated_at?: string;
   usage_count: number;
   creator_name?: string;
   creator_profile_image?: string;
