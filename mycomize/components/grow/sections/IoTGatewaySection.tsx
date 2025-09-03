@@ -35,17 +35,6 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({ growId, st
   const gateways = useGatewayStore((state) => state.gateways);
   const connectionStatuses = useGatewayStore((state) => state.connectionStatuses);
 
-  // Debug logging
-//  console.log(`[IoTGatewaySection] Debug - growId: ${growId}, stage: "${stage}"`);
-//  console.log(`[IoTGatewaySection] Debug - linkedEntities count: ${linkedEntities.length}`);
-//  console.log(`[IoTGatewaySection] Debug - entityStates count: ${Object.keys(entityStates).length}`);
-//  console.log(`[IoTGatewaySection] Debug - linkedEntities:`, linkedEntities.map(e => ({
-//    name: e.entity_name,
-//    domain: e.domain,
-//    linked_grow_id: e.linked_grow_id,
-//    linked_stage: e.linked_stage
-//  })));
-
   // Local state for control operations
   const [controllingEntities, setControllingEntities] = useState<Set<string>>(new Set());
   const [pendingNumberValues, setPendingNumberValues] = useState<Record<string, string>>({});
@@ -208,29 +197,19 @@ export const IoTGatewaySection: React.FC<IoTGatewaySectionProps> = ({ growId, st
 
   // Filter entities for this specific grow and stage
   const stageLinkedEntities = linkedEntities.filter((entity) => {
-    //console.log(`[IoTGatewaySection] Filtering entity ${entity.entity_name}: linked_grow_id=${entity.linked_grow_id}, target_growId=${growId}, linked_stage="${entity.linked_stage}", target_stage="${stage}"`);
-    
     if (entity.linked_grow_id !== growId) {
       return false;
     }
     
     // If no stage is specified or stage is empty, show all entities for this grow
     if (!stage || stage === "") {
-      //console.log(`[IoTGatewaySection] Entity ${entity.entity_name} accepted - empty stage filter`);
       return true;
     }
     
     // Otherwise, filter by specific stage
     const matches = entity.linked_stage === stage;
-    //console.log(`[IoTGatewaySection] Entity ${entity.entity_name} ${matches ? 'accepted' : 'filtered out'} - stage match: ${matches}`);
     return matches;
   });
-
-  //console.log(`[IoTGatewaySection] After filtering: ${stageLinkedEntities.length} entities`);
-  //console.log(`[IoTGatewaySection] Filtered entities:`, stageLinkedEntities.map(e => ({
-  //  name: e.entity_name,
-  //  domain: e.domain
-  //})));
 
   // Helper function to get InfoBadge props from connection status
   const getConnectionBadgeProps = (status: ConnectionStatus) => {

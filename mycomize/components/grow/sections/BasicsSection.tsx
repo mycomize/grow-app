@@ -31,7 +31,7 @@ export const BasicsSection: React.FC = () => {
   };
 
   return (
-    <VStack space="md" className="bg-background-0 p-2">
+    <VStack space="md" className="bg-background-0 px-0 pb-3">
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText>Name</FormControlLabelText>

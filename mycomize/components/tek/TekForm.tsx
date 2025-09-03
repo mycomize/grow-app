@@ -47,7 +47,6 @@ export function TekForm({ tekId, saveButtonText = 'Save Tek' }: TekFormProps) {
 
   // Store subscriptions
   const tekData = useCurrentTekFormData();
-  const currentTekId = useCurrentTekId();
   const isSaving = useTekSaving();
 
   // Store actions
@@ -156,7 +155,7 @@ export function TekForm({ tekId, saveButtonText = 'Save Tek' }: TekFormProps) {
   return (
     <VStack className="flex-1 bg-background-50">
       <ScrollView className="flex-1">
-        <VStack className="p-2" space="md">
+        <VStack className="pt-4 pb-3 px-2" space="md">
           {/* Accordion for all sections */}
           <Accordion type="multiple" variant="unfilled" className="w-full gap-4 p-0">
             {/* Basics Section */}
@@ -179,7 +178,7 @@ export function TekForm({ tekId, saveButtonText = 'Save Tek' }: TekFormProps) {
                 </AccordionTrigger>
               </AccordionHeader>
               <AccordionContent>
-                <VStack className="gap-5 p-2" space="md">
+                <VStack className="gap-5 px-0 pb-3" space="md">
                   {/* Tek name */}
                   <VStack space="sm">
                     <Text className="font-medium">Name</Text>
@@ -310,7 +309,7 @@ export function TekForm({ tekId, saveButtonText = 'Save Tek' }: TekFormProps) {
           isDisabled={isSaving}
           className="h-12 flex-1">
           <ButtonIcon as={Save} className="text-white" />
-          <ButtonText className="text-white">{isSaving ? 'Saving...' : saveButtonText}</ButtonText>
+          <ButtonText className="text-lg text-white">{isSaving ? 'Saving...' : saveButtonText}</ButtonText>
         </Button>
       </HStack>
 

@@ -9,7 +9,6 @@ import {
   ActionsheetItemText,
   ActionsheetIcon,
 } from '../actionsheet';
-import { Icon } from '../icon';
 import { SquarePen, Trash2, RefreshCw } from 'lucide-react-native';
 import { DeleteConfirmationModal } from '../delete-confirmation-modal';
 

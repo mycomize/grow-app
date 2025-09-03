@@ -366,7 +366,7 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
   };
 
   return (
-    <VStack space="lg" className="bg-background-0 p-1">
+    <VStack space="lg" className="bg-background-0 px-1 py-1">
       {/* Instructions */}
       <Text className="text-md mb-2 text-typography-500">
         Track your grow's progress through each stage. Press Complete to move to the next stage when

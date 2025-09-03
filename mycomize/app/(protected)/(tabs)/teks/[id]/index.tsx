@@ -11,7 +11,6 @@ import { AuthContext } from '~/lib/api/AuthContext';
 
 export default function TekEditScreen() {
   const { id } = useLocalSearchParams();
-  const { token } = useContext(AuthContext);
   const initializeCurrentTek = useInitializeCurrentTek();
   const currentTek = useCurrentTek();
 
@@ -32,5 +31,5 @@ export default function TekEditScreen() {
     );
   }
 
-  return <TekForm tekId={id as string} saveButtonText="Update Tek" />;
+  return <TekForm tekId={id as string} saveButtonText="Save" />;
 }

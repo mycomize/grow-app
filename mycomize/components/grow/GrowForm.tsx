@@ -223,7 +223,7 @@ export function GrowForm({ growId, saveButtonText = 'Save' }: GrowFormProps) {
   return (
     <VStack className="flex-1 bg-background-50">
       <ScrollView className="flex-1">
-        <VStack className="p-4" space="md">
+        <VStack className="px-2 pt-4" space="md">
           {/* Accordion for all sections */}
           <Accordion type="multiple" variant="unfilled" className="w-full gap-4">
             {/* Basics Section */}
@@ -329,19 +329,6 @@ export function GrowForm({ growId, saveButtonText = 'Save' }: GrowFormProps) {
             onPress={() => router.back()}>
             <ButtonText>Cancel</ButtonText>
           </Button>
-
-          {/* Delete Button - Only show for existing grows */}
-          {growId && growId !== 'new' && (
-            <Button
-              variant="solid"
-              action="negative"
-              onPress={() => setShowDeleteModal(true)}
-              isDisabled={isDeleting}
-              className="h-12 flex-1">
-              <ButtonIcon as={Trash2} className="text-white" />
-              <ButtonText className="text-lg text-white">Delete</ButtonText>
-            </Button>
-          )}
 
           {/* Save Button */}
           <Button

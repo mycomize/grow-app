@@ -156,7 +156,7 @@ export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewa
   return (
     <VStack className="flex-1 bg-background-50">
       <ScrollView className="flex-1">
-        <VStack className="p-2" space="md">
+        <VStack className="px-2 pt-4 pb-3" space="md">
           {/* Accordion for all sections */}
           <Accordion type="multiple" variant="unfilled" className="w-full gap-4">
             {/* Basics Section */}
