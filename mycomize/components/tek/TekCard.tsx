@@ -1,18 +1,32 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { Card } from '~/components/ui/card';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
-import { Popover, PopoverBackdrop, PopoverBody, PopoverContent } from '~/components/ui/popover';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { View } from '~/components/ui/view';
 import { Avatar, AvatarFallbackText, AvatarImage } from '~/components/ui/avatar';
 import { Alert } from 'react-native';
-import { RefreshCw, Users, Trash2, Lock, SquarePen } from 'lucide-react-native';
+import { Eye, EllipsisVertical, Users, Lock, Sprout } from 'lucide-react-native';
 import { getCachedProfileImage, cacheProfileImage } from '~/lib/imageCache';
 import { BulkGrowTek } from '~/lib/types/tekTypes';
-import { TekActionModal } from '~/components/modals/TekActionModal';
+import { TekActionSheet } from '~/components/ui/tek-action-sheet';
+import {
+  Actionsheet,
+  ActionsheetBackdrop,
+  ActionsheetContent,
+  ActionsheetDragIndicator,
+  ActionsheetDragIndicatorWrapper,
+  ActionsheetItem,
+  ActionsheetItemText,
+  ActionsheetIcon,
+} from '~/components/ui/actionsheet';
+import { AuthContext } from '~/lib/api/AuthContext';
+import { formatCount, parseNumberCount } from '~/lib/utils/numberFormatting';
+import { useTekById, useLikeTek, useViewTek, useImportTek } from '~/lib/stores/teksStore';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import AntDesign from '@expo/vector-icons/AntDesign';
 
 interface TekCardProps {
   tek: BulkGrowTek;
@@ -23,6 +37,7 @@ interface TekCardProps {
   onUseForNewGrow: (tek: BulkGrowTek) => void;
   onCopyToNewTek: (tek: BulkGrowTek) => void;
   onTagPress?: (tag: string) => void;
+  onRefresh?: () => void; // To refresh parent data after engagement changes
 }
 
 export const TekCard: React.FC<TekCardProps> = ({
@@ -32,38 +47,90 @@ export const TekCard: React.FC<TekCardProps> = ({
   onUseForNewGrow,
   onCopyToNewTek,
   onTagPress,
+  onRefresh,
 }) => {
   const [cachedImage, setCachedImage] = useState<string | null>(null);
-  const [showPopover, setShowPopover] = useState(false);
-  const [showActionModal, setShowActionModal] = useState(false);
+  const [showImportActionSheet, setShowImportActionSheet] = useState(false);
+  const [showActionSheet, setShowActionSheet] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
-  const handlePopoverOpen = () => {
-    setShowPopover(true);
-  };
+  const { token } = useContext(AuthContext);
+  
+  // Get the current tek data from the store (with optimistic updates)
+  const currentTek = useTekById(tek.id.toString()) || tek;
+  
+  // Get engagement actions from store
+  const likeTek = useLikeTek();
+  const viewTek = useViewTek();
+  const importTek = useImportTek();
 
-  const handlePopoverClose = () => {
-    setShowPopover(false);
-  };
+  // Handle like toggle using store action
+  const handleLike = useCallback(async () => {
+    if (isLiking || !token) return;
+    setIsLiking(true);
 
-  // Handle delete confirmation with React Native Alert
-  const handleDeletePress = useCallback(() => {
-    Alert.alert(
-      'Delete Tek',
-      `Are you sure you want to delete "${tek.name}"? This action cannot be undone.`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => onDelete(tek),
-        },
-      ],
-      { cancelable: true }
-    );
-  }, [tek, onDelete]);
+    try {
+      await likeTek(token, tek.id.toString());
+    } catch (error) {
+      console.error('Error toggling like:', error);
+      Alert.alert(
+        'Error',
+        'Failed to toggle like. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsLiking(false);
+    }
+  }, [likeTek, tek.id, token, isLiking]);
+
+  // Handle import functionality - shows action sheet with options
+  const handleImport = useCallback(() => {
+    setShowImportActionSheet(true);
+  }, []);
+
+  const handleImportToNewGrow = useCallback(async () => {
+    setShowImportActionSheet(false);
+    setIsImporting(true);
+    
+    try {
+      // Track the import using store action
+      if (token) {
+        await importTek(token, tek.id.toString());
+      }
+      
+      // Perform the actual import action
+      onUseForNewGrow(currentTek);
+    } catch (error) {
+      console.error('Error tracking import:', error);
+      // Still perform the import action even if tracking fails
+      onUseForNewGrow(currentTek);
+    } finally {
+      setIsImporting(false);
+    }
+  }, [importTek, onUseForNewGrow, currentTek, token]);
+
+  // Handle owner action sheet
+  const handleOwnerActions = useCallback(() => {
+    setShowActionSheet(true);
+  }, []);
+
+  // Wrapper functions for action sheet handlers
+  const handleEditWrapper = useCallback(() => {
+    setShowActionSheet(false);
+    onEdit(tek);
+  }, [onEdit, tek]);
+
+  const handleDeleteWrapper = useCallback(() => {
+    setShowActionSheet(false);
+    onDelete(tek);
+  }, [onDelete, tek]);
+
+  const handleCopyWrapper = useCallback(() => {
+    setShowActionSheet(false);
+    onCopyToNewTek(tek);
+  }, [onCopyToNewTek, tek]);
+
 
   // Load cached image for the tek creator
   useEffect(() => {
@@ -141,63 +208,19 @@ export const TekCard: React.FC<TekCardProps> = ({
 
           {/* Description */}
           <HStack className="mb-2">
-            {tek.is_public && (
-              <Popover
-                isOpen={showPopover}
-                onClose={handlePopoverClose}
-                onOpen={handlePopoverOpen}
-                shouldFlip={true}
-                placement={'bottom right'}
-                size="md"
-                trigger={(triggerProps) => {
-                  return (
-                    <Pressable {...triggerProps}>
-                      <Icon as={Users} className="mt-1 text-typography-300" size="md" />
-                    </Pressable>
-                  );
-                }}>
-                <PopoverBackdrop />
-                <PopoverContent>
-                  <PopoverBody>
-                    <Text className="text-sm text-typography-500">
-                      This tek is public and can be viewd and used by other users.
-                    </Text>
-                  </PopoverBody>
-                </PopoverContent>
-              </Popover>
-            )}
-            {!tek.is_public && (
-              <Popover
-                isOpen={showPopover}
-                onClose={handlePopoverClose}
-                onOpen={handlePopoverOpen}
-                shouldFlip={true}
-                placement={'bottom right'}
-                size="md"
-                trigger={(triggerProps) => {
-                  return (
-                    <Pressable {...triggerProps}>
-                      <Icon as={Lock} className="mt-1 text-typography-300" size="md" />
-                    </Pressable>
-                  );
-                }}>
-                <PopoverBackdrop />
-                <PopoverContent>
-                  <PopoverBody>
-                    <Text className="text-sm text-typography-500">
-                      This tek is private and can only be viewed and used by you.
-                    </Text>
-                  </PopoverBody>
-                </PopoverContent>
-              </Popover>
-            )}
             {tek.name && (
               <Text
-                className="text-md ml-2 mt-1 flex-1 font-semibold text-typography-600"
+                className="text-md ml-0 flex-1 font-semibold text-typography-600"
                 numberOfLines={1}
                 ellipsizeMode="tail">
                 {tek.name}
               </Text>
+            )}
+            {tek.is_public && (
+              <Icon as={Users} className="text-typography-400" />
+            )}
+            {!tek.is_public && (
+              <Icon as={Lock} className="mt-1 text-typography-300" size="md" />
             )}
           </HStack>
           <HStack className="items-center">
@@ -232,34 +255,87 @@ export const TekCard: React.FC<TekCardProps> = ({
             </VStack>
           )}
 
-          {/* Action controls */}
+          {/* Social action controls */}
           <HStack className="mt-1 justify-around" space="md">
-            <Pressable onPress={() => setShowActionModal(true)}>
-              <HStack className="items-center gap-1">
-                <Icon className="text-typography-300" as={RefreshCw} size="md" />
-                {tek.usage_count > 0 && (
-                  <Text className="text-sm text-typography-300">{tek.usage_count}</Text>
+            {/* Like Button */}
+            <Pressable onPress={handleLike} disabled={isLiking}>
+              <HStack className="items-center gap-1 mt-0.5">
+                {currentTek.user_has_liked
+                 ? <AntDesign name="heart" size={16} color="#ff2400" />
+                 : <AntDesign name="hearto" size={16} color="#6c6c6c" />
+                }
+                {parseNumberCount(currentTek.like_count) > 0 && (
+                  <Text className={currentTek.user_has_liked ? "text-sm text-[#ff2400] font-semibold" : "text-sm text-typography-300"}>
+                    {formatCount(parseNumberCount(currentTek.like_count))}
+                  </Text>
                 )}
               </HStack>
             </Pressable>
-            <Pressable onPress={() => onEdit(tek)}>
-              <Icon className="text-typography-300" as={SquarePen} size="md" />
+
+            {/* Import Button */}
+            <Pressable onPress={handleImport} disabled={isImporting}>
+              <HStack className="items-center gap-1">
+                {currentTek.user_has_imported
+                 ? <MaterialCommunityIcons name="mushroom" size={18} color="#4DBE6C" />
+                 : <MaterialCommunityIcons name="mushroom-outline" size={20} color="#6c6c6c"/>
+
+                }
+                {parseNumberCount(currentTek.import_count) > 0 && (
+                  <Text className="text-sm text-[#4DBE6C] font-semibold">
+                    {formatCount(parseNumberCount(currentTek.import_count))}
+                  </Text>
+                )}
+              </HStack>
             </Pressable>
-            <Pressable onPress={handleDeletePress}>
-              <Icon className="text-typography-300" as={Trash2} size="md" />
-            </Pressable>
+
+            {/* View Count Display */}
+            <HStack className="items-center gap-1">
+              <Icon className="text-typography-300" as={Eye} size="md" />
+              {parseNumberCount(currentTek.view_count) > 0 && (
+                <Text className="text-sm text-typography-300">
+                  {formatCount(parseNumberCount(currentTek.view_count))}
+                </Text>
+              )}
+            </HStack>
+
+            {/* Owner Actions - Only show if user owns this tek */}
+            {tek.is_owner && (
+              <Pressable onPress={handleOwnerActions}>
+                <Icon className="text-typography-300" as={EllipsisVertical} size="md" />
+              </Pressable>
+            )}
           </HStack>
         </View>
       </VStack>
 
-      {/* Tek Action Modal */}
-      <TekActionModal
-        isOpen={showActionModal}
-        onClose={() => setShowActionModal(false)}
-        tek={tek}
-        onUseForNewGrow={() => onUseForNewGrow(tek)}
-        onCopyToNewTek={() => onCopyToNewTek(tek)}
-      />
+      {/* Import Action Sheet - Simple action sheet for importing tek */}
+      <Actionsheet isOpen={showImportActionSheet} onClose={() => setShowImportActionSheet(false)}>
+        <ActionsheetBackdrop />
+        <ActionsheetContent>
+          <ActionsheetDragIndicatorWrapper>
+            <ActionsheetDragIndicator />
+          </ActionsheetDragIndicatorWrapper>
+          
+          <ActionsheetItem onPress={handleImportToNewGrow}>
+            <MaterialCommunityIcons name="mushroom-outline" size={22} color="#6c6c6c" />
+            <ActionsheetItemText className="text-xl font-semibold ml-1">Import to new grow</ActionsheetItemText>
+          </ActionsheetItem>
+        </ActionsheetContent>
+      </Actionsheet>
+
+      {/* Owner Action Sheet - Only render if user owns this tek */}
+      {tek.is_owner && (
+        <TekActionSheet
+          isOpen={showActionSheet}
+          onClose={() => setShowActionSheet(false)}
+          onEdit={handleEditWrapper}
+          onDelete={handleDeleteWrapper}
+          onCopy={handleCopyWrapper}
+          isOwner={tek.is_owner}
+          tekName={tek.name}
+          isDeleting={false}
+        />
+      )}
     </Card>
   );
 };

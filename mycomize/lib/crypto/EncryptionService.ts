@@ -30,11 +30,11 @@ export class EncryptionService {
   private currentUserId: string | null = null;
 
   private getMasterKeyStorageKey(userId: string): string {
-    return `mycomize_master_key_${userId}`;
+    return `opentek_master_key_${userId}`;
   }
 
   private getEncryptionTestKey(userId: string): string {
-    return `mycomize_encryption_test_${userId}`;
+    return `opentek_encryption_test_${userId}`;
   }
 
   /**
@@ -290,7 +290,7 @@ export class EncryptionService {
     const seed = await bip39.mnemonicToSeed(mnemonic);
 
     // Create salt with password
-    const salt = password ? `mycomize-${password}` : 'mycomize';
+    const salt = password ? `opentek-${password}` : 'opentek';
 
     // Derive master key using PBKDF2 with QuickCrypto
     const masterKey = QuickCrypto.pbkdf2Sync(

@@ -9,15 +9,12 @@ import {
   AccordionItem,
   AccordionHeader,
   AccordionTrigger,
-  AccordionTitleText,
   AccordionContent,
-  AccordionIcon,
 } from '~/components/ui/accordion';
 import {
   UserLock,
   Key,
   Dot,
-  ArrowRight,
   ChevronDown,
   ChevronRight,
   Plus,
@@ -75,7 +72,7 @@ export function IntroductionStep({ onCreateSeed, onRecoverData }: IntroductionSt
               <HStack className="items-start gap-2">
                 <Icon as={Dot} size="xl" className="mt-1 text-typography-500" />
                 <Text size="md" className="flex-1 text-typography-700">
-                  Mycomize servers never see your data unencrypted unless you explicitly allow it
+                  OpenTek servers never see your data unencrypted unless you explicitly allow it
                 </Text>
               </HStack>
               <HStack className="items-start gap-2">

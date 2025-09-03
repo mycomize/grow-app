@@ -231,6 +231,10 @@ export default function ProfileScreen() {
         showToast('Profile image updated successfully!', 'success');
       }
     } catch (error) {
+      if (isUnauthorizedError(error as Error)) {
+        router.replace('/login');
+      }
+
       console.error('Error uploading image:', error);
       showToast('Failed to update profile image', 'error');
     } finally {
@@ -305,12 +309,9 @@ export default function ProfileScreen() {
           <Heading className="mb-3 text-typography-400">IOT GATEWAY</Heading>
           <VStack className="gap-4">
             <VStack className="gap-2">
-              <Text className="text-lg">Home Assistant State Update Interval</Text>
               <HStack className="flex w-full flex-row items-center justify-between">
-                <Text className="text-md">
-                  Range: 1-720 minutes (1-12 hours)
-                </Text>
                 <HStack className="flex flex-row items-center gap-3">
+                  <Text className="text-lg flex-1">State Update Interval</Text>
                   <Input size="md" className="w-24">
                     <InputField
                       placeholder="1-720"

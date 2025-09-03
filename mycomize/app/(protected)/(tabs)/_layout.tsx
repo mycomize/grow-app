@@ -33,7 +33,6 @@ export default function TabLayout() {
         await initializeAllGatewayData(token);
         await fetchTeks(token);
       } catch (error) {
-        console.error('Error fetching initial data:', error);
       }
     };
 
@@ -61,7 +60,6 @@ export default function TabLayout() {
     entitiesByGateway.forEach((entityIds, gatewayId) => {
       console.log(`[TabLayout] Registering ${entityIds.length} entities for gateway ${gatewayId}`);
       const results = haWebSocketManager.bulkSubscribeToEntityStates(gatewayId, entityIds);
-      console.log(`[TabLayout] Gateway ${gatewayId} initial registration results:`, results);
     });
 
     console.log(`[TabLayout] Completed initial real-time listener registration for ${linkedEntities.length} entities`);

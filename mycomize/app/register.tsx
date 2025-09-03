@@ -12,15 +12,12 @@ import { PasswordInput } from '@/components/ui/password-input';
 import { Center } from '@/components/ui/center';
 import { VStack } from '@/components/ui/vstack';
 import { HStack } from '@/components/ui/hstack';
-import { Image } from '@/components/ui/image';
-import { Link, LinkText } from '@/components/ui/link';
 import { Text } from '~/components/ui/text';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
 import { useRouter } from 'expo-router';
-import { CircleX, UserPlus, LogIn } from 'lucide-react-native';
-import { Icon } from '@/components/ui/icon';
+import { UserPlus, LogIn } from 'lucide-react-native';
 
-import MycomizeLogo from '~/assets/mycomize-logo.svg';
+import OpenTekLogo from '~/assets/opentek-logo.svg';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -69,7 +66,7 @@ export default function SignUpScreen() {
         <View className="mt-36 flex items-center gap-4">
           <VStack space="xl">
             <Center>
-              <MycomizeLogo width={111} height={131} />
+              <OpenTekLogo width={111} height={131} />
             </Center>
             <FormControl className="mt-16 rounded-lg border border-outline-300 p-4">
               <VStack space="xl">

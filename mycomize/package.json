@@ -1,5 +1,5 @@
 {
-  "name": "mycomize",
+  "name": "opentek",
   "version": "1.0.0",
   "main": "./index",
   "scripts": {
@@ -15,7 +15,6 @@
     "@craftzdog/react-native-buffer": "^6.1.0",
     "@dreson4/react-native-quick-bip39": "^0.0.7",
     "@expo/html-elements": "^0.4.2",
-    "@expo/vector-icons": "^14.0.0",
     "@gluestack-ui/accordion": "^1.0.14",
     "@gluestack-ui/actionsheet": "^0.2.53",
     "@gluestack-ui/alert": "^0.1.16",
@@ -49,6 +48,7 @@
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-community/cli": "^19.1.1",
     "@react-native-community/datetimepicker": "8.3.0",
+    "@react-native-vector-icons/material-icons": "^12.3.0",
     "@react-navigation/drawer": "^7.5.2",
     "@react-navigation/native": "^7.0.3",
     "@shopify/react-native-skia": "v2.0.0-next.4",
@@ -89,7 +89,8 @@
     "react-native-svg": "15.11.2",
     "react-native-web": "^0.20.0",
     "stream-browserify": "^3.0.0",
-    "zustand": "^5.0.7"
+    "zustand": "^5.0.7",
+    "@expo/vector-icons": "^14.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

@@ -110,9 +110,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         </ModalHeader>
 
         <ModalBody>
-          <VStack space="sm">
-            <Text className="text-typography-700">{message}</Text>
+          <VStack space="md" className="mt-2">
             {itemName && <Text className="font-medium text-typography-900">"{itemName}"</Text>}
+            <Text className="text-typography-700">{message}</Text>
           </VStack>
         </ModalBody>
 

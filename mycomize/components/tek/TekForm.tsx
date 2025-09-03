@@ -236,8 +236,8 @@ export function TekForm({ tekId, saveButtonText = 'Save Tek' }: TekFormProps) {
                         <Text className="font-medium">Make Public</Text>
                         <Text className="text-sm text-typography-500">
                           {tekData.is_public
-                            ? 'This tek is public and visible to all mycomize users'
-                            : 'Allow other mycomize users to view and use this tek'}
+                            ? 'This tek is public and visible to all OpenTek users'
+                            : 'Allow other OpenTek users to view and use this tek'}
                         </Text>
                         {isExistingPublicTek && (
                           <Text className="text-xs text-typography-400">
@@ -321,7 +321,7 @@ export function TekForm({ tekId, saveButtonText = 'Save Tek' }: TekFormProps) {
         onConfirm={confirmMakePublic}
         type="make-public"
         title="Make Tek Public"
-        message="Are you sure you want to make this tek public? Once public, it cannot be made private again. All of the tek's data will be visible to all mycomize users."
+        message="Are you sure you want to make this tek public? Once public, it cannot be made private again. All of the tek's data will be visible to all OpenTek users."
         itemName={tekData.name}
         confirmText="Make Public"
       />

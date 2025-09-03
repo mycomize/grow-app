@@ -50,8 +50,17 @@ const MODEL_SPECIFIC_ALLOWLISTS = {
     'id',
     'is_public',
     'usage_count',
+    // Backend-computed response fields (not stored user data)
+    'creator_name',
+    'is_owner',
+    'user_has_liked',    // Backend-computed user engagement state
+    'user_has_viewed',   // Backend-computed user engagement state
+    'user_has_imported', // Backend-computed user engagement state
     // SQLAlchemy relationships present in BulkGrowTek model
     'creator',
+    'likes',   // New engagement relationships
+    'views',   // New engagement relationships
+    'imports', // New engagement relationships
   ] as const,
 
   IoTGateway: [

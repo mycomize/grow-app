@@ -260,6 +260,19 @@ class ApiClient {
     return this.delete(`/bulk-grow-tek/${id}`, token);
   }
 
+  // BulkGrowTek engagement operations
+  async likeBulkGrowTek(id: string, token: string) {
+    return this.post(`/bulk-grow-tek/${id}/like`, {}, token, undefined, undefined);
+  }
+
+  async trackBulkGrowTekView(id: string, token: string) {
+    return this.post(`/bulk-grow-tek/${id}/view`, {}, token, undefined, undefined);
+  }
+
+  async trackBulkGrowTekImport(id: string, token: string) {
+    return this.post(`/bulk-grow-tek/${id}/import`, {}, token, undefined, undefined);
+  }
+
   // IoT Gateway operations
   async getIoTGateways(token: string) {
     return this.get('/iot-gateways/', token, 'IoTGateway', true);

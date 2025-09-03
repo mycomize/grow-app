@@ -28,5 +28,13 @@ class BulkGrowTek(Base):
     # backend/schemas/bulk_stage.py for definitions.
     stages = Column(Text, nullable=True)  # JSON stored as encrypted string
 
+    # Engagement metrics - stored as TEXT to support encryption for private teks
+    like_count = Column(Text, nullable=True, default="0")  # Encrypted when is_public=False
+    view_count = Column(Text, nullable=True, default="0")  # Encrypted when is_public=False
+    import_count = Column(Text, nullable=True, default="0")  # Encrypted when is_public=False
+
     # Relationships
     creator = relationship("User", back_populates="bulk_grow_teks")
+    likes = relationship("TekLike", back_populates="tek", cascade="all, delete-orphan")
+    views = relationship("TekView", back_populates="tek", cascade="all, delete-orphan")
+    imports = relationship("TekImport", back_populates="tek", cascade="all, delete-orphan")

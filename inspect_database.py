@@ -114,7 +114,7 @@ def get_system_fields() -> List[str]:
         # Primary keys
         'id',
         # Foreign keys  
-        'user_id', 'bulk_grow_id', 'gateway_id', 'created_by', 'linked_grow_id',
+        'user_id', 'bulk_grow_id', 'gateway_id', 'created_by', 'linked_grow_id', 'tek_id',
         # System timestamps
         'created_at', 'updated_at',
         # System flags and counters
@@ -151,7 +151,7 @@ def get_expected_model_fields() -> Dict[str, Dict[str, List[str]]]:
         },
         'bulk_grow_teks': {
             'system': ['id', 'created_by', 'is_public'],
-            'user_data': ['name', 'description', 'species', 'variant', 'tags', 'stages']
+            'user_data': ['name', 'description', 'species', 'variant', 'tags', 'stages', 'like_count', 'view_count', 'import_count']
         },
         'iot_gateways': {
             'system': ['id', 'user_id'],
@@ -160,6 +160,18 @@ def get_expected_model_fields() -> Dict[str, Dict[str, List[str]]]:
         'iot_entities': {
             'system': ['id', 'gateway_id', 'linked_grow_id'],
             'user_data': ['entity_name', 'entity_type', 'friendly_name', 'domain', 'device_class', 'linked_stage']
+        },
+        'tek_likes': {
+            'system': ['id', 'tek_id', 'user_id', 'created_at'],
+            'user_data': []  # No encrypted user data fields
+        },
+        'tek_views': {
+            'system': ['id', 'tek_id', 'user_id', 'created_at'],
+            'user_data': []  # No encrypted user data fields
+        },
+        'tek_imports': {
+            'system': ['id', 'tek_id', 'user_id', 'created_at'],
+            'user_data': []  # No encrypted user data fields
         }
     }
 
@@ -397,6 +409,55 @@ def inspect_user_data(conn: sqlite3.Connection, user_id: int) -> None:
                     value = format_field_value(entity[field])
                     status = analysis.get(field, "[UNKNOWN]")
                     print(f"    {field:25}: {status:15} | {value}")
+    
+    # Inspect TEK Engagement Data
+    print(f"\n--- TEK Engagement for User {user_id} ---")
+    
+    # TEK Likes
+    cursor.execute("SELECT * FROM tek_likes WHERE user_id = ? ORDER BY created_at DESC LIMIT 10;", (user_id,))
+    likes = cursor.fetchall()
+    if likes:
+        print(f"\n** TEK Likes ({len(likes)} shown, most recent first) **")
+        for like in likes:
+            analysis = analyze_encryption_status(like)
+            print(f"  TEK {like['tek_id']:3} | ID: {like['id']:3} | {like['created_at']}")
+    else:
+        print("\n** TEK Likes: None found **")
+    
+    # TEK Views  
+    cursor.execute("SELECT * FROM tek_views WHERE user_id = ? ORDER BY created_at DESC LIMIT 10;", (user_id,))
+    views = cursor.fetchall()
+    if views:
+        print(f"\n** TEK Views ({len(views)} shown, most recent first) **")
+        for view in views:
+            analysis = analyze_encryption_status(view)
+            print(f"  TEK {view['tek_id']:3} | ID: {view['id']:3} | {view['created_at']}")
+    else:
+        print("\n** TEK Views: None found **")
+    
+    # TEK Imports
+    cursor.execute("SELECT * FROM tek_imports WHERE user_id = ? ORDER BY created_at DESC LIMIT 10;", (user_id,))
+    imports = cursor.fetchall()
+    if imports:
+        print(f"\n** TEK Imports ({len(imports)} shown, most recent first) **")
+        for import_record in imports:
+            analysis = analyze_encryption_status(import_record)
+            print(f"  TEK {import_record['tek_id']:3} | ID: {import_record['id']:3} | {import_record['created_at']}")
+    else:
+        print("\n** TEK Imports: None found **")
+    
+    # Show engagement summary for this user
+    print(f"\n--- Engagement Summary for User {user_id} ---")
+    try:
+        like_count = cursor.execute("SELECT COUNT(*) FROM tek_likes WHERE user_id = ?", (user_id,)).fetchone()[0]
+        view_count = cursor.execute("SELECT COUNT(*) FROM tek_views WHERE user_id = ?", (user_id,)).fetchone()[0] 
+        import_count = cursor.execute("SELECT COUNT(*) FROM tek_imports WHERE user_id = ?", (user_id,)).fetchone()[0]
+        
+        print(f"  Total Likes: {like_count}")
+        print(f"  Total Views: {view_count}")
+        print(f"  Total Imports: {import_count}")
+    except sqlite3.Error as e:
+        print(f"  Error calculating engagement summary: {e}")
 
 def inspect_table_raw(conn: sqlite3.Connection, table_name: str, limit: int = 10) -> None:
     """Show raw data from a table."""
@@ -426,7 +487,7 @@ def show_encryption_summary(conn: sqlite3.Connection) -> None:
     """Show a summary of encryption status across all tables."""
     print("\n=== ENCRYPTION SUMMARY ===")
     
-    tables_to_check = ['users', 'bulk_grows', 'flushes', 'bulk_grow_teks', 'iot_gateways', 'iot_entities']
+    tables_to_check = ['users', 'bulk_grows', 'flushes', 'bulk_grow_teks', 'iot_gateways', 'iot_entities', 'tek_likes', 'tek_views', 'tek_imports']
     
     for table_name in tables_to_check:
         cursor = conn.cursor()
@@ -458,6 +519,16 @@ def show_encryption_summary(conn: sqlite3.Connection) -> None:
                             private_count = cursor.execute("SELECT COUNT(*) FROM bulk_grow_teks WHERE is_public = 0").fetchone()[0]
                             print(f"  [TEKS] Public TEKs: {public_count}, Private TEKs: {private_count}")
                     except (KeyError, IndexError):
+                        pass
+                
+                # Special notes for engagement tables
+                if table_name in ['tek_likes', 'tek_views', 'tek_imports']:
+                    try:
+                        total_count = cursor.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
+                        unique_users = cursor.execute(f"SELECT COUNT(DISTINCT user_id) FROM {table_name}").fetchone()[0]
+                        unique_teks = cursor.execute(f"SELECT COUNT(DISTINCT tek_id) FROM {table_name}").fetchone()[0]
+                        print(f"  [ENGAGEMENT] Total: {total_count}, Users: {unique_users}, TEKs: {unique_teks}")
+                    except (KeyError, IndexError, sqlite3.Error):
                         pass
         
         except sqlite3.Error as e:

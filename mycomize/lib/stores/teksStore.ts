@@ -54,6 +54,11 @@ interface TeksStore {
   // Saving state management
   setSaving: (saving: boolean) => void;
 
+  // Engagement Actions
+  likeTek: (token: string, tekId: string) => Promise<void>;
+  viewTek: (token: string, tekId: string) => Promise<void>;
+  importTek: (token: string, tekId: string) => Promise<void>;
+
   reset: () => void;
 }
 
@@ -381,6 +386,166 @@ export const useTeksStore = create<TeksStore>((set, get) => {
     set({ isSaving: saving });
   },
 
+  // Like/Unlike a tek with optimistic updates
+  likeTek: async (token: string, tekId: string) => {
+    const { teks } = get();
+    const tek = teks.find(t => t.id.toString() === tekId);
+    
+    if (!tek) {
+      console.error('Tek not found for like action:', tekId);
+      return;
+    }
+
+    // Store original state for rollback
+    const originalUserHasLiked = tek.user_has_liked;
+    const originalLikeCount = tek.like_count;
+
+    // Optimistic update
+    const newUserHasLiked = !originalUserHasLiked;
+    const newLikeCount = originalUserHasLiked 
+      ? Math.max(0, originalLikeCount - 1) 
+      : originalLikeCount + 1;
+
+    set((state) => ({
+      teks: state.teks.map(t => 
+        t.id.toString() === tekId
+          ? { 
+              ...t, 
+              user_has_liked: newUserHasLiked,
+              like_count: newLikeCount
+            }
+          : t
+      )
+    }));
+
+    try {
+      await apiClient.likeBulkGrowTek(tekId, token);
+      // Success - the optimistic update is kept
+      console.log(`[TeksStore] Successfully toggled like for tek ${tekId}`);
+    } catch (error) {
+      console.error('Error toggling like:', error);
+      handleUnauthorizedError(error as Error);
+      
+      // Rollback optimistic update on error
+      set((state) => ({
+        teks: state.teks.map(t => 
+          t.id.toString() === tekId
+            ? { 
+                ...t, 
+                user_has_liked: originalUserHasLiked,
+                like_count: originalLikeCount
+              }
+            : t
+        )
+      }));
+      
+      throw error;
+    }
+  },
+
+  // Track view for a tek with optimistic updates
+  viewTek: async (token: string, tekId: string) => {
+    const { teks } = get();
+    const tek = teks.find(t => t.id.toString() === tekId);
+    
+    if (!tek) {
+      console.error('Tek not found for view action:', tekId);
+      return;
+    }
+
+    // Only track if user hasn't viewed already
+    if (tek.user_has_viewed) {
+      return;
+    }
+
+    // Optimistic update
+    set((state) => ({
+      teks: state.teks.map(t => 
+        t.id.toString() === tekId
+          ? { 
+              ...t, 
+              user_has_viewed: true,
+              view_count: t.view_count + 1
+            }
+          : t
+      )
+    }));
+
+    try {
+      await apiClient.trackBulkGrowTekView(tekId, token);
+      console.log(`[TeksStore] Successfully tracked view for tek ${tekId}`);
+    } catch (error) {
+      console.error('Error tracking view:', error);
+      handleUnauthorizedError(error as Error);
+      
+      // Rollback optimistic update on error
+      set((state) => ({
+        teks: state.teks.map(t => 
+          t.id.toString() === tekId
+            ? { 
+                ...t, 
+                user_has_viewed: false,
+                view_count: Math.max(0, t.view_count - 1)
+              }
+            : t
+        )
+      }));
+      
+      throw error;
+    }
+  },
+
+  // Track import for a tek with optimistic updates
+  importTek: async (token: string, tekId: string) => {
+    const { teks } = get();
+    const tek = teks.find(t => t.id.toString() === tekId);
+    
+    if (!tek) {
+      console.error('Tek not found for import action:', tekId);
+      return;
+    }
+
+    // Store original state for potential rollback
+    const originalUserHasImported = tek.user_has_imported;
+    const originalImportCount = tek.import_count;
+
+    // Optimistic update - always increment import count, but only set user_has_imported once
+    set((state) => ({
+      teks: state.teks.map(t => 
+        t.id.toString() === tekId
+          ? { 
+              ...t, 
+              user_has_imported: true,
+              import_count: t.import_count + 1
+            }
+          : t
+      )
+    }));
+
+    try {
+      await apiClient.trackBulkGrowTekImport(tekId, token);
+      console.log(`[TeksStore] Successfully tracked import for tek ${tekId}`);
+    } catch (error) {
+      console.error('Error tracking import:', error);
+      handleUnauthorizedError(error as Error);
+      
+      // Rollback optimistic update on error
+      set((state) => ({
+        teks: state.teks.map(t => 
+          t.id.toString() === tekId
+            ? { 
+                ...t, 
+                user_has_imported: originalUserHasImported,
+                import_count: originalImportCount
+              }
+            : t
+        )
+      }));
+      
+      throw error;
+    }
+  },
+
   // Reset store state
   reset: () => {
     set({
@@ -426,6 +591,11 @@ export const useFetchTeks = () => useTeksStore((state) => state.fetchTeks);
 export const useCreateTek = () => useTeksStore((state) => state.createTek);
 export const useUpdateTek = () => useTeksStore((state) => state.updateTek);
 export const useDeleteTek = () => useTeksStore((state) => state.deleteTek);
+
+// Engagement action selectors
+export const useLikeTek = () => useTeksStore((state) => state.likeTek);
+export const useViewTek = () => useTeksStore((state) => state.viewTek);
+export const useImportTek = () => useTeksStore((state) => state.importTek);
 
 // Export the NEW_TEK_ID constant for use in components
 export { NEW_TEK_ID };

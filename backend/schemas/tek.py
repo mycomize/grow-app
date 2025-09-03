@@ -36,6 +36,17 @@ class BulkGrowTek(BulkGrowTekBase):
     """Schema for returning a bulk_grow tek"""
     id: int
     creator_name: str  # Will be populated from user relationship
+    creator_profile_image: Optional[str] = None  # Will be encrypted for private teks
+    
+    # Engagement count fields - will be encrypted for private teks, cleartext for public
+    like_count: Optional[str] = None  # TEXT field supporting encryption
+    view_count: Optional[str] = None  # TEXT field supporting encryption
+    import_count: Optional[str] = None  # TEXT field supporting encryption
+    
+    user_has_liked: bool = False  # Shows if current user liked this tek
+    user_has_viewed: bool = False  # Shows if current user viewed this tek
+    user_has_imported: bool = False  # Shows if current user has imported this tek
+    is_owner: bool = False  # Shows if current user owns this tek
 
     class Config:
         from_attributes = True

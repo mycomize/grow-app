@@ -1,4 +1,3 @@
-import React from 'react';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { View } from '~/components/ui/view';
@@ -6,7 +5,7 @@ import { Heading } from '~/components/ui/heading';
 import { Box } from '~/components/ui/box';
 import { Icon } from '~/components/ui/icon';
 import { Shield } from 'lucide-react-native';
-import MycomizeLogo from '~/assets/mycomize-logo.svg';
+import OpenTekLogo from '~/assets/opentek-logo.svg';
 
 interface EncryptionHeaderProps {
   currentStep: string;
@@ -40,7 +39,7 @@ export function EncryptionHeader({ currentStep, totalSteps }: EncryptionHeaderPr
           Encryption Setup
         </Heading>
         <View className="flex-1" />
-        <MycomizeLogo height={50} width={50} />
+        <OpenTekLogo height={50} width={50} />
       </HStack>
     </VStack>
   );

@@ -29,6 +29,8 @@ import {
   Filter,
   Check,
   Layers,
+  Users,
+  Lock
 } from 'lucide-react-native';
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
@@ -38,6 +40,7 @@ import { TekCardSkeleton } from '~/components/tek';
 import { CountBadge } from '~/components/ui/count-badge';
 import { BulkGrowTek } from '~/lib/types/tekTypes';
 import { useTeks, useTekLoading, useDeleteTek } from '~/lib/stores';
+import { InfoBadge } from '~/components/ui/info-badge';
 
 export default function TekLibraryScreen() {
   const { token } = useContext(AuthContext);
@@ -87,8 +90,6 @@ export default function TekLibraryScreen() {
           return (a.name || '').localeCompare(b.name || '');
         case 'species':
           return (a.species || '').localeCompare(b.species || '');
-        case 'usage_count':
-          return b.usage_count - a.usage_count; // Most used first
         default:
           return 0;
       }
@@ -233,18 +234,14 @@ export default function TekLibraryScreen() {
         {/* Tek Control Card */}
         <Card className="mx-4 w-11/12 bg-background-0">
           <VStack className="p-2" space="md">
-            <HStack className="">
               <HStack className="items-center gap-2">
                 <Icon as={Layers} size="xl" className="text-typography-600" />
-                <CountBadge count={teks.length} label="TOTAL" variant="success" />
-                {publicTeks.length > 0 && (
-                  <CountBadge count={publicTeks.length} label="PUBLIC" variant="green-dark" />
-                )}
-                {privateTeks.length > 0 && (
-                  <CountBadge count={privateTeks.length} label="PRIVATE" variant="error" />
-                )}
+                <Heading size="xl">Tek List</Heading>
+                <HStack className="items-center gap-2 ml-auto">
+                  <InfoBadge variant='default' icon={Users} text={`${publicTeks.length} PUBLIC`}/>
+                  <InfoBadge variant='default' icon={Lock} text={`${privateTeks.length} PRIVATE`}/>
+                </HStack>
               </HStack>
-            </HStack>
 
             <Input className="mt-2">
               <InputIcon as={Search} className="ml-3" />

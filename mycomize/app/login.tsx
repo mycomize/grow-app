@@ -1,5 +1,4 @@
-import { Image } from '@/components/ui/image';
-import { useState, useEffect, useContext } from 'react';
+import { useState, useContext } from 'react';
 import { View } from 'react-native';
 import { ScrollView } from '@/components/ui/scroll-view';
 import { Box } from '@/components/ui/box';
@@ -14,9 +13,8 @@ import { Center } from '@/components/ui/center';
 import { VStack } from '@/components/ui/vstack';
 import { useRouter } from 'expo-router';
 import { HStack } from '@/components/ui/hstack';
-import { Link, LinkText } from '~/components/ui/link';
 import { EyeIcon, EyeOffIcon, UserPlus, LogIn } from 'lucide-react-native';
-import MycomizeLogo from '@/assets/mycomize-logo.svg';
+import OpenTekLogo from '@/assets/opentek-logo.svg';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -68,7 +66,7 @@ export default function LoginScreen() {
         <View className="mt-36 flex items-center gap-4">
           <VStack space="xl">
             <Center>
-              <MycomizeLogo width={111} height={131} />
+              <OpenTekLogo width={111} height={131} />
             </Center>
             {errorMessage && <Text className="mt-6 text-error-500">{errorMessage}</Text>}
             <FormControl className="mt-16 rounded-lg border border-outline-300 p-4">

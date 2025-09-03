@@ -309,7 +309,7 @@ export function GrowForm({ growId, saveButtonText = 'Save' }: GrowFormProps) {
                   <VStack className="items-center mx-3 mb-3 p-8 rounded-lg border border-dashed border-typography-300" space="sm">
                     <Icon as={CircuitBoard} size="xl" className="text-typography-400" />
                     <Text className="text-center text-typography-500">
-                      No linked IoT Gateway controls. Save this grow
+                      No linked IoT Gateway controls. Save this grow,
                       then link controls from the IoT tab.
                     </Text>
                   </VStack>

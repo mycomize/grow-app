@@ -240,8 +240,8 @@ export default function GrowScreen() {
 
   return grows.length == 0 ? (
     <VStack className="flex-1 items-center justify-center gap-5 bg-background-50">
-      <MushroomIcon height={22} width={22} strokeWidth={2} color="#888888" />
-      <Text className="text-lg">Add your first grow to get started!</Text>
+      <MushroomIcon height={30} width={30} strokeWidth={2} color="#888888" />
+      <Text className="text-lg">Add your first grow</Text>
       <Button
         variant="solid"
         className="h-16 w-16 rounded-full"

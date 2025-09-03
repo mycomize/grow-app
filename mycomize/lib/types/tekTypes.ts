@@ -112,6 +112,16 @@ export const createEmptyTekData = (): BulkGrowTekData => ({
   },
 });
 
+// Engagement interface for like/view/import functionality
+export interface TekEngagement {
+  like_count: number;
+  view_count: number;
+  import_count: number;
+  user_has_liked: boolean;
+  user_has_viewed: boolean;
+  user_has_imported: boolean;
+}
+
 // Tek interface for API responses
 export interface BulkGrowTek {
   id: number;
@@ -121,7 +131,14 @@ export interface BulkGrowTek {
   variant?: string;
   tags?: string[];
   is_public: boolean;
-  usage_count: number;
+  usage_count?: number;
+  like_count: number;
+  view_count: number;
+  import_count: number;
+  user_has_liked: boolean; // Shows if current user liked this tek
+  user_has_viewed: boolean; // Shows if current user viewed this tek
+  user_has_imported: boolean; // Shows if current user has imported this tek
+  is_owner?: boolean; // Shows if current user owns this tek
   creator_name?: string;
   creator_profile_image?: string;
   stages?: {
