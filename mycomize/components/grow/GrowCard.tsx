@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card } from '~/components/ui/card';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
@@ -24,7 +24,6 @@ import {
   Skull,
   MapPin,
 } from 'lucide-react-native';
-import { Spinner } from '~/components/ui/spinner';
 import { BulkGrowComplete, bulkGrowStatuses } from '~/lib/types/growTypes';
 import { InfoBadge } from '~/components/ui/info-badge';
 //import { useGrowGateways } from '~/lib/iot-gateway/useGrowGateways';
@@ -210,7 +209,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
       <VStack className="p-2">
         <View>
           {/* First row: Grow name and strain */}
-          <HStack className="mb-2 items-center justify-between">
+          <HStack className="mb-0 items-center justify-between">
             <Text
               className="flex-1 text-lg font-bold text-typography-700"
               numberOfLines={1}
@@ -238,7 +237,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
 
           {/* Second row: Location and species (if variant exists) */}
           {(grow.location || (grow.variant && grow.species)) && (
-            <HStack className="mb-5 items-center">
+            <HStack className="mb-1 items-center">
               {grow.location && (
                 <>
                   <Icon as={MapPin} className="mr-1 text-typography-400" />
@@ -262,7 +261,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
           )}
 
           {/* Third row: Stage timeline */}
-          <VStack className="mb-5">
+          <VStack className="mb-5 mt-3">
             {/* Timeline with icons and connecting lines */}
             <HStack className="items-center">
               {stages.map((stage, index) => {
@@ -355,54 +354,55 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
             />
           </HStack>
 
-          {/* Fifth row: IoT Gateways with Connection Status */}
-          <VStack className="mb-4 mt-1" space="xs">
-            <HStack className="items-center gap-2">
-              <Icon as={CircuitBoard} className="text-typography-400" size="lg" />
-              <Text className="text-lg font-medium text-typography-600">IoT Gateways</Text>
-            </HStack>
-            {(() => {
-              if (iotEntities.length === 0) {
-                return <Text className="text-md text-typography-400">None</Text>;
-              }
+          {/* Fifth row: IoT Gateways with Connection Status - Only show if there are IoT entities */}
+          {iotEntities.length > 0 && (
+            <VStack className="mb-4 mt-1" space="xs">
+              <HStack className="items-center gap-2">
+                <Icon as={CircuitBoard} className="text-typography-400" size="lg" />
+                <Text className="text-lg font-medium text-typography-600">IoT Gateways</Text>
+              </HStack>
+              {(() => {
+                //if (gatewaysLoading) {
+                //  return (
+                //    <HStack className="items-center justify-center py-2">
+                //      <Spinner size="small" />
+                //    </HStack>
+                //  );
+                //}
 
-              //if (gatewaysLoading) {
-              //  return (
-              //    <HStack className="items-center justify-center py-2">
-              //      <Spinner size="small" />
-              //    </HStack>
-              //  );
-              //}
+                //if (gateways.length === 0) {
+                //  return (
+                //    <Text className="text-md text-typography-400">Gateway data unavailable</Text>
+                //  );
+                //}
 
-              //if (gateways.length === 0) {
-              //  return (
-              //    <Text className="text-md text-typography-400">Gateway data unavailable</Text>
-              //  );
-              //}
+                // Show each gateway with name and connection status
+                //return (
+                //  <VStack space="sm">
+                //    {gateways.map((gateway) => {
+                //      const connectionStatus = connectionStatuses[gateway.id] || 'unknown';
+                //      const badgeProps = getConnectionBadgeProps(connectionStatus);
 
-              // Show each gateway with name and connection status
-              //return (
-              //  <VStack space="sm">
-              //    {gateways.map((gateway) => {
-              //      const connectionStatus = connectionStatuses[gateway.id] || 'unknown';
-              //      const badgeProps = getConnectionBadgeProps(connectionStatus);
+                //      return (
+                //        <HStack key={gateway.id} className="items-center justify-between">
+                //          <Text
+                //            className="text-md ml-3 flex-1 text-typography-600"
+                //            numberOfLines={1}
+                //            ellipsizeMode="tail">
+                //            {gateway.name || 'Unnamed Gateway'}
+                //          </Text>
+                //          <InfoBadge {...badgeProps} size="sm" />
+                //        </HStack>
+                //      );
+                //    })}
+                //  </VStack>
+                //);
 
-              //      return (
-              //        <HStack key={gateway.id} className="items-center justify-between">
-              //          <Text
-              //            className="text-md ml-3 flex-1 text-typography-600"
-              //            numberOfLines={1}
-              //            ellipsizeMode="tail">
-              //            {gateway.name || 'Unnamed Gateway'}
-              //          </Text>
-              //          <InfoBadge {...badgeProps} size="sm" />
-              //        </HStack>
-              //      );
-              //    })}
-              //  </VStack>
-              //);
-            })()}
-          </VStack>
+                // Since the gateway logic is commented out, just return null for now
+                return null;
+              })()}
+            </VStack>
+          )}
 
           {/* Last row: Grow tags */}
           {Array.isArray(grow.tags) && grow.tags.length > 0 && (

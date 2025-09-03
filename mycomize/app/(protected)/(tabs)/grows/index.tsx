@@ -21,6 +21,7 @@ import { CountBadge } from '~/components/ui/count-badge';
 import { GrowFilterModal } from '~/components/modals/GrowFilterModal';
 import { GrowSortModal, SortOption } from '~/components/modals/GrowSortModal';
 import { useGrows, useGrowLoading, useGrowStore } from '~/lib/stores';
+import { InfoBadge } from '~/components/ui/info-badge';
 
 export default function GrowScreen() {
   const { token } = useContext(AuthContext);
@@ -264,12 +265,6 @@ export default function GrowScreen() {
               <HStack className="items-center gap-2">
                 <Icon as={List} size="xl" className="text-typography-900" />
                 <Heading size="xl">Grow List</Heading>
-              </HStack>
-              <HStack className="ml-auto items-center gap-2">
-                <CountBadge count={grows.length} label="TOTAL" variant="success" />
-                {inProgressGrows.length > 0 && (
-                  <CountBadge count={inProgressGrows.length} label="ACTIVE" variant="green-dark" />
-                )}
               </HStack>
             </HStack>
 
