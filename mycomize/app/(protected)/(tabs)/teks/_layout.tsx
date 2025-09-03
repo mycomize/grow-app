@@ -22,7 +22,7 @@ export default function TekLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: 'Tek Library',
+          title: 'Tek',
           headerShown: true,
         }}
       />

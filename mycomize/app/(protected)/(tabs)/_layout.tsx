@@ -8,6 +8,7 @@ import { useGrowStore, useTeksStore } from '~/lib/stores';
 import { useGatewayStore } from '~/lib/stores/iot/gatewayStore';
 import { useEntityStore } from '~/lib/stores/iot/entityStore';
 import { haWebSocketManager } from '~/lib/iot/haWebSocketManager';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 export default function TabLayout() {
   const { theme } = useTheme();
@@ -102,7 +103,7 @@ export default function TabLayout() {
         options={{
           title: 'Grow',
           tabBarLabel: 'Grow',
-          tabBarIcon: ({ color }) => <MushroomIcon height={24} width={24} color={color} />,
+          tabBarIcon: ({ color }) => <MaterialCommunityIcons name="mushroom-outline" size={24} color={color} />,
           headerShown: false,
         }}
       />

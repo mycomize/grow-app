@@ -22,6 +22,7 @@ import { GrowFilterModal } from '~/components/modals/GrowFilterModal';
 import { GrowSortModal, SortOption } from '~/components/modals/GrowSortModal';
 import { useGrows, useGrowLoading, useGrowStore } from '~/lib/stores';
 import { InfoBadge } from '~/components/ui/info-badge';
+import { PsychedelicBorder } from '~/components/ui/psychedelic-border';
 
 export default function GrowScreen() {
   const { token } = useContext(AuthContext);
@@ -229,90 +230,92 @@ export default function GrowScreen() {
 
   if (loading) {
     return (
-      <VStack className="flex-1 items-center gap-4 bg-background-50">
-        <View className="mt-2" />
-        {/* Show 3 skeleton cards while loading */}
-        {Array.from({ length: 1 }).map((_, index) => (
-          <GrowCardSkeleton key={index} />
-        ))}
-      </VStack>
+      <ScrollView className="m-0 flex-1 bg-background-[#181818]">
+        <VStack className="flex-1 items-center gap-4">
+          <View className="mt-2" />
+          {/* Show 3 skeleton cards while loading */}
+          {Array.from({ length: 1 }).map((_, index) => (
+            <GrowCardSkeleton key={index} />
+          ))}
+        </VStack>
+      </ScrollView>
     );
   }
 
   return grows.length == 0 ? (
-    <VStack className="flex-1 items-center justify-center gap-5 bg-background-50">
-      <MushroomIcon height={30} width={30} strokeWidth={2} color="#888888" />
-      <Text className="text-lg">Add your first grow</Text>
-      <Button
-        variant="solid"
-        className="h-16 w-16 rounded-full"
-        action="positive"
-        onPress={() => {
-          router.push('/grows/new');
-        }}>
-        <ButtonIcon as={PlusIcon} className="h-6 w-6 text-white" />
-      </Button>
-    </VStack>
-  ) : (
     <ScrollView className="m-0 flex-1 bg-background-50">
-      <VStack className="items-center gap-4 pb-16">
-        <View className="mt-2" />
-
-        {/* Dashboard Card */}
-        <Card className="mx-4 w-11/12 bg-background-0">
-          <VStack className="p-2" space="md">
-            <HStack className="">
-              <HStack className="items-center gap-2">
-                <Icon as={List} size="xl" className="text-typography-900" />
-                <Heading size="xl">Grow List</Heading>
-              </HStack>
-            </HStack>
-
-            <Input className="mt-2">
-              <InputIcon as={Search} className="ml-3" />
-              <InputField
-                placeholder="Search grows..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-              {searchQuery && (
-                <Pressable onPress={() => setSearchQuery('')} className="pr-3">
-                  <Icon as={X} size="sm" className="text-typography-500" />
-                </Pressable>
-              )}
-            </Input>
-
-            {/* Current Filter/Sort Status */}
-            <HStack className="mt-2 items-center justify-around gap-2">
-              <Pressable onPress={handleSortModalOpen}>
-                <Icon as={ArrowUpDown} size="md" className="text-typography-300" />
-              </Pressable>
-              <Pressable onPress={handleFilterModalOpen}>
-                <Icon as={Filter} size="md" className="text-typography-300" />
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  router.push('/grows/new');
-                }}>
-                <Icon className="text-typography-300" as={CirclePlus} size="md" />
-              </Pressable>
-            </HStack>
-          </VStack>
-        </Card>
-
-        {/* Grow Cards */}
-        {filteredAndSortedGrows.map((grow, index) => (
-          <GrowCard key={index} grow={grow} onDelete={deleteGrow} onTagPress={handleTagPress} />
-        ))}
-
-        {filteredAndSortedGrows.length === 0 && searchQuery && (
-          <VStack className="items-center justify-center p-8">
-            <Text className="text-center text-typography-500">
-              {searchQuery ? `No grows found matching "${searchQuery}"` : 'No active grows found'}
-            </Text>
-          </VStack>
-        )}
+      <VStack className="flex-1 items-center justify-center gap-5">
+        <MushroomIcon height={30} width={30} strokeWidth={2} color="#888888" />
+        <Text className="text-lg">Add your first grow</Text>
+        <Button
+          variant="solid"
+          className="h-16 w-16 rounded-full"
+          action="positive"
+          onPress={() => {
+            router.push('/grows/new');
+          }}>
+          <ButtonIcon as={PlusIcon} className="h-6 w-6 text-white" />
+        </Button>
       </VStack>
+    </ScrollView>
+  ) : (
+      <>
+        <VStack className="items-center h-full gap-2 bg-background-0">
+
+          {/* Dashboard Card */}
+            <VStack className="px-6 pb-3 pt-5 w-full bg-background-0" space="md">
+              <HStack className="">
+                <HStack className="items-center gap-2">
+                  <Icon as={List} size="xl" className="text-typography-900" />
+                  <Heading size="xl">Grow List</Heading>
+                </HStack>
+              </HStack>
+
+              <Input className="mt-2">
+                <InputIcon as={Search} className="ml-3" />
+                <InputField
+                  placeholder="Search grows..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+                {searchQuery && (
+                  <Pressable onPress={() => setSearchQuery('')} className="pr-3">
+                    <Icon as={X} size="sm" className="text-typography-500" />
+                  </Pressable>
+                )}
+              </Input>
+
+              {/* Current Filter/Sort Status */}
+              <HStack className="mt-2 items-center justify-around gap-2">
+                <Pressable onPress={handleSortModalOpen}>
+                  <Icon as={ArrowUpDown} size="md" className="text-typography-300" />
+                </Pressable>
+                <Pressable onPress={handleFilterModalOpen}>
+                  <Icon as={Filter} size="md" className="text-typography-300" />
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    router.push('/grows/new');
+                  }}>
+                  <Icon className="text-typography-300" as={CirclePlus} size="md" />
+                </Pressable>
+              </HStack>
+            </VStack>
+
+          <ScrollView className="w-full bg-background-50">
+          {filteredAndSortedGrows.map((grow) => (
+              <GrowCard key={grow.id} grow={grow} onDelete={deleteGrow} onTagPress={handleTagPress} />
+          ))}
+          </ScrollView>
+
+          {filteredAndSortedGrows.length === 0 && searchQuery && (
+            <VStack className="items-center justify-center p-8">
+              <Text className="text-center text-typography-500">
+                {searchQuery ? `No grows found matching "${searchQuery}"` : 'No active grows found'}
+              </Text>
+            </VStack>
+          )}
+        </VStack>
 
       {/* Sort Modal */}
       <GrowSortModal
@@ -350,6 +353,6 @@ export default function GrowScreen() {
           setTempFilterLocation('');
         }}
       />
-    </ScrollView>
+      </>
   );
 }

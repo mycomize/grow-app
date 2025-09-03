@@ -37,7 +37,6 @@ import { useRouter } from 'expo-router';
 import { AuthContext } from '~/lib/api/AuthContext';
 import { TekCard } from '~/components/tek/TekCard';
 import { TekCardSkeleton } from '~/components/tek';
-import { CountBadge } from '~/components/ui/count-badge';
 import { BulkGrowTek } from '~/lib/types/tekTypes';
 import { useTeks, useTekLoading, useDeleteTek } from '~/lib/stores';
 import { InfoBadge } from '~/components/ui/info-badge';
@@ -227,13 +226,10 @@ export default function TekLibraryScreen() {
       </Button>
     </VStack>
   ) : (
-    <ScrollView className="m-0 flex-1 bg-background-50">
-      <VStack className="items-center gap-4 pb-16">
-        <View className="mt-2" />
-
+      <>
+      <VStack className="items-center h-full gap-2 bg-background-0">
         {/* Tek Control Card */}
-        <Card className="mx-4 w-11/12 bg-background-0">
-          <VStack className="p-2" space="md">
+          <VStack className="px-6 pb-3 pt-5 w-full bg-background-0" space="md">
               <HStack className="items-center gap-2">
                 <Icon as={Layers} size="xl" className="text-typography-600" />
                 <Heading size="xl">Tek List</Heading>
@@ -270,9 +266,9 @@ export default function TekLibraryScreen() {
               </Pressable>
             </HStack>
           </VStack>
-        </Card>
 
         {/* Tek Cards */}
+        <ScrollView className="w-full bg-background-50">
         {filteredAndSortedTeks.map((tek) => (
           <TekCard
             key={tek.id}
@@ -286,6 +282,7 @@ export default function TekLibraryScreen() {
             onTagPress={handleTagPress}
           />
         ))}
+        </ScrollView>
 
         {filteredAndSortedTeks.length === 0 && (searchQuery || filterBy !== 'all') && (
           <VStack className="items-center justify-center  gap-3 p-8">
@@ -407,6 +404,6 @@ export default function TekLibraryScreen() {
           </ModalFooter>
         </ModalContent>
       </Modal>
-    </ScrollView>
+  </>
   );
 }

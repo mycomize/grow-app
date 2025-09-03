@@ -205,8 +205,8 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
   const healthInfo = getHealthStatusInfo();
 
   return (
-    <Card className="w-11/12 rounded-xl bg-background-0 p-2">
-      <VStack className="p-2">
+      <>
+      <VStack className="border-t border-outline-50 py-4 px-6 bg-background-0 w-full">
         <View>
           {/* First row: Grow name and strain */}
           <HStack className="mb-0 items-center justify-between">
@@ -413,7 +413,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
                     key={index}
                     onPress={() => onTagPress?.(tag)}
                     className="rounded-md px-0 py-0.5">
-                    <Text className="text-md text-blue-400">#{tag}</Text>
+                    <Text className="text-md text-blue-500">#{tag}</Text>
                   </Pressable>
                 ))}
                 {grow.tags.length > 3 && (
@@ -461,6 +461,6 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
         title="Delete Grow"
         itemName={grow.name || grow.variant || 'grow'}
       />
-    </Card>
+      </>
   );
 };

@@ -163,8 +163,8 @@ export const TekCard: React.FC<TekCardProps> = ({
   };
 
   return (
-    <Card className="w-11/12 rounded-xl bg-background-0 p-2">
-      <VStack className="p-2">
+      <>
+      <VStack className="border-t border-outline-50 py-4 px-6 bg-background-0 w-full">
         <View>
           {/* Header with tek name and variant/species */}
           {/* Creator info with avatar */}
@@ -336,6 +336,6 @@ export const TekCard: React.FC<TekCardProps> = ({
           isDeleting={false}
         />
       )}
-    </Card>
+   </>
   );
 };

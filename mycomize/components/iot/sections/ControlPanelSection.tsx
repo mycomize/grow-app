@@ -57,12 +57,6 @@ export function ControlPanelSection({ gatewayId }: ControlPanelSectionProps) {
   const { linkableEntities, filteredLinkableEntities, linkedEntities } =
     useGatewayEntities(gatewayNumericId);
 
-  // Optional debug logging (can be enabled for troubleshooting)
-  // console.log(`[ControlPanelSection] Using gateway ID ${gatewayNumericId} for entity filtering`);
-  // console.log(
-  //   `[ControlPanelSection] Gateway-scoped entities: ${linkableEntities.length} linkable, ${filteredLinkableEntities.length} filtered, ${linkedEntities.length} linked`
-  // );
-
   const grows = useGrows();
   const filterPreferences = useEntityStore((state) => state.filterPreferences);
   const linkEntity = useEntityStore((state) => state.linkEntity);
@@ -268,7 +262,7 @@ export function ControlPanelSection({ gatewayId }: ControlPanelSectionProps) {
   // Show content if connected, even without a saved gateway
   if (!gateway && connectionStatus !== 'connected') {
     return (
-      <VStack className="items-center justify-center p-8" space="md">
+      <VStack className="items-center justify-center p-8 mx-1 mb-3 border rounded-xl border-dashed border-typography-300" space="md">
         <Icon as={WifiOff} size="xl" className="text-typography-400" />
         <Text className="text-center text-typography-500">
           Gateway data not available. Connect the gateway to get started

@@ -340,13 +340,11 @@ export default function IoTScreen() {
       <AddIoTGatewayButton title="Add IoTGateway" initial={true} />
     </VStack>
   ) : (
-    <ScrollView className="m-0 flex-1 bg-background-50">
-      <VStack className="items-center gap-4 pb-16">
-        <View className="mt-2" />
+      <>
+      <VStack className="items-center h-full gap-2 bg-background-0">
 
         {/* IoT Control Card */}
-        <Card className="mx-4 w-11/12 bg-background-0">
-          <VStack className="p-2" space="md">
+          <VStack className="px-6 pb-3 pt-5 w-full bg-background-0" space="md">
             <HStack className="items-center" space="sm">
               <Icon as={CircuitBoard} size="xl" className="text-typography-600" />
               <CountBadge count={gateways.length} label="TOTAL" variant="success" />
@@ -389,9 +387,9 @@ export default function IoTScreen() {
               </Pressable>
             </HStack>
           </VStack>
-        </Card>
 
         {/* IoT Gateway Cards */}
+        <ScrollView className="w-full bg-[#1d1d1d]">
         {filteredAndSortedGateways.map((gateway, index) => (
           <IoTGatewayCard
             key={gateway.id}
@@ -402,6 +400,7 @@ export default function IoTScreen() {
             onDelete={handleDelete}
           />
         ))}
+        </ScrollView>
 
         {filteredAndSortedGateways.length === 0 && (searchQuery || filterConnectedOnly) && (
           <VStack className="items-center justify-center p-8">
@@ -517,6 +516,6 @@ export default function IoTScreen() {
           </ModalFooter>
         </ModalContent>
       </Modal>
-    </ScrollView>
+      </>
   );
 }
