@@ -272,7 +272,7 @@ export function ControlPanelSection({ gatewayId }: ControlPanelSectionProps) {
   }
 
   return (
-    <VStack space="md" className="p-2">
+    <VStack space="md" className="pb-3">
       {/* Linked Controls/Entities Section */}
       <VStack space="md">
         <HStack className="items-center justify-between">

@@ -1,11 +1,7 @@
 import React from 'react';
 import { Icon } from '~/components/ui/icon';
 import { Syringe, Wheat, Box, ShoppingBasket } from 'lucide-react-native';
-import MushroomIcon from '~/components/icons/MushroomIcon';
-
-interface BulkGrowTekIconProps {
-  stage: string;
-}
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 export const BulkGrowTekIcon: React.FC<{ stage: string }> = ({ stage }) => {
   switch (stage) {
@@ -17,7 +13,7 @@ export const BulkGrowTekIcon: React.FC<{ stage: string }> = ({ stage }) => {
       return <Icon className="mb-1 text-typography-400" as={Box} />;
     case 'fruiting':
       return (
-        <MushroomIcon height={18} width={18} strokeWidth={2} color="#888888" className="mb-1" />
+        <MaterialCommunityIcons name="mushroom-outline" size={19} color="#888888" />
       );
     case 'harvest':
       return <Icon className="mb-1 text-typography-400" as={ShoppingBasket} />;

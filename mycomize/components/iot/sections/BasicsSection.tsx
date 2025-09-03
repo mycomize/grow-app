@@ -32,6 +32,7 @@ import {
   useCurrentGatewayConnectionStatus,
   useUpdateCurrentGatewayField,
   useTestCurrentGatewayConnection,
+  useGatewayStore,
 } from '~/lib/stores/iot/gatewayStore';
 import { useEntityStore } from '~/lib/stores/iot/entityStore';
 
@@ -80,36 +81,54 @@ export function BasicsSection() {
     }
   };
 
-  // Handle scanned data when returning from scanner
+  // Handle scanned data when returning from scanner with enhanced timing and error handling
   useFocusEffect(
     useCallback(() => {
       const checkForScannedData = async () => {
         try {
-          // TODO: make this secure store
+          // Check if there's scanned data from QR scanner
           const scannedData = await AsyncStorage.getItem('qr_scanned_data');
-          if (scannedData) {
-            updateCurrentGatewayField('api_key', scannedData);
-            // Clear the stored data after using it
-            await AsyncStorage.removeItem('qr_scanned_data');
-          }
+          
+          if (scannedData && scannedData.trim()) {
+            // Apply scanned data immediately - this should overwrite any preserved data
+            updateCurrentGatewayField('api_key', scannedData.trim());
+            
+            // Clear the stored data after successfully applying it
+            try {
+              await AsyncStorage.removeItem('qr_scanned_data');
+            } catch (clearError) {
+              // Don't fail the entire operation if clearing fails
+            }
+          } 
         } catch (error) {
-          console.error('Error reading scanned data:', error);
+          // Attempt to clear potentially corrupted data
+          try {
+            await AsyncStorage.removeItem('qr_scanned_data');
+          } catch (clearError) {
+          }
         }
       };
 
-      checkForScannedData();
-    }, [updateCurrentGatewayField])
+      // Use setTimeout to ensure this runs after any store initialization
+      // This improves timing to ensure preserved data is loaded before QR data overwrites it
+      const timeoutId = setTimeout(() => {
+        checkForScannedData();
+      }, 100);
+
+      // Cleanup function to prevent memory leaks
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    }, [updateCurrentGatewayField, formData])
   );
 
   // Connection test handler - optimized to force refresh entities
   const handleTestConnection = useCallback(async () => {
     try {
-      console.log('[BasicsSection] Starting connection test');
       const result = await testCurrentGatewayConnection();
 
       // If connection successful, fetch HA entities with forceRefresh for immediate preview
       if (result.status === 'connected' && formData) {
-        console.log('[BasicsSection] Connection successful, fetching entities for preview');
         // Create temporary gateway object for entity fetching
         const tempGateway = {
           id: -1,
@@ -124,18 +143,13 @@ export function BasicsSection() {
         // Compute entity lists for new gateway to make entities available in ControlPanelSection
         const { computeAndSetEntityLists } = useEntityStore.getState();
         computeAndSetEntityLists(true); // true = isNewGateway
-
-        console.log('[BasicsSection] Entity fetch completed for connection test');
       }
     } catch (error) {
-      console.error('Connection test failed:', error);
     }
   }, [testCurrentGatewayConnection, fetchHaEntities, formData]);
 
   // Handle credential field blur - detect potential changes for cache invalidation
   const handleCredentialBlur = useCallback((field: 'api_url' | 'api_key', value: string) => {
-    console.log(`[BasicsSection] Credential field ${field} blur detected`);
-
     // Note: The actual cache invalidation will be handled by the entityStore's
     // shouldRefreshEntities method when fetchHaEntities is next called
     // This blur handler is mainly for logging and future enhancements
@@ -157,6 +171,8 @@ export function BasicsSection() {
   };
 
   const handleQRCodeScan = () => {
+    // Set the QR scanning flag before navigation
+    useGatewayStore.getState().setQrScanning(true);
     router.push('/qrscanner' as any);
   };
 
@@ -175,7 +191,7 @@ export function BasicsSection() {
 
   if (isEditing) {
     return (
-      <VStack space="lg" className="p-2">
+      <VStack space="lg" className="px-0 pt-0 pb-3">
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText>Name</FormControlLabelText>
@@ -270,7 +286,7 @@ export function BasicsSection() {
           </HStack>
 
           {/* Connection Controls */}
-          <HStack space="sm" className="mt-3">
+          <HStack space="sm" className="mt-3 w-1/3">
             <Button
               variant="solid"
               action="primary"

@@ -8,8 +8,6 @@ import { ScrollView } from '~/components/ui/scroll-view';
 import { Icon } from '~/components/ui/icon';
 import { Input, InputField, InputIcon } from '~/components/ui/input';
 import { Pressable } from '~/components/ui/pressable';
-import { Card } from '~/components/ui/card';
-import MushroomIcon from '~/components/icons/MushroomIcon';
 import { List, PlusIcon, Search, X, ArrowUpDown, Filter, CirclePlus } from 'lucide-react-native';
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
@@ -17,12 +15,10 @@ import { AuthContext } from '~/lib/api/AuthContext';
 import { BulkGrowComplete, bulkGrowStatuses } from '~/lib/types/growTypes';
 import { GrowCard } from '~/components/grow/GrowCard';
 import { GrowCardSkeleton } from '~/components/grow/GrowCardSkeleton';
-import { CountBadge } from '~/components/ui/count-badge';
 import { GrowFilterModal } from '~/components/modals/GrowFilterModal';
 import { GrowSortModal, SortOption } from '~/components/modals/GrowSortModal';
 import { useGrows, useGrowLoading, useGrowStore } from '~/lib/stores';
-import { InfoBadge } from '~/components/ui/info-badge';
-import { PsychedelicBorder } from '~/components/ui/psychedelic-border';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 export default function GrowScreen() {
   const { token } = useContext(AuthContext);
@@ -245,7 +241,7 @@ export default function GrowScreen() {
   return grows.length == 0 ? (
     <ScrollView className="m-0 flex-1 bg-background-50">
       <VStack className="flex-1 items-center justify-center gap-5">
-        <MushroomIcon height={30} width={30} strokeWidth={2} color="#888888" />
+        <MaterialCommunityIcons name="mushroom-outline" size={30} color="#888888" />
         <Text className="text-lg">Add your first grow</Text>
         <Button
           variant="solid"

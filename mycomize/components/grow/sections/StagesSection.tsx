@@ -1,5 +1,4 @@
-import React, { useMemo, useState, useEffect, useContext, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useContext } from 'react';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
@@ -21,7 +20,7 @@ import {
   CheckSquare,
 } from 'lucide-react-native';
 
-import MushroomIcon from '~/components/icons/MushroomIcon';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { View } from 'react-native';
 import { InoculationSection } from './InoculationSection';
 import { SpawnSection } from './SpawnSection';
@@ -29,7 +28,6 @@ import { BulkSection } from './BulkSection';
 import { FruitingSection } from './FruitingSection';
 import { HarvestSection } from './HarvestSection';
 import { AuthContext } from '~/lib/api/AuthContext';
-import { apiClient, isUnauthorizedError } from '~/lib/api/ApiClient';
 import { useRouter } from 'expo-router';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
 
@@ -439,10 +437,9 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                           {stage.name === 'Fruiting' && (
                             <>
                               <View className="ml-0" />
-                              <MushroomIcon
-                                height={18}
-                                width={18}
-                                strokeWidth={2}
+                              <MaterialCommunityIcons
+                                name="mushroom-outline"
+                                size={18}
                                 color="#9ca3af"
                               />
                             </>
@@ -495,10 +492,9 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                           {stage.name === 'Fruiting' && (
                             <>
                               <View className="ml-0.5" />
-                              <MushroomIcon
-                                height={18}
-                                width={18}
-                                strokeWidth={2}
+                              <MaterialCommunityIcons
+                                name="mushroom-outline"
+                                size={20}
                                 color="#9ca3af"
                               />
                             </>

@@ -2,7 +2,6 @@ import { useEffect, useContext } from 'react';
 import { Tabs, useRouter, useSegments } from 'expo-router';
 import { CircuitBoard, User, FlaskConical, Layers } from 'lucide-react-native';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
-import MushroomIcon from '~/components/icons/MushroomIcon';
 import { AuthContext } from '~/lib/api/AuthContext';
 import { useGrowStore, useTeksStore } from '~/lib/stores';
 import { useGatewayStore } from '~/lib/stores/iot/gatewayStore';

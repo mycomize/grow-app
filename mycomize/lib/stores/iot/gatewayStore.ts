@@ -23,6 +23,12 @@ interface CurrentGateway {
   latency?: number;
 }
 
+// Interface for tracking gateway initialization state
+interface GatewayInitializationState {
+  initialized: boolean;
+  hasUserData: boolean;
+}
+
 interface GatewayStore {
   // State
   gateways: IoTGateway[];
@@ -30,6 +36,7 @@ interface GatewayStore {
   connectionStatuses: Record<number, ConnectionStatus>;
   connectionLatencies: Record<number, number>;
   currentGateway: CurrentGateway | null;
+  isQrScanning: boolean; // Flag to track when user is in QR scanner flow
 
   // Actions
   fetchGateways: (token: string) => Promise<void>;
@@ -48,6 +55,14 @@ interface GatewayStore {
   updateCurrentGatewayField: (field: keyof IoTGatewayUpdate, value: any) => void;
   testCurrentGatewayConnection: () => Promise<ConnectionInfo>;
 
+  // QR scanning flow management
+  setQrScanning: (isScanning: boolean) => void;
+  checkAndClearQrScanningFlag: () => boolean;
+
+  // Helper functions for data preservation
+  shouldPreserveGatewayData: (currentGateway: CurrentGateway | null, targetGatewayId: string | undefined) => boolean;
+  hasUserEnteredData: (formData: IoTGatewayUpdate) => boolean;
+
   reset: () => void;
 }
 
@@ -58,6 +73,7 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
   connectionStatuses: {},
   connectionLatencies: {},
   currentGateway: null,
+  isQrScanning: false,
 
   // Fetch all gateways
   fetchGateways: async (token: string) => {
@@ -505,13 +521,53 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
     }
   },
 
+  // Helper function to check if existing form data should be preserved
+  shouldPreserveGatewayData: (currentGateway: CurrentGateway | null, targetGatewayId: string | undefined): boolean => {
+    if (!currentGateway) {
+      console.log('[GatewayStore] No current gateway exists, cannot preserve data');
+      return false;
+    }
 
-  // Initialize current gateway for editing/creating
+    const targetId = !targetGatewayId || targetGatewayId === 'new' ? NEW_GATEWAY_ID : parseInt(targetGatewayId, 10);
+    
+    // Only preserve if we're trying to initialize the same gateway
+    if (currentGateway.id !== targetId) {
+      console.log(`[GatewayStore] Gateway ID mismatch (current: ${currentGateway.id}, target: ${targetId}), not preserving`);
+      return false;
+    }
+
+    // Check if current gateway has user-entered data
+    const hasUserData = get().hasUserEnteredData(currentGateway.formData);
+    console.log(`[GatewayStore] Gateway ${currentGateway.id} has user data: ${hasUserData}`);
+    
+    return hasUserData && get().isQrScanning;
+  },
+
+  // Helper function to check if form data contains user-entered information
+  hasUserEnteredData: (formData: IoTGatewayUpdate): boolean => {
+    return !!(
+      formData.name?.trim() ||
+      formData.description?.trim() ||
+      formData.api_url?.trim() ||
+      formData.api_key?.trim()
+    );
+  },
+
+  // Initialize current gateway for editing/creating with smart preservation logic
   initializeCurrentGateway: (gatewayId?: string) => {
-    const { gateways, connectionStatuses, connectionLatencies } = get();
+    const { gateways, connectionStatuses, connectionLatencies, currentGateway } = get();
+    
+    console.log(`[GatewayStore] Initializing gateway with ID: ${gatewayId || 'new'}`);
+
+    // Check if we should preserve existing data
+    if (get().shouldPreserveGatewayData(currentGateway, gatewayId)) {
+      console.log(`[GatewayStore] Preserving existing form data for gateway ${currentGateway!.id}`);
+      return; // Don't reinitialize, keep existing data
+    }
 
     if (!gatewayId || gatewayId === 'new') {
       // New gateway - initialize with empty form data
+      console.log('[GatewayStore] Initializing new gateway with empty form data');
       set({
         currentGateway: {
           id: NEW_GATEWAY_ID,
@@ -532,6 +588,7 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
         const existingConnectionStatus = connectionStatuses[gateway.id] || 'unknown';
         const existingLatency = connectionLatencies[gateway.id];
 
+        console.log(`[GatewayStore] Initializing existing gateway ${gateway.id} with saved data`);
         set({
           currentGateway: {
             id: gateway.id,
@@ -546,6 +603,8 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
             latency: existingLatency,
           },
         });
+      } else {
+        console.log(`[GatewayStore] Gateway ${gatewayId} not found, initializing with empty data`);
       }
     }
   },
@@ -651,6 +710,22 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
     }
   },
 
+  // QR scanning flow management
+  setQrScanning: (isScanning: boolean) => {
+    console.log(`[GatewayStore] Setting QR scanning flag to: ${isScanning}`);
+    set({ isQrScanning: isScanning });
+  },
+
+  checkAndClearQrScanningFlag: () => {
+    const { isQrScanning } = get();
+    if (isQrScanning) {
+      console.log('[GatewayStore] QR scanning flag was true, clearing it');
+      set({ isQrScanning: false });
+      return true;
+    }
+    return false;
+  },
+
   // Reset store state
   reset: () => {
     set({
@@ -659,6 +734,7 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
       connectionStatuses: {},
       connectionLatencies: {},
       currentGateway: null,
+      isQrScanning: false,
     });
   },
 }));

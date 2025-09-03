@@ -14,12 +14,11 @@ import { Text } from '~/components/ui/text';
 import { Button, ButtonText } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Radio, RadioGroup, RadioIcon, RadioIndicator, RadioLabel } from '~/components/ui/radio';
-import { Card } from '~/components/ui/card';
 import { ScrollView } from '~/components/ui/scroll-view';
 import { X, CircleIcon, CircleX, MoveRight } from 'lucide-react-native';
-import MushroomIcon from '~/components/icons/MushroomIcon';
 import { BulkGrow } from '~/lib/types/growTypes';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 interface IoTLinkingModalProps {
   isVisible: boolean;
@@ -107,7 +106,7 @@ export function IoTLinkingModal({
       <ModalContent className="max-h-[80%]">
         <ModalHeader>
           <HStack className="items-center" space="sm">
-            <MushroomIcon height={20} width={20} color={mushroomColor} strokeWidth={2} />
+            <MaterialCommunityIcons name="mushroom-outline" size={20} width={20} color={mushroomColor} />
             <Text className="font-bold text-typography-600" size="lg">
               {mode === 'bulk' ? 'Bulk Link IoT Controls' : 'Link IoT Control'}
             </Text>

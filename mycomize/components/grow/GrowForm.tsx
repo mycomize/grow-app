@@ -21,10 +21,10 @@ import {
   CircuitBoard,
   Trash2,
 } from 'lucide-react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import MushroomIcon from '~/components/icons/MushroomIcon';
+import { useRouter } from 'expo-router';
 import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { AuthContext } from '~/lib/api/AuthContext';
 import {
@@ -257,7 +257,7 @@ export function GrowForm({ growId, saveButtonText = 'Save' }: GrowFormProps) {
                   {({ isExpanded }: { isExpanded: boolean }) => (
                     <HStack className="flex-1 items-center justify-between">
                       <HStack className="items-center" space="md">
-                        <MushroomIcon height={20} width={20} color="#828282" strokeWidth={2} />
+                        <MaterialCommunityIcons name="mushroom-outline" size={21} color="#828282" />
                         <Text className="text-lg font-semibold">Stages</Text>
                       </HStack>
                       <Icon
