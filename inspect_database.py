@@ -95,14 +95,53 @@ def analyze_encryption_status(row: sqlite3.Row) -> Dict[str, str]:
 def list_users(conn: sqlite3.Connection) -> None:
     """List all users in the database."""
     cursor = conn.cursor()
-    cursor.execute("SELECT id, username, is_active, created_at FROM users ORDER BY id;")
+    cursor.execute("SELECT id, username, is_active, created_at, profile_image FROM users ORDER BY id;")
     
     print("\n=== USERS ===")
-    print(f"{'ID':<5} {'Username':<20} {'Active':<8} {'Created':<20}")
-    print("-" * 60)
+    print(f"{'ID':<5} {'Username':<20} {'Active':<8} {'Created':<20} {'Profile Image':<15}")
+    print("-" * 80)
     
     for row in cursor.fetchall():
-        print(f"{row[0]:<5} {row[1]:<20} {row[2]:<8} {row[3]:<20}")
+        profile_status = "[ENCRYPTED]" if row[4] and is_likely_encrypted(row[4]) else "[CLEARTEXT]" if row[4] else "[NULL]"
+        print(f"{row[0]:<5} {row[1]:<20} {row[2]:<8} {row[3]:<20} {profile_status:<15}")
+
+def inspect_user_profile(conn: sqlite3.Connection, user_id: int = None) -> None:
+    """Inspect user profile data specifically."""
+    print("\n=== USER PROFILE INSPECTION ===")
+    
+    cursor = conn.cursor()
+    if user_id:
+        cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+        users = [cursor.fetchone()]
+    else:
+        cursor.execute("SELECT * FROM users ORDER BY id;")
+        users = cursor.fetchall()
+    
+    if not users or (len(users) == 1 and users[0] is None):
+        print("No users found.")
+        return
+    
+    for user in users:
+        if user is None:
+            continue
+            
+        print(f"\n** User {user['id']} (@{user['username']}) **")
+        analysis = analyze_encryption_status(user)
+        
+        # Show profile image status specifically
+        if user['profile_image']:
+            profile_status = analysis.get('profile_image', '[UNKNOWN]')
+            print(f"  Profile Image Status: {profile_status}")
+            print(f"  Profile Image Length: {len(user['profile_image'])} characters")
+            print(f"  Profile Image Preview: {format_field_value(user['profile_image'], 50)}")
+        else:
+            print(f"  Profile Image: [NULL]")
+        
+        # Show other user fields
+        print(f"  Username: {user['username']} (unencrypted)")
+        print(f"  Active: {user['is_active']}")
+        print(f"  Created: {user['created_at']}")
+        print(f"  Updated: {user['updated_at']}")
 
 def get_system_fields() -> List[str]:
     """Get list of fields that should be system fields (not encrypted).
@@ -538,6 +577,7 @@ def main():
     parser = argparse.ArgumentParser(description="Inspect Mycomize SQLite database for encryption verification")
     parser.add_argument("--db", default="./backend/data/mycomize.db", help="Path to SQLite database file")
     parser.add_argument("--list-users", action="store_true", help="List all users")
+    parser.add_argument("--user-profile", type=int, nargs='?', const=0, help="Inspect user profile data (all users if no ID given)")
     parser.add_argument("--user", type=int, help="Inspect data for specific user ID")
     parser.add_argument("--table", help="Show raw data from specific table")
     parser.add_argument("--limit", type=int, default=10, help="Limit number of rows to show")
@@ -559,6 +599,12 @@ def main():
         
         elif args.list_users:
             list_users(conn)
+        
+        elif args.user_profile is not None:
+            if args.user_profile == 0:
+                inspect_user_profile(conn)  # All users
+            else:
+                inspect_user_profile(conn, args.user_profile)  # Specific user
         
         elif args.user:
             inspect_user_data(conn, args.user)
