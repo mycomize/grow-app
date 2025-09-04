@@ -101,15 +101,9 @@ export const FlushModal: React.FC<FlushModalProps> = ({ isOpen, onClose, onSave,
       id: flush?.id || Date.now(),
       bulk_grow_id: flush?.bulk_grow_id || 0, // This will be set by the parent component
       harvest_date: formData.harvest_date?.toISOString().split('T')[0],
-      wet_yield_grams: formData.wet_yield_grams.trim()
-        ? parseFloat(formData.wet_yield_grams.trim())
-        : undefined,
-      dry_yield_grams: formData.dry_yield_grams.trim()
-        ? parseFloat(formData.dry_yield_grams.trim())
-        : undefined,
-      concentration_mg_per_gram: formData.concentration_mg_per_gram.trim()
-        ? parseFloat(formData.concentration_mg_per_gram.trim())
-        : undefined,
+      wet_yield_grams: formData.wet_yield_grams.trim() || undefined,
+      dry_yield_grams: formData.dry_yield_grams.trim() || undefined,
+      concentration_mg_per_gram: formData.concentration_mg_per_gram.trim() || undefined,
     };
 
     onSave(flushData);

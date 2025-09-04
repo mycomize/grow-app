@@ -1,6 +1,6 @@
 // Import shared tek structures for reuse between teks and grows
 import type { BulkStageData } from './tekTypes';
-import type { IoTEntity } from './iot';
+import type { IoTEntity } from '../iot/iot';
 
 // Stage structure specific to bulk grows and bulk grow teks
 // This matches the same structure used in bulk grow teks
@@ -22,13 +22,14 @@ export interface IoTGateway {
 }
 
 // Bulk Grow Flush interface - matches backend BulkGrowFlush model
+// All user data fields are strings to support encryption
 export interface BulkGrowFlush {
   id: number;
   bulk_grow_id: number;
   harvest_date?: string;
-  wet_yield_grams?: number;
-  dry_yield_grams?: number;
-  concentration_mg_per_gram?: number;
+  wet_yield_grams?: string;
+  dry_yield_grams?: string;
+  concentration_mg_per_gram?: string;
 }
 
 // Base Bulk Grow interface - matches backend BulkGrow model exactly
@@ -49,6 +50,7 @@ export interface BulkGrow {
   full_spawn_colonization_date?: string;
   full_bulk_colonization_date?: string;
   fruiting_pin_date?: string;
+  harvest_completion_date?: string;
   s2b_ratio?: string;
 
   // Stage statuses - matches backend exactly
@@ -104,6 +106,7 @@ export interface BulkGrowCreate {
   full_spawn_colonization_date?: string;
   full_bulk_colonization_date?: string;
   fruiting_pin_date?: string;
+  harvest_completion_date?: string;
   s2b_ratio?: string;
   current_stage?: string;
   status?: string;
@@ -129,6 +132,7 @@ export interface BulkGrowUpdate {
   full_spawn_colonization_date?: string;
   full_bulk_colonization_date?: string;
   fruiting_pin_date?: string;
+  harvest_completion_date?: string;
   s2b_ratio?: string;
   current_stage?: string;
   status?: string;

@@ -7,23 +7,29 @@ import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import {
   Plus,
-  Edit2,
+  SquarePen,
   Trash2,
   ShoppingBasket,
-  Copy,
   CalendarDays,
   Weight,
 } from 'lucide-react-native';
 import { FlushModal } from '~/components/modals/FlushModal';
 import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
 import { BulkGrowFlush } from '~/lib/types/growTypes';
+import { 
+  useCurrentGrowFlushes, 
+  useAddFlush, 
+  useUpdateFlush, 
+  useRemoveFlush,
+  useGrowStore
+} from '~/lib/stores/growStore';
 
-interface FlushListProps {
-  flushes: BulkGrowFlush[];
-  onUpdateFlushes: (flushes: BulkGrowFlush[]) => void;
-}
-
-export const FlushList: React.FC<FlushListProps> = ({ flushes, onUpdateFlushes }) => {
+export const FlushList: React.FC = () => {
+  // Get flushes and actions directly from Zustand store
+  const flushes = useCurrentGrowFlushes();
+  const addFlush = useAddFlush();
+  const updateFlush = useUpdateFlush();
+  const removeFlush = useRemoveFlush();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFlush, setEditingFlush] = useState<BulkGrowFlush | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -46,29 +52,27 @@ export const FlushList: React.FC<FlushListProps> = ({ flushes, onUpdateFlushes }
 
   const handleSaveFlush = (flush: BulkGrowFlush) => {
     if (editingFlush) {
-      // Update existing flush
-      const updatedFlushes = flushes.map((f) => (f.id === flush.id ? flush : f));
-      onUpdateFlushes(updatedFlushes);
+      // Update existing flush using store action
+      updateFlush(flush.id.toString(), flush);
     } else {
-      // Add new flush
-      onUpdateFlushes([...flushes, flush]);
+      // For new flush, directly modify the store state to add the flush with data
+      useGrowStore.getState().updateCurrentGrowField('flushes', [
+        ...flushes,
+        {
+          ...flush,
+          id: Date.now(), // Generate unique ID
+          bulk_grow_id: 0, // Will be set when saving to backend
+        }
+      ]);
     }
   };
 
-  const handleCopyFlush = (flush: BulkGrowFlush) => {
-    const newFlush: BulkGrowFlush = {
-      ...flush,
-      id: Date.now(), // Generate a new ID
-      harvest_date: undefined, // Reset date for copy
-    };
-    onUpdateFlushes([...flushes, newFlush]);
-  };
 
   const handleConfirmDelete = () => {
     if (flushToDelete) {
-      const updatedFlushes = flushes.filter((f) => f.id !== flushToDelete.id);
-      onUpdateFlushes(updatedFlushes);
+      removeFlush(flushToDelete.id.toString());
       setFlushToDelete(null);
+      setIsDeleteModalOpen(false);
     }
   };
 
@@ -124,7 +128,7 @@ export const FlushList: React.FC<FlushListProps> = ({ flushes, onUpdateFlushes }
                   <HStack className="items-center" space="xs">
                     <Icon as={Weight} className="text-typography-500" size="sm" />
                     <Text className="text-sm text-typography-600">
-                      Wet: {flush.wet_yield_grams || 0}g, Dry: {flush.dry_yield_grams || 0}g
+                      Wet: {flush.wet_yield_grams || '0'}g, Dry: {flush.dry_yield_grams || '0'}g
                     </Text>
                   </HStack>
 
@@ -136,11 +140,8 @@ export const FlushList: React.FC<FlushListProps> = ({ flushes, onUpdateFlushes }
                 </VStack>
 
                 <HStack space="lg">
-                  <Pressable onPress={() => handleCopyFlush(flush)} className="rounded p-2">
-                    <Icon as={Copy} className="text-typography-500" size="sm" />
-                  </Pressable>
                   <Pressable onPress={() => handleEditFlush(flush)} className="rounded p-2">
-                    <Icon as={Edit2} className="text-typography-500" size="sm" />
+                    <Icon as={SquarePen} className="text-typography-500" size="sm" />
                   </Pressable>
                   <Pressable onPress={() => handleDeleteFlush(flush)} className="rounded p-2">
                     <Icon as={Trash2} className="text-typography-500" size="sm" />
@@ -150,29 +151,6 @@ export const FlushList: React.FC<FlushListProps> = ({ flushes, onUpdateFlushes }
             </VStack>
           ))}
 
-          {/* Total Summary */}
-          {flushes.length > 0 && (
-            <VStack className="mt-4 gap-2 rounded-md border border-success-200 bg-success-50 p-4">
-              <HStack className="justify-between">
-                <Text className="font-bold text-success-800">Total Wet Yield:</Text>
-                <Text className="text-success-800">
-                  {flushes
-                    .reduce((sum, flush) => sum + (flush.wet_yield_grams || 0), 0)
-                    .toFixed(2)}
-                  g
-                </Text>
-              </HStack>
-              <HStack className="justify-between">
-                <Text className="font-bold text-success-800">Total Dry Yield:</Text>
-                <Text className="text-success-800">
-                  {flushes
-                    .reduce((sum, flush) => sum + (flush.dry_yield_grams || 0), 0)
-                    .toFixed(2)}
-                  g
-                </Text>
-              </HStack>
-            </VStack>
-          )}
         </VStack>
       )}
 

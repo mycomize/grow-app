@@ -50,12 +50,17 @@ async def create_grow(
 
         inoculation_date=grow.inoculation_date,
         inoculation_status=grow.inoculation_status,
+        spawn_start_date=grow.spawn_start_date,
         spawn_colonization_status=grow.spawn_colonization_status,
+        bulk_start_date=grow.bulk_start_date,
         bulk_colonization_status=grow.bulk_colonization_status,
+        fruiting_start_date=grow.fruiting_start_date,
+        fruiting_status=grow.fruiting_status,
         full_spawn_colonization_date=grow.full_spawn_colonization_date,
         full_bulk_colonization_date=grow.full_bulk_colonization_date,
         fruiting_pin_date=grow.fruiting_pin_date,
-        fruiting_status=grow.fruiting_status,
+        harvest_completion_date=grow.harvest_completion_date,
+        s2b_ratio=grow.s2b_ratio,
 
         current_stage=grow.current_stage,
         status=grow.status,

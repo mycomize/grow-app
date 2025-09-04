@@ -341,6 +341,10 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
 
     // Special handling for finishing harvest stage
     if (currentStageIndex === stages.length - 1) {
+      // Set harvest completion date if not already set
+      if (!growData.harvest_completion_date) {
+        updateField('harvest_completion_date', today);
+      }
       updateField('status', 'completed');
       updateField('current_stage', 'completed');
       return;
@@ -353,12 +357,27 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
 
     // Special handling for inoculation -> spawn colonization
     if (currentStageIndex === -1 || currentStageIndex === 0) {
-      updateField('inoculation_date', today);
-      updateField('spawn_start_date', today);
+      // Only set inoculation date if not already set
+      if (!growData.inoculation_date) {
+        updateField('inoculation_date', today);
+      }
+      // Only set spawn start date if not already set (but sync with inoculation date if that exists)
+      if (!growData.spawn_start_date) {
+        updateField('spawn_start_date', growData.inoculation_date || today);
+      }
       updateField('current_stage', 'spawn_colonization');
     } else if (nextStage.dateField) {
-      updateField(nextStage.dateField, today);
-      updateField('current_stage', nextStage.id);
+      // Skip auto-setting dates for bulk colonization and fruiting - user should set manually
+      if (nextStage.id === 'bulk_colonization' || nextStage.id === 'fruiting') {
+        updateField('current_stage', nextStage.id);
+      } else {
+        // Only set the next stage date if not already set for other stages
+        const currentDateValue = growData[nextStage.dateField];
+        if (!currentDateValue) {
+          updateField(nextStage.dateField, today);
+        }
+        updateField('current_stage', nextStage.id);
+      }
     } else {
       // Handle harvest stage which has no dateField
       updateField('current_stage', nextStage.id);
@@ -604,11 +623,12 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
                           )}
                           {stage.id === 'harvest' && (
                             <HarvestSection
-                              flushes={flushes}
-                              onUpdateFlushes={(updatedFlushes) => {
-                                // Update the flushes directly via the updateField function
-                                updateField('flushes', updatedFlushes);
-                              }}
+                              growData={growData}
+                              updateField={updateField}
+                              activeDatePicker={activeDatePicker}
+                              setActiveDatePicker={setActiveDatePicker}
+                              handleDateChange={handleDateChange}
+                              parseDate={parseDate}
                               status={status}
                               currentStageIndex={currentStageIndex}
                               stageIndex={index}
@@ -629,6 +649,100 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
             </VStack>
           );
         })}
+      </VStack>
+
+      {/* Totals Section */}
+      <VStack space="md" className="border-t border-background-200 pt-6 pb-3">
+        <Text className="text-lg font-semibold text-typography-700">Grow Totals</Text>
+        
+        <VStack space="sm" className="ml-3">
+          {/* Total Cost */}
+          <HStack className="items-center justify-between">
+            <Text className="text-typography-700">Cost</Text>
+            <InfoBadge
+              text={`$${(() => {
+                if (!growData.stages) return '0.00';
+                let totalCost = 0;
+                Object.values(growData.stages).forEach((stage: any) => {
+                  if (stage?.items) {
+                    stage.items.forEach((item: any) => {
+                      totalCost += parseFloat(item.cost || '0') || 0;
+                    });
+                  }
+                });
+                return totalCost.toFixed(2);
+              })()}`}
+              variant="default"
+              size="md"
+            />
+          </HStack>
+
+          {/* Duration */}
+          <HStack className="items-center justify-between">
+            <Text className="text-typography-700">Duration</Text>
+            <InfoBadge
+              text={`${(() => {
+                if (!growData.inoculation_date) return '0 days';
+                
+                const inoculationDate = parseDate(growData.inoculation_date);
+                if (!inoculationDate) return '0 days';
+                
+                // Use completion date for completed grows, otherwise use today
+                let endDate = new Date();
+                if (growData.status === 'completed' || growData.current_stage === 'completed') {
+                  if (growData.harvest_completion_date) {
+                    endDate = parseDate(growData.harvest_completion_date) || new Date();
+                  } else {
+                    // Fall back to most recent flush date if no completion date
+                    const flushDates = flushes
+                      ?.map(flush => flush.harvest_date)
+                      .filter(Boolean)
+                      .map(date => new Date(date!))
+                      .sort((a, b) => b.getTime() - a.getTime());
+                    
+                    if (flushDates && flushDates.length > 0) {
+                      endDate = flushDates[0];
+                    }
+                  }
+                }
+                
+                const diffTime = Math.abs(endDate.getTime() - inoculationDate.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                return `${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+              })()}`}
+              variant="default"
+              size="md"
+            />
+          </HStack>
+
+          {/* Dry Yield */}
+          <HStack className="items-center justify-between">
+            <Text className="text-typography-700">Dry Yield</Text>
+            <InfoBadge
+              text={`${(() => {
+                const totalDry = flushes?.reduce((sum, flush) => 
+                  sum + (parseFloat(flush.dry_yield_grams || '0') || 0), 0) || 0;
+                return `${totalDry.toFixed(2)}g`;
+              })()}`}
+              variant="default"
+              size="md"
+            />
+          </HStack>
+
+          {/* Wet Yield */}
+          <HStack className="items-center justify-between">
+            <Text className="text-typography-700">Wet Yield</Text>
+            <InfoBadge
+              text={`${(() => {
+                const totalWet = flushes?.reduce((sum, flush) => 
+                  sum + (parseFloat(flush.wet_yield_grams || '0') || 0), 0) || 0;
+                return `${totalWet.toFixed(2)}g`;
+              })()}`}
+              variant="default"
+              size="md"
+            />
+          </HStack>
+        </VStack>
       </VStack>
     </VStack>
   );

@@ -3,20 +3,25 @@ import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Button, ButtonText } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
-import { ArrowDownToDot } from 'lucide-react-native';
+import { Input, InputField, InputSlot } from '~/components/ui/input';
+import { FormControl, FormControlLabel, FormControlLabelText } from '~/components/ui/form-control';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { ArrowDownToDot, CalendarDays, X } from 'lucide-react-native';
 
 // Import grow components
 import { FlushList } from '../FlushList';
 
 // Import tek types
-import { BulkGrowFlush } from '~/lib/types/growTypes';
 import { StageTabs } from '~/components/ui/stage-tabs';
 import { StageIoTData } from '~/lib/types/iotTypes';
 
 interface HarvestSectionProps {
-  flushes: BulkGrowFlush[];
-  onUpdateFlushes: (flushes: BulkGrowFlush[]) => void;
   growData?: any; // Grow data for calendar integration
+  updateField?: (field: string, value: any) => void;
+  activeDatePicker?: string | null;
+  setActiveDatePicker?: (field: string | null) => void;
+  handleDateChange?: (field: string, date?: Date, event?: any) => void;
+  parseDate?: (dateString?: string) => Date | null;
 
   // Tek stage data (if available from tek)
   stageData?: any;
@@ -36,9 +41,12 @@ interface HarvestSectionProps {
 }
 
 export const HarvestSection: React.FC<HarvestSectionProps> = ({
-  flushes,
-  onUpdateFlushes,
   growData,
+  updateField,
+  activeDatePicker,
+  setActiveDatePicker,
+  handleDateChange,
+  parseDate,
   stageData,
   onUpdateBulkStageData,
   status,
@@ -60,9 +68,43 @@ export const HarvestSection: React.FC<HarvestSectionProps> = ({
         stageIoTData={stageIoTData}
       />
 
-      {/* Harvest Flushes */}
-      <VStack space="lg" className="mt-1 border-t border-background-200 pt-4">
-        <FlushList flushes={flushes} onUpdateFlushes={onUpdateFlushes} />
+        {/* Harvest-specific fields */}
+        <VStack space="lg" className="mt-1 border-t border-background-200 pt-4">
+          {/* Harvest Flushes */}
+          <FlushList />
+
+          {/* Harvest Completion Date (after flushes) */}
+          {updateField && setActiveDatePicker && handleDateChange && parseDate && (
+            <FormControl>
+              <FormControlLabel>
+                <FormControlLabelText className="text-typography-600">
+                  Harvest Completion Date
+                </FormControlLabelText>
+              </FormControlLabel>
+              <Input isReadOnly>
+                <InputField
+                  value={parseDate(growData?.harvest_completion_date)?.toDateString() || 'Select date'}
+                  className={!growData?.harvest_completion_date ? 'text-typography-400' : ''}
+                />
+                {growData?.harvest_completion_date ? (
+                  <InputSlot onPress={() => updateField('harvest_completion_date', null)}>
+                    <Icon as={X} className="mr-3 text-typography-400" />
+                  </InputSlot>
+                ) : (
+                  <InputSlot onPress={() => setActiveDatePicker('harvest_completion_date')}>
+                    <Icon as={CalendarDays} className="mr-3 text-typography-400" />
+                  </InputSlot>
+                )}
+              </Input>
+              {activeDatePicker === 'harvest_completion_date' && (
+                <DateTimePicker
+                  value={parseDate(growData?.harvest_completion_date) || new Date()}
+                  mode="date"
+                  onChange={(event, date) => handleDateChange('harvest_completion_date', date, event)}
+                />
+              )}
+            </FormControl>
+          )}
 
         {/* Complete button */}
         {showCompleteButton && (

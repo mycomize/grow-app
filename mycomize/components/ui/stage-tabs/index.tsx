@@ -116,7 +116,7 @@ export const StageTabs: React.FC<StageTabsProps> = ({
       </HStack>
 
       {/* Tab Content */}
-      <VStack space="md">
+      <VStack space="md" className="mb-1">
         {activeTab === 'items' && (
           <ItemsList items={currentBulkStageData.items} onUpdateItems={handleUpdateItems} />
         )}

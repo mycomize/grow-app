@@ -15,7 +15,7 @@ import {
   Disc2,
   Clock,
   DollarSign,
-  Scale,
+  Weight,
   SquarePen,
   Trash2,
   Layers,
@@ -26,8 +26,7 @@ import {
 } from 'lucide-react-native';
 import { BulkGrowComplete, bulkGrowStatuses } from '~/lib/types/growTypes';
 import { InfoBadge } from '~/components/ui/info-badge';
-//import { useGrowGateways } from '~/lib/iot-gateway/useGrowGateways';
-//import { getConnectionBadgeProps } from '~/lib/iot-gateway/connectionUtils';
+import { useGrowDuration, useGrowTotalDryYield } from '~/lib/stores/growStore';
 
 interface GrowCardProps {
   grow: BulkGrowComplete;
@@ -38,6 +37,10 @@ interface GrowCardProps {
 export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }) => {
   const router = useRouter();
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+
+  // Use efficient selectors for duration and dry yield calculations
+  const growAge = useGrowDuration(grow);
+  const totalDryYield = useGrowTotalDryYield(grow);
 
   // Memoize IoT entities to prevent infinite re-renders
   const iotEntities = useMemo(() => grow.iot_entities || [], [grow.iot_entities]);
@@ -62,17 +65,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
     { id: 'harvest', name: 'Harvest', dateField: 'flushes' },
   ];
 
-  // Calculate age from inoculation date
-  const calculateAge = () => {
-    if (!grow.inoculation_date) return 0;
-    const inoculationDate = new Date(grow.inoculation_date);
-    const today = new Date();
-    const diffTime = Math.abs(today.getTime() - inoculationDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  const growAge = calculateAge();
+  // Duration is now calculated by the efficient selector
 
   // Determine current stage index
   const getCurrentStageIndex = () => {
@@ -130,17 +123,6 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
     });
   };
 
-  // Calculate total yields
-  const calculateTotalYields = () => {
-    const totalWetYield =
-      grow.flushes?.reduce((sum, flush) => sum + (flush.wet_yield_grams || 0), 0) || 0;
-    const totalDryYield =
-      grow.flushes?.reduce((sum, flush) => sum + (flush.dry_yield_grams || 0), 0) || 0;
-    return { totalWetYield, totalDryYield };
-  };
-
-  const { totalWetYield, totalDryYield } = calculateTotalYields();
-
   // Calculate overall health status based on stage statuses
   const calculateHealthStatus = () => {
     // Get all stage statuses for completed and active stages
@@ -192,6 +174,10 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
 
   // Get health status display info
   const getHealthStatusInfo = () => {
+    if (grow.harvest_completion_date) {
+        return { text: 'Complete', icon: CheckCircle, variant: 'success' as const };
+    }
+
     switch (healthStatus) {
       case 'contaminated':
         return { text: 'Contam', icon: Skull, variant: 'error' as const };
@@ -324,36 +310,58 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
             </HStack>
           </VStack>
 
-          {/* Fourth row: Badge row with total cost, health status, dry yield, and duration */}
-          <HStack className="mb-4 flex-wrap" space="sm">
-            <InfoBadge
-              text={healthInfo.text}
-              icon={healthInfo.icon}
-              variant={healthInfo.variant}
-              size="md"
-            />
-            {totalDryYield > 0 && (
+            <HStack className="mb-2">
+              <Text className="text-typography-600">Status: </Text>
+              <HStack className="ml-auto">
+                <InfoBadge
+                  text={healthInfo.text}
+                  icon={healthInfo.icon}
+                  variant={healthInfo.variant}
+                  size="md"
+                />
+              </HStack>
+            </HStack>
+            
+          
+          {grow.inoculation_date &&
+            <HStack className="mb-2">
+              <Text className="text-typography-600">Inoculation Date: </Text>
+              <Text className="text-typography-500 italic">{grow.inoculation_date}</Text>
+              <HStack className="ml-auto">
               <InfoBadge
-                text={`${totalDryYield.toFixed(1)}g`}
-                icon={Scale}
+                text={growAge === 1 ? `${growAge} day` : `${growAge} days`}
+                icon={Clock}
                 variant="default"
                 size="md"
               />
-            )}
-            <InfoBadge
-              text={`${grow.total_cost?.toFixed(2) || '0.00'}`}
-              icon={DollarSign}
-              variant="default"
-              size="md"
-            />
-            <InfoBadge
-              text={growAge === 1 ? `${growAge} day` : `${growAge} days`}
-              icon={Clock}
-              variant="default"
-              size="md"
-            />
-          </HStack>
-
+              </HStack>
+            </HStack>
+          }
+          
+            <HStack className="mb-2">
+              <Text className="text-typography-600">Cost: </Text>
+              <HStack className="ml-auto">
+                <InfoBadge
+                  text={`${grow.total_cost?.toFixed(2) || '0.00'}`}
+                  icon={DollarSign}
+                  variant="default"
+                  size="md"
+                />
+              </HStack>
+            </HStack>
+            
+            <HStack className="mb-2">
+              <Text className="text-typography-600">Yield: </Text>
+              <HStack className="ml-auto">
+                <InfoBadge
+                  text={`${totalDryYield.toFixed(1)}g`}
+                  icon={Weight}
+                  variant="default"
+                  size="md"
+                />
+              </HStack>
+            </HStack>
+            
           {/* Fifth row: IoT Gateways with Connection Status - Only show if there are IoT entities */}
           {iotEntities.length > 0 && (
             <VStack className="mb-4 mt-1" space="xs">
@@ -413,7 +421,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
                     key={index}
                     onPress={() => onTagPress?.(tag)}
                     className="rounded-md px-0 py-0.5">
-                    <Text className="text-md text-blue-500">#{tag}</Text>
+                    <Text className="text-md text-blue-400">#{tag}</Text>
                   </Pressable>
                 ))}
                 {grow.tags.length > 3 && (

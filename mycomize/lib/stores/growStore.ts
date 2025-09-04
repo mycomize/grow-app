@@ -88,6 +88,7 @@ const createEmptyBulkGrow = (): BulkGrowUpdate => ({
   full_spawn_colonization_date: '',
   full_bulk_colonization_date: '',
   fruiting_pin_date: '',
+  harvest_completion_date: '',
   s2b_ratio: '',
   inoculation_status: '',
   spawn_colonization_status: '',
@@ -130,7 +131,7 @@ export const useGrowStore = create<GrowStore>((set, get) => ({
     try {
       set({ loading: true });
 
-      const data: BulkGrowComplete[] = await apiClient.get('/grows/', token, 'BulkGrow', true);
+      const data: BulkGrowComplete[] = await apiClient.getBulkGrowsComplete(token);
 
       set({
         grows: data,
@@ -240,11 +241,18 @@ export const useGrowStore = create<GrowStore>((set, get) => ({
 
       const updatedGrow: BulkGrowComplete = await apiClient.updateBulkGrow(id, apiData, token);
 
-      // Update local state directly from PUT response
+      // Update local state optimistically, preserving flushes since PUT response doesn't include them
       set((state) => ({
-        grows: state.grows.map((grow) =>
-          grow.id.toString() === id ? updatedGrow : grow
-        ),
+        grows: state.grows.map((grow) => {
+          if (grow.id.toString() === id) {
+            // Merge PUT response with preserved flushes from current state and data
+            return {
+              ...updatedGrow,
+              flushes: data.flushes || grow.flushes || [], // Use flushes from update data or keep existing
+            };
+          }
+          return grow;
+        }),
         lastModifiedGrowId: updatedGrow.id,
         lastAction: 'update',
       }));
@@ -365,6 +373,7 @@ export const useGrowStore = create<GrowStore>((set, get) => ({
               full_spawn_colonization_date: grow.full_spawn_colonization_date || '',
               full_bulk_colonization_date: grow.full_bulk_colonization_date || '',
               fruiting_pin_date: grow.fruiting_pin_date || '',
+              harvest_completion_date: grow.harvest_completion_date || '',
               s2b_ratio: grow.s2b_ratio || '',
               inoculation_status: grow.inoculation_status || '',
               spawn_colonization_status: grow.spawn_colonization_status || '',
@@ -533,3 +542,79 @@ export const useFormatDateForAPI = () => useGrowStore((state) => state.formatDat
 export const useAddFlush = () => useGrowStore((state) => state.addFlush);
 export const useUpdateFlush = () => useGrowStore((state) => state.updateFlush);
 export const useRemoveFlush = () => useGrowStore((state) => state.removeFlush);
+
+// Efficient memoized selectors for completion date and duration calculations
+export const useGrowCompletionDate = (grow: BulkGrowComplete) =>
+  useGrowStore(
+    useShallow((state) => {
+      // If grow status is completed, determine completion date in priority order
+      if (grow.status === 'completed' || grow.current_stage === 'completed') {
+        // First priority: harvest completion date if explicitly set
+        if (grow.harvest_completion_date) {
+          return state.parseDate(grow.harvest_completion_date);
+        }
+        
+        // Second priority: most recent flush harvest date
+        const flushDates = grow.flushes
+          ?.map(flush => flush.harvest_date)
+          .filter(Boolean)
+          .map(date => new Date(date!))
+          .sort((a, b) => b.getTime() - a.getTime());
+        
+        if (flushDates && flushDates.length > 0) {
+          return flushDates[0];
+        }
+        
+        // Fallback to fruiting start date if no flush dates
+        if (grow.fruiting_start_date) {
+          return state.parseDate(grow.fruiting_start_date);
+        }
+      }
+      
+      return null;
+    })
+  );
+
+export const useGrowDuration = (grow: BulkGrowComplete) =>
+  useGrowStore(
+    useShallow((state) => {
+      if (!grow.inoculation_date) return 0;
+      
+      const inoculationDate = state.parseDate(grow.inoculation_date);
+      if (!inoculationDate) return 0;
+      
+      // Use completion date for completed grows, otherwise use today
+      let endDate = new Date();
+      if (grow.status === 'completed' || grow.current_stage === 'completed') {
+        // First priority: harvest completion date if explicitly set
+        if (grow.harvest_completion_date) {
+          endDate = state.parseDate(grow.harvest_completion_date) || new Date();
+        } else {
+          // Second priority: most recent flush harvest date
+          const flushDates = grow.flushes
+            ?.map(flush => flush.harvest_date)
+            .filter(Boolean)
+            .map(date => new Date(date!))
+            .sort((a, b) => b.getTime() - a.getTime());
+          
+          if (flushDates && flushDates.length > 0) {
+            endDate = flushDates[0];
+          } else if (grow.fruiting_start_date) {
+            endDate = state.parseDate(grow.fruiting_start_date) || new Date();
+          }
+        }
+      }
+      
+      const diffTime = Math.abs(endDate.getTime() - inoculationDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    })
+  );
+
+// Total dry yield calculation selector
+export const useGrowTotalDryYield = (grow: BulkGrowComplete) =>
+  useGrowStore(
+    useShallow(() => {
+      return grow.flushes?.reduce((sum, flush) => sum + (parseFloat(flush.dry_yield_grams || '0') || 0), 0) || 0;
+    })
+  );

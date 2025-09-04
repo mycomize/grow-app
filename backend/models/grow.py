@@ -57,6 +57,7 @@ class BulkGrow(Base):
     full_spawn_colonization_date = Column(Text, nullable=True)
     full_bulk_colonization_date = Column(Text, nullable=True)
     fruiting_pin_date = Column(Text, nullable=True)
+    harvest_completion_date = Column(Text, nullable=True)
     s2b_ratio = Column(Text, nullable=True)
     current_stage = Column(Text, nullable=True)  # Track current stage in timeline
     status = Column(Text, nullable=True)

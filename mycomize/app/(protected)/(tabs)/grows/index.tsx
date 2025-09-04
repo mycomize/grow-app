@@ -137,15 +137,15 @@ export default function GrowScreen() {
           return costB - costA; // Highest cost first
         case 'wetYield':
           const wetYieldA =
-            a.flushes?.reduce((sum, flush) => sum + (flush.wet_yield_grams || 0), 0) || 0;
+            a.flushes?.reduce((sum, flush) => sum + (parseFloat(flush.wet_yield_grams || '0') || 0), 0) || 0;
           const wetYieldB =
-            b.flushes?.reduce((sum, flush) => sum + (flush.wet_yield_grams || 0), 0) || 0;
+            b.flushes?.reduce((sum, flush) => sum + (parseFloat(flush.wet_yield_grams || '0') || 0), 0) || 0;
           return wetYieldB - wetYieldA; // Highest yield first
         case 'dryYield':
           const dryYieldA =
-            a.flushes?.reduce((sum, flush) => sum + (flush.dry_yield_grams || 0), 0) || 0;
+            a.flushes?.reduce((sum, flush) => sum + (parseFloat(flush.dry_yield_grams || '0') || 0), 0) || 0;
           const dryYieldB =
-            b.flushes?.reduce((sum, flush) => sum + (flush.dry_yield_grams || 0), 0) || 0;
+            b.flushes?.reduce((sum, flush) => sum + (parseFloat(flush.dry_yield_grams || '0') || 0), 0) || 0;
           return dryYieldB - dryYieldA; // Highest yield first
         case 'duration':
           const getDuration = (grow: BulkGrowComplete) => {
@@ -239,8 +239,7 @@ export default function GrowScreen() {
   }
 
   return grows.length == 0 ? (
-    <ScrollView className="m-0 flex-1 bg-background-50">
-      <VStack className="flex-1 items-center justify-center gap-5">
+      <VStack className="flex-1 items-center justify-center gap-5 bg-background-50">
         <MaterialCommunityIcons name="mushroom-outline" size={30} color="#888888" />
         <Text className="text-lg">Add your first grow</Text>
         <Button
@@ -253,7 +252,6 @@ export default function GrowScreen() {
           <ButtonIcon as={PlusIcon} className="h-6 w-6 text-white" />
         </Button>
       </VStack>
-    </ScrollView>
   ) : (
       <>
         <VStack className="items-center h-full gap-2 bg-background-0">

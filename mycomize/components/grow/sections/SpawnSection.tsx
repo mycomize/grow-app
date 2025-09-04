@@ -19,6 +19,7 @@ import {
 } from '~/components/ui/select';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ChevronDown, ArrowDownToDot, CalendarDays, X } from 'lucide-react-native';
+import { useFocusEffect } from 'expo-router';
 
 // Import tek types
 import { BulkGrow } from '~/lib/types/growTypes';
@@ -72,6 +73,15 @@ export const SpawnSection: React.FC<SpawnSectionProps> = ({
   stageIoTData,
 }) => {
   const showCompleteButton = status === 'active';
+
+  // Auto-sync spawn start date with inoculation date when inoculation date is set but spawn start date is not
+  useFocusEffect(
+    React.useCallback(() => {
+      if (growData.inoculation_date && !growData.spawn_start_date) {
+        updateField('spawn_start_date', growData.inoculation_date);
+      }
+    }, [growData.inoculation_date, growData.spawn_start_date, updateField])
+  );
 
   return (
     <VStack space="md" className="bg-background-0 p-1">

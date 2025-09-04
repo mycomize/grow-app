@@ -45,6 +45,7 @@ class BulkGrowBase(BaseModel):
     full_spawn_colonization_date: Optional[str] = None
     full_bulk_colonization_date: Optional[str] = None
     fruiting_pin_date: Optional[str] = None
+    harvest_completion_date: Optional[str] = None
     s2b_ratio: Optional[str] = None
 
     current_stage: Optional[str] = None
@@ -97,6 +98,7 @@ class BulkGrowUpdate(BaseModel):
     full_spawn_colonization_date: Optional[str] = None
     full_bulk_colonization_date: Optional[str] = None
     fruiting_pin_date: Optional[str] = None
+    harvest_completion_date: Optional[str] = None
     s2b_ratio: Optional[str] = None
 
     current_stage: Optional[str] = None
