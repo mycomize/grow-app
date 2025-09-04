@@ -27,6 +27,7 @@ import { formatCount, parseNumberCount } from '~/lib/utils/numberFormatting';
 import { useTekById, useLikeTek, useViewTek, useImportTek } from '~/lib/stores/teksStore';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import AntDesign from '@expo/vector-icons/AntDesign';
+import { useRouter } from 'expo-router';
 
 interface TekCardProps {
   tek: BulkGrowTek;
@@ -56,6 +57,7 @@ export const TekCard: React.FC<TekCardProps> = ({
   const [isImporting, setIsImporting] = useState(false);
 
   const token = useAuthToken();
+  const router = useRouter();
   
   // Get the current tek data from the store (with optimistic updates)
   const currentTek = useTekById(tek.id.toString()) || tek;
@@ -131,6 +133,11 @@ export const TekCard: React.FC<TekCardProps> = ({
     onCopyToNewTek(tek);
   }, [onCopyToNewTek, tek]);
 
+  // Handle view tek - navigate to view screen
+  const handleViewTek = useCallback(() => {
+    router.push(`/teks/${tek.id}/view`);
+  }, [router, tek.id]);
+
 
   // Load cached image for the tek creator
   useEffect(() => {
@@ -204,13 +211,19 @@ export const TekCard: React.FC<TekCardProps> = ({
                 </Text>
               )}
             </VStack>
+            {/* Owner Actions - Only show if user owns this tek */}
+            {tek.is_owner && (
+              <Pressable onPress={handleOwnerActions}>
+                <Icon className="text-typography-300 ml-4" as={EllipsisVertical} size="md" />
+              </Pressable>
+            )}
           </HStack>
 
           {/* Description */}
           <HStack className="mb-2">
             {tek.name && (
               <Text
-                className="text-md ml-0 flex-1 font-semibold text-typography-600"
+                className="text-xl ml-0 flex-1 font-semibold text-typography-600"
                 numberOfLines={1}
                 ellipsizeMode="tail">
                 {tek.name}
@@ -220,21 +233,16 @@ export const TekCard: React.FC<TekCardProps> = ({
               <Icon as={Users} className="text-typography-400" />
             )}
             {!tek.is_public && (
-              <Icon as={Lock} className="mt-1 text-typography-300" size="md" />
+              <Icon as={Lock} className="mt-1 text-typography-400" size="md" />
             )}
           </HStack>
           <HStack className="items-center">
             {tek.description && (
-              <Text className="text-md mb-2 flex-1 text-typography-600" numberOfLines={6}>
+              <Text className="text-md mb-2 flex-1 text-typography-600">
                 {tek.description}
               </Text>
             )}
           </HStack>
-
-          {/* Info badge row */}
-          <VStack className="mb-2" space="md">
-            <HStack space="md">{/* Timeline info removed for now */}</HStack>
-          </VStack>
 
           {/* Tags */}
           {tek.tags && tek.tags.length > 0 && (
@@ -288,22 +296,18 @@ export const TekCard: React.FC<TekCardProps> = ({
               </HStack>
             </Pressable>
 
-            {/* View Count Display */}
-            <HStack className="items-center gap-1">
-              <Icon className="text-typography-300" as={Eye} size="md" />
-              {parseNumberCount(currentTek.view_count) > 0 && (
-                <Text className="text-sm text-typography-300">
-                  {formatCount(parseNumberCount(currentTek.view_count))}
-                </Text>
-              )}
-            </HStack>
+            {/* View Button - Navigate to view screen */}
+            <Pressable onPress={handleViewTek}>
+              <HStack className="items-center gap-1">
+                <Icon className="text-typography-300" as={Eye} size="md" />
+                {parseNumberCount(currentTek.view_count) > 0 && (
+                  <Text className="text-sm text-typography-300">
+                    {formatCount(parseNumberCount(currentTek.view_count))}
+                  </Text>
+                )}
+              </HStack>
+            </Pressable>
 
-            {/* Owner Actions - Only show if user owns this tek */}
-            {tek.is_owner && (
-              <Pressable onPress={handleOwnerActions}>
-                <Icon className="text-typography-300" as={EllipsisVertical} size="md" />
-              </Pressable>
-            )}
           </HStack>
         </View>
       </VStack>

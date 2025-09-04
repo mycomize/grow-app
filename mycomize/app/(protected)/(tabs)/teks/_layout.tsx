@@ -42,6 +42,14 @@ export default function TekLayout() {
           headerLeft: () => <BackButton />,
         }}
       />
+      <Stack.Screen
+        name="[id]/view"
+        options={{
+          title: 'View Tek',
+          headerShown: true,
+          headerLeft: () => <BackButton />,
+        }}
+      />
     </Stack>
   );
 }
