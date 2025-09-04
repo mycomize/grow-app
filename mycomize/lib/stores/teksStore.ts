@@ -43,7 +43,7 @@ interface TeksStore {
   deleteTek: (token: string, id: string) => Promise<boolean>;
 
   // Current tek actions
-  initializeCurrentTek: (tekId?: string, tekToCopy?: string) => Promise<void>;
+  initializeCurrentTek: (tekId?: string, tekToCopy?: string, fromGrow?: string) => Promise<void>;
   updateCurrentTekField: (field: keyof BulkGrowTekData, value: any) => void;
   clearCurrentTek: () => void;
 
@@ -234,7 +234,7 @@ export const useTeksStore = create<TeksStore>((set, get) => {
     },
 
     // Initialize current tek for editing/creating
-    initializeCurrentTek: async (tekId?: string, tekToCopy?: string) => {
+    initializeCurrentTek: async (tekId?: string, tekToCopy?: string, fromGrow?: string) => {
     const { teks } = get();
 
     if (!tekId || tekId === 'new') {
@@ -275,6 +275,49 @@ export const useTeksStore = create<TeksStore>((set, get) => {
           console.error('Error parsing tek data for copying:', error);
           
           // Fall back to empty tek if copying fails
+          set({
+            currentTek: {
+              id: NEW_TEK_ID,
+              formData: createEmptyTekData(),
+            },
+          });
+        }
+      } else if (fromGrow) {
+        // Convert grow to tek
+        try {
+          const parsedGrow = JSON.parse(fromGrow);
+
+          // Create new tek data based on the grow, excluding dates, flushes, location, yield
+          const convertedTekData: BulkGrowTekData = {
+            name: `${parsedGrow.name} Tek`, // Add "Tek" suffix to distinguish
+            description: parsedGrow.description || '',
+            species: parsedGrow.species || '',
+            variant: parsedGrow.variant || '',
+            is_public: false, // Always start as private
+            tags: Array.isArray(parsedGrow.tags) ? [...parsedGrow.tags] : [],
+            stages: parsedGrow.stages
+              ? {
+                  inoculation: deepCopyStageData(parsedGrow.stages.inoculation),
+                  spawn_colonization: deepCopyStageData(parsedGrow.stages.spawn_colonization),
+                  bulk_colonization: deepCopyStageData(parsedGrow.stages.bulk_colonization),
+                  fruiting: deepCopyStageData(parsedGrow.stages.fruiting),
+                  harvest: deepCopyStageData(parsedGrow.stages.harvest),
+                }
+              : createEmptyTekData().stages,
+          };
+
+          set({
+            currentTek: {
+              id: NEW_TEK_ID,
+              formData: convertedTekData,
+            },
+          });
+
+          console.log(`[TeksStore] Successfully converted grow to tek`);
+        } catch (error) {
+          console.error('Error converting grow to tek:', error);
+          
+          // Fall back to empty tek if conversion fails
           set({
             currentTek: {
               id: NEW_TEK_ID,

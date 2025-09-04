@@ -106,20 +106,11 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
     return 'pending';
   };
 
-  // Check if grow is completed and can be turned into a tek
-  const canCreateTek = () => {
-    return (
-      grow.status === 'completed' ||
-      grow.status === bulkGrowStatuses.HARVESTED ||
-      grow.current_stage === 'completed'
-    );
-  };
-
   const handleCreateTek = () => {
     // Navigate to tek creation from grow using router.push with query params
     router.push({
       pathname: '/teks/new',
-      params: { fromGrow: grow.id.toString() },
+      params: { fromGrow: JSON.stringify(grow) },
     });
   };
 
@@ -433,11 +424,9 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
 
           {/* Individual grow controls */}
           <HStack className="mt-2 justify-around" space="md">
-            {canCreateTek() && (
-              <Pressable onPress={handleCreateTek}>
-                <Icon as={Layers} size="md" className="text-typography-300" />
-              </Pressable>
-            )}
+            <Pressable onPress={handleCreateTek}>
+              <Icon as={Layers} size="md" className="text-typography-300" />
+            </Pressable>
             <Pressable
               onPress={() => {
                 router.push({

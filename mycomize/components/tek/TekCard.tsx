@@ -169,7 +169,7 @@ export const TekCard: React.FC<TekCardProps> = ({
           {/* Header with tek name and variant/species */}
           {/* Creator info with avatar */}
           <HStack className="mb-5 items-center" space="sm">
-            <Avatar size="md">
+            <Avatar size="lg">
               {cachedImage || tek.creator_profile_image ? (
                 <AvatarImage source={{ uri: cachedImage || tek.creator_profile_image }} />
               ) : (
@@ -177,7 +177,7 @@ export const TekCard: React.FC<TekCardProps> = ({
               )}
             </Avatar>
             <Text
-              className="flex-1 text-lg font-bold text-typography-700"
+              className="flex-1 text-lg font-bold text-typography-700 ml-2"
               numberOfLines={1}
               ellipsizeMode="tail">
               @{tek.creator_name}
