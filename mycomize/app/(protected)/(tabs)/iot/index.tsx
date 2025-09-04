@@ -1,4 +1,4 @@
-import React, { useState, useContext, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { Button, ButtonIcon, ButtonText } from '~/components/ui/button';
 import { Text } from '~/components/ui/text';
@@ -40,7 +40,7 @@ import { Pressable } from '~/components/ui/pressable';
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
 
-import { AuthContext } from '~/lib/api/AuthContext';
+import { useAuthToken } from '~/lib/stores/authEncryptionStore';
 import { IoTGateway, gatewayTypeLabels } from '~/lib/iot/iot';
 import { IoTGatewayCardSkeleton } from '~/components/iot/IoTGatewayCardSkeleton';
 import { ConnectionStatus } from '~/components/ui/connection-status-badge';
@@ -199,7 +199,7 @@ const IoTGatewayCard: React.FC<IoTGatewayCardProps> = ({
 };
 
 export default function IoTScreen() {
-  const { token } = useContext(AuthContext);
+  const token = useAuthToken();
   const router = useRouter();
 
   // Zustand store hooks

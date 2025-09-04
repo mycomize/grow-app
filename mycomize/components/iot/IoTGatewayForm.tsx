@@ -1,4 +1,4 @@
-import { useState, useContext, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { ScrollView } from '~/components/ui/scroll-view';
@@ -20,7 +20,7 @@ import { Save, ChevronDown, ChevronRight, FileText, ServerCog, Trash2 } from 'lu
 import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
 import { useGatewayStore, useCurrentGateway } from '~/lib/stores/iot/gatewayStore';
 import { useEntityStore } from '~/lib/stores/iot/entityStore';
-import { AuthContext } from '~/lib/api/AuthContext';
+import { useAuthToken } from '~/lib/stores/authEncryptionStore';
 
 // Import modular sections
 import { BasicsSection } from '~/components/iot/sections/BasicsSection';
@@ -33,7 +33,7 @@ interface IoTGatewayFormProps {
 }
 
 export function IoTGatewayForm({ gatewayId, saveButtonText = 'Save' }: IoTGatewayFormProps) {
-  const { token } = useContext(AuthContext);
+  const token = useAuthToken();
   const router = useRouter();
   const currentGateway = useCurrentGateway();
 

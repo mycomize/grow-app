@@ -3,11 +3,9 @@ import { useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { TekForm } from '~/components/tek/TekForm';
 import { useInitializeCurrentTek } from '~/lib/stores';
-import { AuthContext } from '~/lib/api/AuthContext';
 
 export default function NewTekScreen() {
   const { tekToCopy, fromGrow } = useLocalSearchParams<{ tekToCopy?: string; fromGrow?: string }>();
-  const { token } = useContext(AuthContext);
   const initializeCurrentTek = useInitializeCurrentTek();
 
   useFocusEffect(

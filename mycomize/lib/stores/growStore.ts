@@ -139,7 +139,6 @@ export const useGrowStore = create<GrowStore>((set, get) => ({
         hasInitiallyLoaded: true,
       });
     } catch (error) {
-      console.error('Error fetching grows:', error);
       set({ loading: false });
       handleUnauthorizedError(error as Error);
       throw error;

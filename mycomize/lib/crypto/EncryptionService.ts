@@ -111,8 +111,10 @@ export class EncryptionService {
    */
   async loadMasterKey(userId: string): Promise<boolean> {
     try {
+      console.log(`[EncryptionService] Loading master key for user: ${userId}`);
       const encryptedKeyData = await SecureStore.getItemAsync(this.getMasterKeyStorageKey(userId));
       if (!encryptedKeyData) {
+        console.log(`[EncryptionService] No master key found for user: ${userId}`);
         return false;
       }
 
@@ -123,9 +125,10 @@ export class EncryptionService {
 
       this.currentUserId = userId;
       this.isReady = true;
+      console.log(`[EncryptionService] Master key loaded successfully for user: ${userId}`);
       return true;
     } catch (error) {
-      console.error('Failed to load master key:', error);
+      console.error(`[EncryptionService] Failed to load master key for user ${userId}:`, error);
       return false;
     }
   }
@@ -136,6 +139,7 @@ export class EncryptionService {
   async testEncryption(): Promise<boolean> {
     try {
       if (!this.isReady || !this.masterKey || !this.currentUserId) {
+        console.log(`[EncryptionService] Encryption test failed - not ready or missing data`);
         return false;
       }
 
@@ -144,13 +148,16 @@ export class EncryptionService {
         this.getEncryptionTestKey(this.currentUserId)
       );
       if (!testCiphertext) {
+        console.log(`[EncryptionService] No test ciphertext found for user: ${this.currentUserId}`);
         return false;
       }
 
       const decrypted = await this.decryptWithKey(testCiphertext, this.masterKey);
-      return decrypted.startsWith('encryption_test_');
+      const isValid = decrypted.startsWith('encryption_test_');
+      console.log(`[EncryptionService] Encryption test ${isValid ? 'passed' : 'failed'} for user: ${this.currentUserId}`);
+      return isValid;
     } catch (error) {
-      console.error('Encryption test failed:', error);
+      console.error(`[EncryptionService] Encryption test failed for user ${this.currentUserId}:`, error);
       return false;
     }
   }
@@ -276,6 +283,84 @@ export class EncryptionService {
       console.error('Failed to change encryption password:', error);
       return false;
     }
+  }
+
+  /**
+   * Switch to a different user context for encryption operations
+   */
+  async switchUser(userId: string): Promise<boolean> {
+    try {
+      console.log(`[EncryptionService] Switching user context from ${this.currentUserId} to ${userId}`);
+      
+      // Clear current user context first
+      this.clearUserContext();
+      
+      // Try to load the new user's encryption key
+      const keyLoaded = await this.loadMasterKey(userId);
+      
+      if (keyLoaded) {
+        console.log(`[EncryptionService] Successfully switched to user context: ${userId}`);
+        return true;
+      } else {
+        console.log(`[EncryptionService] Failed to switch to user context ${userId} - no encryption key found`);
+        return false;
+      }
+    } catch (error) {
+      console.error(`[EncryptionService] Error switching to user context ${userId}:`, error);
+      this.clearUserContext();
+      return false;
+    }
+  }
+
+  /**
+   * Get basic encryption status for a specific user (just checks if they have encryption setup)
+   */
+  async getUserEncryptionStatus(userId: string): Promise<{
+    hasEncryptionSetup: boolean;
+  }> {
+    try {
+      console.log(`[EncryptionService] Checking encryption status for user: ${userId}`);
+      
+      // Check if user has master key stored
+      const masterKeyData = await SecureStore.getItemAsync(this.getMasterKeyStorageKey(userId));
+      const hasEncryptionSetup = masterKeyData !== null; 
+
+      const status = { hasEncryptionSetup };
+      console.log(`[EncryptionService] Encryption status for user ${userId}:`, status);
+      return status;
+    } catch (error) {
+      console.error(`[EncryptionService] Error checking encryption status for user ${userId}:`, error);
+      return { hasEncryptionSetup: false };
+    }
+  }
+
+  /**
+   * Clear current user context without affecting stored data
+   */
+  clearUserContext(): void {
+    console.log(`[EncryptionService] Clearing user context for user: ${this.currentUserId}`);
+
+    this.masterKey = null;
+    this.currentUserId = null;
+    this.isReady = false;
+  }
+
+  /**
+   * Get the current user ID
+   */
+  getCurrentUserId(): string | null {
+    return this.currentUserId;
+  }
+
+  /**
+   * Validate that current user ID matches expected user ID for security
+   */
+  validateCurrentUser(expectedUserId: string): boolean {
+    const isValid = this.currentUserId === expectedUserId && this.isReady;
+    if (!isValid) {
+      console.warn(`[EncryptionService] User validation failed. Expected: ${expectedUserId}, Current: ${this.currentUserId}, Ready: ${this.isReady}`);
+    }
+    return isValid;
   }
 
   // Private helper methods

@@ -1,0 +1,541 @@
+import { create } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
+import { router } from 'expo-router';
+import { apiClient } from '~/lib/api/ApiClient';
+import { getEncryptionService } from '~/lib/crypto/EncryptionService';
+import { UserContextManager } from '~/lib/utils/userContextManager';
+import {
+  AuthEncryptionState,
+  AuthEncryptionActions,
+  AuthEncryptionStore,
+  User,
+  AuthResponse,
+  RegisterResponse,
+} from '../types/authEncryptionTypes';
+
+/**
+ * Unified Zustand store for authentication and encryption state management.
+ * This eliminates race conditions by providing a single source of truth.
+ */
+const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
+  // Initial state
+  token: null,
+  currentUser: null,
+  isAuthLoading: false,
+  isEncryptionReady: false,
+  isEncryptionLoading: false,
+  needsEncryptionSetup: false,
+  isInitializing: false,
+
+  // Utility function to extract user ID from JWT token
+  getUserIdFromToken: (token: string): string | null => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.sub || payload.user_id || null;
+    } catch (error) {
+      console.error('Failed to decode token:', error);
+      return null;
+    }
+  },
+
+  // Authentication actions
+  signIn: async (username: string, password: string) => {
+    console.log(`[AuthEncryptionStore] Starting sign in for user: ${username}`);
+    set({ isAuthLoading: true, isInitializing: true });
+
+    try {
+      // Prepare OAuth2 form data
+      const formData = new URLSearchParams();
+      formData.append('username', username);
+      formData.append('password', password);
+      formData.append('grant_type', 'password');
+      formData.append('scope', '');
+      formData.append('client_id', '');
+      formData.append('client_secret', '');
+
+      // Call login API
+      const loginResponse = await apiClient.call({
+        endpoint: '/auth/token',
+        config: {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Accept: 'application/json',
+          },
+          body: formData.toString(),
+        },
+      });
+
+      const token = loginResponse.access_token;
+      
+      // Get user info with the new token
+      const userResponse = await apiClient.call({
+        endpoint: '/auth/me',
+        config: {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        },
+      });
+
+      // Create user object - ensure ID is a string for SecureStore compatibility
+      const user: User = {
+        id: String(userResponse.id),
+        username: userResponse.username,
+        hasEncryptionKey: false, // Will be determined by checkUserEncryptionStatus
+        encryptionInitialized: false,
+      };
+      
+      const userId = user.id;
+
+      // Store auth state
+      set({
+        token,
+        currentUser: user,
+        isAuthLoading: false,
+      });
+
+      // Store user auth data and current user ID
+      await UserContextManager.storeUserAuthState(userId, { token, user: userResponse });
+      await UserContextManager.storeCurrentUserId(userId);
+
+      // Check encryption status for this user (this is the single place this happens)
+      await get().checkUserEncryptionStatus(userId);
+
+      console.log(`[AuthEncryptionStore] Sign in completed successfully for user: ${username}`);
+      set({ isInitializing: false });
+
+      // Navigate to home unless we need encryption setup
+      const state = get();
+      if (state.needsEncryptionSetup) {
+        router.replace('/encryption-setup');
+      } else {
+        router.replace('/');
+      }
+
+      return { success: true };
+
+    } catch (error: any) {
+      console.error('[AuthEncryptionStore] Failed to sign in:', error);
+      set({
+        isAuthLoading: false,
+        isInitializing: false,
+        token: null,
+        currentUser: null,
+      });
+
+      const errorMessage = error.message;
+      if (errorMessage.includes('401') || errorMessage.toLowerCase().includes('unauthorized')) {
+        return { success: false, error: 'Invalid username or password. Please try again.' };
+      }
+      return { success: false, error: 'Network error. Please check your connection and try again.' };
+    }
+  },
+
+  signOut: async () => {
+    console.log('[AuthEncryptionStore] Starting sign out');
+    const { currentUser } = get();
+
+    try {
+      // Clear encryption service state
+      const encryptionService = getEncryptionService();
+      encryptionService.clearKeys();
+
+      // Clear store state
+      set({
+        token: null,
+        currentUser: null,
+        isAuthLoading: false,
+        isEncryptionReady: false,
+        isEncryptionLoading: false,
+        needsEncryptionSetup: false,
+        isInitializing: false,
+      });
+
+      // Clear user context data
+      await UserContextManager.performLogoutCleanup(currentUser?.id);
+
+      // Navigate to login
+      router.replace('/login');
+      console.log('[AuthEncryptionStore] Sign out completed successfully');
+
+    } catch (error) {
+      console.error('[AuthEncryptionStore] Error during sign out:', error);
+      throw error;
+    }
+  },
+
+  register: async (username: string, password: string) => {
+    console.log(`[AuthEncryptionStore] Starting registration for user: ${username}`);
+    set({ isAuthLoading: true });
+
+    try {
+      await apiClient.call({
+        endpoint: '/auth/register',
+        config: {
+          method: 'POST',
+          body: { username, password },
+        },
+      });
+
+      set({ isAuthLoading: false });
+      router.replace('/login');
+      return { success: true };
+
+    } catch (error: any) {
+      console.error('[AuthEncryptionStore] Registration failed:', error);
+      set({ isAuthLoading: false });
+
+      const errorMessage = error.message;
+
+      // Handle specific error cases
+      if (
+        errorMessage.includes('already registered') ||
+        errorMessage.includes('Username already registered')
+      ) {
+        return { success: false, error: 'This username is already taken. Please choose another one.' };
+      }
+
+      if (
+        errorMessage.includes('Password must be at least') ||
+        errorMessage.includes('Username must be at least') ||
+        errorMessage.includes('characters long')
+      ) {
+        return { success: false, error: errorMessage };
+      }
+
+      if (errorMessage === 'UNAUTHORIZED') {
+        return { success: false, error: 'Invalid credentials. Please try again.' };
+      }
+
+      if (
+        errorMessage.includes('fetch') ||
+        errorMessage.includes('network') ||
+        errorMessage === 'Request failed'
+      ) {
+        return { success: false, error: 'Network error. Please check your connection and try again.' };
+      }
+
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  // Encryption actions
+  initializeEncryption: async (seedWords: string[], password?: string) => {
+    console.log('[AuthEncryptionStore] Starting encryption initialization');
+    const { currentUser } = get();
+
+    if (!currentUser) {
+      console.error('[AuthEncryptionStore] No current user for encryption initialization');
+      return false;
+    }
+
+    set({ isEncryptionLoading: true });
+
+    try {
+      const encryptionService = getEncryptionService();
+      const success = await encryptionService.initializeEncryption(
+        currentUser.id,
+        seedWords,
+        password
+      );
+
+      if (success) {
+        // Update user and state
+        const updatedUser: User = {
+          ...currentUser,
+          hasEncryptionKey: true,
+          encryptionInitialized: true,
+        };
+
+        set({
+          currentUser: updatedUser,
+          isEncryptionReady: true,
+          isEncryptionLoading: false,
+          needsEncryptionSetup: false,
+        });
+
+        // Update stored user data
+        const authState = await UserContextManager.loadUserAuthState(currentUser.id);
+        if (authState) {
+          await UserContextManager.storeUserAuthState(currentUser.id, {
+            ...authState,
+            user: { ...authState.user, hasEncryptionKey: true, encryptionInitialized: true },
+          });
+        }
+
+        console.log('[AuthEncryptionStore] Encryption initialization successful');
+        return true;
+      }
+
+      set({ isEncryptionLoading: false });
+      return false;
+
+    } catch (error) {
+      console.error('[AuthEncryptionStore] Encryption initialization failed:', error);
+      set({ isEncryptionLoading: false });
+      return false;
+    }
+  },
+
+  checkUserEncryptionStatus: async (userId: string) => {
+    console.log(`[AuthEncryptionStore] Checking encryption status for user: ${userId}`);
+    set({ isEncryptionLoading: true });
+
+    try {
+      // Check if user has existing encryption setup
+      const hasEncryptionSetup = await UserContextManager.hasUserEncryptionSetup(userId);
+      
+      if (hasEncryptionSetup) {
+        // Try to load the master key
+        const encryptionService = getEncryptionService();
+        const keyLoaded = await encryptionService.loadMasterKey(userId);
+
+        if (keyLoaded) {
+          // Test if encryption works
+          const testResult = await encryptionService.testEncryption();
+          
+          if (testResult) {
+            // Encryption is working
+            const { currentUser } = get();
+            if (currentUser && currentUser.id === userId) {
+              const updatedUser: User = {
+                ...currentUser,
+                hasEncryptionKey: true,
+                encryptionInitialized: true,
+              };
+
+              set({
+                currentUser: updatedUser,
+                isEncryptionReady: true,
+                isEncryptionLoading: false,
+                needsEncryptionSetup: false,
+              });
+
+              console.log(`[AuthEncryptionStore] Encryption loaded successfully for user: ${userId}`);
+              return;
+            }
+          } else {
+            console.warn(`[AuthEncryptionStore] Encryption test failed for user: ${userId}`);
+          }
+        } else {
+          console.warn(`[AuthEncryptionStore] Failed to load encryption key for user: ${userId}`);
+        }
+      }
+
+      // No working encryption found - user needs setup
+      const { currentUser } = get();
+      if (currentUser && currentUser.id === userId) {
+        const updatedUser: User = {
+          ...currentUser,
+          hasEncryptionKey: hasEncryptionSetup,
+          encryptionInitialized: false,
+        };
+
+        set({
+          currentUser: updatedUser,
+          isEncryptionReady: false,
+          isEncryptionLoading: false,
+          needsEncryptionSetup: true,
+        });
+
+        console.log(`[AuthEncryptionStore] User ${userId} needs encryption setup`);
+      }
+
+    } catch (error) {
+      console.error(`[AuthEncryptionStore] Error checking encryption status for user ${userId}:`, error);
+      set({
+        isEncryptionReady: false,
+        isEncryptionLoading: false,
+        needsEncryptionSetup: true,
+      });
+    }
+  },
+
+  // Internal state management
+  setToken: (token: string | null) => {
+    set({ token });
+  },
+
+  setCurrentUser: (user: User | null) => {
+    set({ currentUser: user });
+  },
+
+  resetEncryptionState: () => {
+    set({
+      isEncryptionReady: false,
+      isEncryptionLoading: false,
+      needsEncryptionSetup: false,
+    });
+  },
+
+  // Combined initialization for app startup
+  initializeStore: async () => {
+    console.log('[AuthEncryptionStore] Initializing store from persisted data');
+    set({ isInitializing: true });
+
+    try {
+      // Check for current user
+      const currentUserId = await UserContextManager.loadCurrentUserId();
+      
+      if (!currentUserId) {
+        console.log('[AuthEncryptionStore] No current user found');
+        set({ isInitializing: false });
+        return;
+      }
+
+      // Load user's auth state
+      const authState = await UserContextManager.loadUserAuthState(currentUserId);
+      
+      if (!authState || !authState.token) {
+        console.log(`[AuthEncryptionStore] No valid auth state found for user: ${currentUserId}`);
+        await UserContextManager.clearCurrentUserId();
+        set({ isInitializing: false });
+        return;
+      }
+
+      // Create user object
+      const user: User = {
+        id: currentUserId,
+        username: authState.user.username,
+        hasEncryptionKey: false, // Will be determined by checkUserEncryptionStatus
+        encryptionInitialized: false,
+      };
+
+      // Restore auth state
+      set({
+        token: authState.token,
+        currentUser: user,
+      });
+
+      // Check encryption status
+      await get().checkUserEncryptionStatus(currentUserId);
+
+      console.log(`[AuthEncryptionStore] Store initialized successfully for user: ${currentUserId}`);
+
+    } catch (error) {
+      console.error('[AuthEncryptionStore] Error initializing store:', error);
+      // Clear any invalid state
+      await UserContextManager.clearCurrentUserId();
+    } finally {
+      set({ isInitializing: false });
+    }
+  },
+}));
+
+// Optimized selector hooks using useShallow to prevent unnecessary re-renders
+
+// Auth selectors
+export const useAuth = () => 
+  useAuthEncryptionStore(
+    useShallow((state) => ({
+      token: state.token,
+      currentUser: state.currentUser,
+      isAuthLoading: state.isAuthLoading,
+      signIn: state.signIn,
+      signOut: state.signOut,
+      register: state.register,
+    }))
+  );
+
+export const useAuthToken = () => useAuthEncryptionStore((state) => state.token);
+export const useCurrentUser = () => useAuthEncryptionStore((state) => state.currentUser);
+export const useIsAuthLoading = () => useAuthEncryptionStore((state) => state.isAuthLoading);
+
+// Encryption selectors
+export const useEncryption = () =>
+  useAuthEncryptionStore(
+    useShallow((state) => ({
+      isEncryptionReady: state.isEncryptionReady,
+      isEncryptionLoading: state.isEncryptionLoading,
+      needsEncryptionSetup: state.needsEncryptionSetup,
+      initializeEncryption: state.initializeEncryption,
+      checkUserEncryptionStatus: state.checkUserEncryptionStatus,
+      resetEncryptionState: state.resetEncryptionState,
+    }))
+  );
+
+export const useIsEncryptionReady = () => useAuthEncryptionStore((state) => state.isEncryptionReady);
+export const useIsEncryptionLoading = () => useAuthEncryptionStore((state) => state.isEncryptionLoading);
+export const useNeedsEncryptionSetup = () => useAuthEncryptionStore((state) => state.needsEncryptionSetup);
+
+// Combined selectors
+export const useAuthEncryption = () =>
+  useAuthEncryptionStore(
+    useShallow((state) => ({
+      token: state.token,
+      currentUser: state.currentUser,
+      isAuthLoading: state.isAuthLoading,
+      isEncryptionReady: state.isEncryptionReady,
+      isEncryptionLoading: state.isEncryptionLoading,
+      needsEncryptionSetup: state.needsEncryptionSetup,
+      isInitializing: state.isInitializing,
+    }))
+  );
+
+export const useIsInitializing = () => useAuthEncryptionStore((state) => state.isInitializing);
+
+// Action selectors to prevent infinite loops
+export const useSignIn = () => useAuthEncryptionStore((state) => state.signIn);
+export const useSignOut = () => useAuthEncryptionStore((state) => state.signOut);
+export const useRegister = () => useAuthEncryptionStore((state) => state.register);
+export const useInitializeEncryption = () => useAuthEncryptionStore((state) => state.initializeEncryption);
+export const useCheckUserEncryptionStatus = () => useAuthEncryptionStore((state) => state.checkUserEncryptionStatus);
+export const useInitializeStore = () => useAuthEncryptionStore((state) => state.initializeStore);
+
+// Export the main store for direct access when needed
+export default useAuthEncryptionStore;
+
+// Backward compatibility hooks that match the old Context API
+export const useAuthSession = () => {
+  const { token, isAuthLoading, signIn, signOut, register } = useAuth();
+  return {
+    token,
+    isTokenLoading: isAuthLoading,
+    signIn: (username: string, password: string, skipRedirect?: boolean) => 
+      signIn(username, password),
+    signOut: async () => {
+      await signOut();
+      return null;
+    },
+    register: async (username: string, password: string) => {
+      const result = await register(username, password);
+      return result.success ? null : result.error;
+    },
+  };
+};
+
+export const useEncryptionFlow = () => {
+  const encryption = useEncryption();
+  
+  const getRequiredAction = (): 'none' | 'setup' | 'recovery' | 'loading' => {
+    if (encryption.isEncryptionLoading) return 'loading';
+    if (encryption.isEncryptionReady) return 'none';
+    if (encryption.needsEncryptionSetup) return 'setup';
+    return 'none';
+  };
+
+  return {
+    requiredAction: getRequiredAction(),
+    isInitialized: encryption.isEncryptionReady,
+    isLoading: encryption.isEncryptionLoading,
+    needsSetup: encryption.needsEncryptionSetup,
+    needsRecovery: false, // Simplified for now
+    initializeEncryption: encryption.initializeEncryption,
+    loadExistingEncryption: async () => true, // Handled automatically by checkUserEncryptionStatus
+    clearEncryption: async () => {
+      const encryptionService = getEncryptionService();
+      await encryptionService.deleteMasterKey();
+      encryptionService.clearKeys();
+      encryption.resetEncryptionState();
+    },
+    checkEncryptionStatus: async () => {
+      const currentUser = useAuthEncryptionStore.getState().currentUser;
+      if (currentUser) {
+        await encryption.checkUserEncryptionStatus(currentUser.id);
+      }
+    },
+  };
+};

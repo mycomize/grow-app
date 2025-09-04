@@ -1,4 +1,4 @@
-import { useCallback, useContext } from 'react';
+import { useCallback } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { VStack } from '~/components/ui/vstack';
@@ -7,7 +7,6 @@ import { Spinner } from '~/components/ui/spinner';
 
 import { TekForm } from '~/components/tek/TekForm';
 import { useInitializeCurrentTek, useCurrentTek } from '~/lib/stores';
-import { AuthContext } from '~/lib/api/AuthContext';
 
 export default function TekEditScreen() {
   const { id } = useLocalSearchParams();

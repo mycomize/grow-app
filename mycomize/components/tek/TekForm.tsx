@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState } from 'react';
 import { ScrollView } from '~/components/ui/scroll-view';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
@@ -22,7 +22,7 @@ import { useUnifiedToast } from '~/components/ui/unified-toast';
 import { StageAccordion } from '~/components/tek/StageAccordion';
 import { TagManager } from '~/components/tek/TagManager';
 import { ConfirmationModal } from '~/components/modals/ConfirmationModal';
-import { AuthContext } from '~/lib/api/AuthContext';
+import { useAuthToken } from '~/lib/stores/authEncryptionStore';
 import {
   useCurrentTekFormData,
   useCurrentTekId,
@@ -41,7 +41,7 @@ interface TekFormProps {
 }
 
 export function TekForm({ tekId, saveButtonText = 'Save Tek' }: TekFormProps) {
-  const { token } = useContext(AuthContext);
+  const token = useAuthToken();
   const router = useRouter();
   const { showError, showSuccess } = useUnifiedToast();
 

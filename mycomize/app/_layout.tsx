@@ -3,15 +3,21 @@ import '@/global.css';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { AuthProvider } from '~/lib/api/AuthContext';
-import { EncryptionProvider } from '~/lib/crypto/EncryptionContext';
 import { ThemeProvider, useTheme } from '@/components/ui/themeprovider/themeprovider';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useEffect } from 'react';
+import { useInitializeStore } from '~/lib/stores/authEncryptionStore';
 
-// Wrapper component to use the theme context
+// Wrapper component to use the theme context and initialize the store
 function ThemedApp() {
   const { theme } = useTheme();
+  const initializeStore = useInitializeStore();
+
+  // Initialize the auth encryption store on app startup
+  useEffect(() => {
+    initializeStore();
+  }, [initializeStore]);
 
   // Set header styles based on theme
   const headerStyle = {
@@ -54,13 +60,9 @@ function ThemedApp() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <EncryptionProvider>
-          <ThemeProvider>
-            <ThemedApp />
-          </ThemeProvider>
-        </EncryptionProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <ThemedApp />
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }

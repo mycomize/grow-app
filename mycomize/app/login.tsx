@@ -1,9 +1,7 @@
-import { useState, useContext } from 'react';
+import { useState } from 'react';
 import { View } from 'react-native';
 import { ScrollView } from '@/components/ui/scroll-view';
 import { Box } from '@/components/ui/box';
-import { AuthContext } from '~/lib/api/AuthContext';
-import { useEncryption } from '~/lib/crypto/EncryptionContext';
 import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { FormControl } from '@/components/ui/form-control';
 import { Heading } from '@/components/ui/heading';
@@ -15,11 +13,12 @@ import { useRouter } from 'expo-router';
 import { HStack } from '@/components/ui/hstack';
 import { EyeIcon, EyeOffIcon, UserPlus, LogIn } from 'lucide-react-native';
 import OpenTekLogo from '@/assets/opentek-logo.svg';
+import { useSignIn, useIsAuthLoading } from '~/lib/stores/authEncryptionStore';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const authState = useContext(AuthContext);
-  const { isInitialized, checkEncryptionStatus } = useEncryption();
+  const signIn = useSignIn();
+  const isAuthLoading = useIsAuthLoading();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -37,23 +36,15 @@ export default function LoginScreen() {
     setErrorMessage(null);
     setIsLoading(true);
     try {
-      // signIn returns an error message or null on success, skip redirect to check encryption
-      const error = await authState.signIn(username, password, true);
-      if (error) {
-        setErrorMessage(error);
-      } else {
-        // Check encryption status after successful login
-        await checkEncryptionStatus();
-
-        // If encryption is not initialized, redirect to setup
-        if (!isInitialized) {
-          router.replace('/encryption-setup');
-        } else {
-          // If already initialized, go to home
-          router.replace('/');
-        }
+      // The unified signIn function handles both authentication and encryption checking
+      // It will automatically redirect to encryption-setup or home as needed
+      const result = await signIn(username, password);
+      if (!result.success) {
+        setErrorMessage(result.error || 'Login failed. Please try again.');
       }
+      // If successful, the signIn function handles navigation automatically
     } catch (error) {
+      console.error('Login error:', error);
       setErrorMessage('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);

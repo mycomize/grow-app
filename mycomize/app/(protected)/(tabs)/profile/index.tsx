@@ -12,10 +12,10 @@ import { Avatar, AvatarFallbackText, AvatarImage } from '@/components/ui/avatar'
 import { useToast, Toast } from '@/components/ui/toast';
 import { Input, InputField } from '@/components/ui/input';
 
-import { AuthContext } from '~/lib/api/AuthContext';
+import { useAuthToken, useSignOut } from '~/lib/stores/authEncryptionStore';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
 import { apiClient, isUnauthorizedError } from '~/lib/api/ApiClient';
-import { useContext, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { getSwitchColors } from '@/lib/switchUtils';
 import * as ImagePicker from 'expo-image-picker';
@@ -26,7 +26,8 @@ import EntityStateUpdateManager from '~/lib/iot/entityStateUpdateManager';
 import { ChevronRight, Camera, AlertCircle, CheckCircle, Settings } from 'lucide-react-native';
 
 export default function ProfileScreen() {
-  const { signOut, token } = useContext(AuthContext);
+  const token = useAuthToken();
+  const signOut = useSignOut();
   const { theme, toggleTheme } = useTheme();
   const { trackFalse, trackTrue, thumbColor } = getSwitchColors(theme);
   const [darkModeEnabled, setDarkModeEnabled] = useState(theme === 'dark');

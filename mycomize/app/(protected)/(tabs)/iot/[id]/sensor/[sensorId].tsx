@@ -18,7 +18,7 @@ import {
   Zap,
 } from 'lucide-react-native';
 
-import { AuthContext } from '~/lib/api/AuthContext';
+import { useAuthToken } from '~/lib/stores/authEncryptionStore';
 import { apiClient, isUnauthorizedError } from '~/lib/api/ApiClient';
 import { IoTGateway, HAEntity } from '~/lib/iot/iot';
 import { SensorGraph } from '~/components/charts/SensorGraph';
@@ -40,7 +40,7 @@ interface SensorMetadata {
 export default function SensorDetailScreen() {
   const { id, sensorId } = useLocalSearchParams();
   const router = useRouter();
-  const { token } = useContext(AuthContext);
+  const token  = useAuthToken();
   const [gateway, setGateway] = useState<IoTGateway | null>(null);
   const [sensorState, setSensorState] = useState<HAEntity | null>(null);
   const [isLoading, setIsLoading] = useState(true);

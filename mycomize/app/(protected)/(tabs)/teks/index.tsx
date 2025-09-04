@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button, ButtonIcon, ButtonText } from '~/components/ui/button';
 import { Heading } from '~/components/ui/heading';
 import { Text } from '~/components/ui/text';
@@ -34,7 +34,7 @@ import {
 } from 'lucide-react-native';
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
-import { AuthContext } from '~/lib/api/AuthContext';
+import { useAuthToken } from '~/lib/stores/authEncryptionStore';
 import { TekCard } from '~/components/tek/TekCard';
 import { TekCardSkeleton } from '~/components/tek';
 import { BulkGrowTek } from '~/lib/types/tekTypes';
@@ -42,7 +42,7 @@ import { useTeks, useTekLoading, useDeleteTek } from '~/lib/stores';
 import { InfoBadge } from '~/components/ui/info-badge';
 
 export default function TekLibraryScreen() {
-  const { token } = useContext(AuthContext);
+  const token = useAuthToken();
   const router = useRouter();
   const { showError, showSuccess } = useUnifiedToast();
 

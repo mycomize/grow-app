@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useContext } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from '~/components/ui/card';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
@@ -22,7 +22,7 @@ import {
   ActionsheetItemText,
   ActionsheetIcon,
 } from '~/components/ui/actionsheet';
-import { AuthContext } from '~/lib/api/AuthContext';
+import { useAuthToken } from '~/lib/stores/authEncryptionStore';
 import { formatCount, parseNumberCount } from '~/lib/utils/numberFormatting';
 import { useTekById, useLikeTek, useViewTek, useImportTek } from '~/lib/stores/teksStore';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -55,7 +55,7 @@ export const TekCard: React.FC<TekCardProps> = ({
   const [isLiking, setIsLiking] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
-  const { token } = useContext(AuthContext);
+  const token = useAuthToken();
   
   // Get the current tek data from the store (with optimistic updates)
   const currentTek = useTekById(tek.id.toString()) || tek;

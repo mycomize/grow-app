@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { ScrollView } from '@/components/ui/scroll-view';
 import { Box } from '@/components/ui/box';
-import { useContext } from 'react';
-import { AuthContext } from '~/lib/api/AuthContext';
 import { Button, ButtonIcon, ButtonText } from '~/components/ui/button';
 import { FormControl } from '@/components/ui/form-control';
 import { Heading } from '@/components/ui/heading';
@@ -16,14 +14,15 @@ import { Text } from '~/components/ui/text';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
 import { useRouter } from 'expo-router';
 import { UserPlus, LogIn } from 'lucide-react-native';
+import { useRegister, useIsAuthLoading } from '~/lib/stores/authEncryptionStore';
 
 import OpenTekLogo from '~/assets/opentek-logo.svg';
 
 export default function SignUpScreen() {
   const router = useRouter();
   const { showError } = useUnifiedToast();
-
-  const authState = useContext(AuthContext);
+  const register = useRegister();
+  const isAuthLoading = useIsAuthLoading();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -46,14 +45,14 @@ export default function SignUpScreen() {
     setIsLoading(true);
 
     try {
-      // register returns an error message or null on success
-      const error = await authState.register(username, password);
-      if (error) {
-        showError(error);
+      // The unified register function handles registration and redirect
+      const result = await register(username, password);
+      if (!result.success) {
+        showError(result.error || 'Registration failed. Please try again.');
       }
-
-      // register handles redirect to /login on success
+      // If successful, the register function handles navigation automatically
     } catch (error) {
+      console.error('Registration error:', error);
       showError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);

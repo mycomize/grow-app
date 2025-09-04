@@ -47,6 +47,7 @@ class UserProfileImageUpdate(BaseModel):
     profile_image: str  # Base64 encoded image data
 
 class UserResponse(UserBase):
+    id: int
     profile_image: Optional[str] = None
     created_at: datetime
 

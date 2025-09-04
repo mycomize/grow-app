@@ -7,8 +7,7 @@ import { Heading } from '~/components/ui/heading';
 import { Calendar, Agenda, DateData } from 'react-native-calendars';
 import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import { getBackendUrl } from '~/lib/api/backendUrl';
-import { AuthContext } from '~/lib/api/AuthContext';
-import { useContext } from 'react';
+import { useAuthToken } from '~/lib/stores/authEncryptionStore';
 import { View, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CalendarDays, Thermometer, CheckCircle, CircleX } from 'lucide-react-native';
@@ -57,7 +56,7 @@ export const AIAssistantSection: React.FC<AIAssistantSectionProps> = ({ growData
   const [isLoadingConditions, setIsLoadingConditions] = useState(false);
   const [toastId, setToastId] = useState(0);
   const { theme } = useTheme();
-  const { token } = useContext(AuthContext);
+  const token = useAuthToken();
   const toast = useToast();
 
   const showSuccessToast = (message: string) => {

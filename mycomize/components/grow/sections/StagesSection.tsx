@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
@@ -27,7 +27,7 @@ import { SpawnSection } from './SpawnSection';
 import { BulkSection } from './BulkSection';
 import { FruitingSection } from './FruitingSection';
 import { HarvestSection } from './HarvestSection';
-import { AuthContext } from '~/lib/api/AuthContext';
+import { useAuthToken } from '~/lib/stores/authEncryptionStore';
 import { useRouter } from 'expo-router';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
 
@@ -99,7 +99,7 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
   handleDateChange,
   parseDate,
 }) => {
-  const { token } = useContext(AuthContext);
+  const token = useAuthToken();
   const router = useRouter();
   const { showError } = useUnifiedToast();
 

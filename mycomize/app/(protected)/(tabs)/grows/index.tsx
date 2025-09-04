@@ -1,4 +1,4 @@
-import { useState, useContext, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Button, ButtonIcon, ButtonText } from '~/components/ui/button';
 import { Heading } from '~/components/ui/heading';
 import { Text } from '~/components/ui/text';
@@ -11,7 +11,7 @@ import { Pressable } from '~/components/ui/pressable';
 import { List, PlusIcon, Search, X, ArrowUpDown, Filter, CirclePlus } from 'lucide-react-native';
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
-import { AuthContext } from '~/lib/api/AuthContext';
+import { useAuthToken } from '~/lib/stores/authEncryptionStore';
 import { BulkGrowComplete, bulkGrowStatuses } from '~/lib/types/growTypes';
 import { GrowCard } from '~/components/grow/GrowCard';
 import { GrowCardSkeleton } from '~/components/grow/GrowCardSkeleton';
@@ -21,7 +21,7 @@ import { useGrows, useGrowLoading, useGrowStore } from '~/lib/stores';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 export default function GrowScreen() {
-  const { token } = useContext(AuthContext);
+  const token = useAuthToken();
   const router = useRouter();
   const grows = useGrows();
   const loading = useGrowLoading();

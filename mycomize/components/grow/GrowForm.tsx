@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { Keyboard } from 'react-native';
 import { ScrollView } from '~/components/ui/scroll-view';
 import { VStack } from '~/components/ui/vstack';
@@ -26,7 +26,7 @@ import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-mod
 import { useUnifiedToast } from '~/components/ui/unified-toast';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { AuthContext } from '~/lib/api/AuthContext';
+import { useAuthToken } from '~/lib/stores/authEncryptionStore';
 import {
   useCurrentGrow,
   useCurrentGrowFormData,
@@ -49,7 +49,7 @@ interface GrowFormProps {
 }
 
 export function GrowForm({ growId, saveButtonText = 'Save' }: GrowFormProps) {
-  const { token } = useContext(AuthContext);
+  const token = useAuthToken();
   const router = useRouter();
   const { showError, showSuccess } = useUnifiedToast();
 

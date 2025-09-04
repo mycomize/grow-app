@@ -1,8 +1,8 @@
-import { useEffect, useContext } from 'react';
+import { useEffect } from 'react';
 import { Tabs, useRouter, useSegments } from 'expo-router';
 import { CircuitBoard, User, FlaskConical, Layers } from 'lucide-react-native';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
-import { AuthContext } from '~/lib/api/AuthContext';
+import { useAuthToken } from '~/lib/stores/authEncryptionStore';
 import { useGrowStore, useTeksStore } from '~/lib/stores';
 import { useGatewayStore } from '~/lib/stores/iot/gatewayStore';
 import { useEntityStore } from '~/lib/stores/iot/entityStore';
@@ -13,7 +13,7 @@ export default function TabLayout() {
   const { theme } = useTheme();
   const router = useRouter();
   const segments = useSegments();
-  const { token } = useContext(AuthContext);
+  const token = useAuthToken();
   const fetchGrows = useGrowStore((state) => state.fetchGrows);
   const fetchTeks = useTeksStore((state) => state.fetchTeks);
   const initializeAllGatewayData = useGatewayStore((state) => state.initializeAllGatewayData);

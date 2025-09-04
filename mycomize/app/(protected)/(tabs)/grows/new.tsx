@@ -1,13 +1,13 @@
-import { useCallback, useContext } from 'react';
+import { useCallback } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { GrowForm } from '~/components/grow/GrowForm';
 import { useInitializeCurrentGrow } from '~/lib/stores';
-import { AuthContext } from '~/lib/api/AuthContext';
+import { useAuthToken } from '~/lib/stores/authEncryptionStore';
 
 export default function NewGrowScreen() {
   const { fromTek } = useLocalSearchParams();
-  const { token } = useContext(AuthContext);
+  const token = useAuthToken();
   const initializeCurrentGrow = useInitializeCurrentGrow();
 
   useFocusEffect(

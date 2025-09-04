@@ -1,4 +1,4 @@
-import { useState, useMemo, useContext } from 'react';
+import { useState, useMemo } from 'react';
 import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
@@ -36,16 +36,16 @@ import {
 import { useEntityStore, useGatewayEntities } from '~/lib/stores/iot/entityStore';
 import { useGrows } from '~/lib/stores';
 
-import { AuthContext } from '~/lib/api/AuthContext';
 import { EntityCard } from '~/components/iot/EntityCard';
 import { BulkActionBar } from '~/components/iot/BulkActionBar';
+import { useAuthToken } from '~/lib/stores/authEncryptionStore';
 
 interface ControlPanelSectionProps {
   gatewayId: string;
 }
 
 export function ControlPanelSection({ gatewayId }: ControlPanelSectionProps) {
-  const { token } = useContext(AuthContext);
+  const token = useAuthToken();
   const { theme } = useTheme();
   const { trackFalse, trackTrue, thumbColor } = getSwitchColors(theme);
 

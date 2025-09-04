@@ -1,4 +1,4 @@
-import { useCallback, useContext } from 'react';
+import { useCallback } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { VStack } from '~/components/ui/vstack';
@@ -7,11 +7,11 @@ import { Spinner } from '~/components/ui/spinner';
 
 import { GrowForm } from '~/components/grow/GrowForm';
 import { useInitializeCurrentGrow, useCurrentGrow } from '~/lib/stores';
-import { AuthContext } from '~/lib/api/AuthContext';
+import { useAuthToken } from '~/lib/stores/authEncryptionStore';
 
 export default function GrowEditScreen() {
   const { id, fromTek } = useLocalSearchParams();
-  const { token } = useContext(AuthContext);
+  const token = useAuthToken();
   const initializeCurrentGrow = useInitializeCurrentGrow();
   const currentGrow = useCurrentGrow();
 

@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { ScrollView } from '@/components/ui/scroll-view';
 import { Box } from '@/components/ui/box';
@@ -16,7 +16,7 @@ import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
 import { Avatar, AvatarFallbackText } from '@/components/ui/avatar';
 
-import { AuthContext } from '~/lib/api/AuthContext';
+import { useAuthToken } from '~/lib/stores/authEncryptionStore';
 import { apiClient, isUnauthorizedError } from '~/lib/api/ApiClient';
 import { PasswordInput } from '@/components/ui/password-input';
 
@@ -41,7 +41,7 @@ function getUsernameFromToken(token: string | null | undefined): string {
 export default function ChangePasswordScreen() {
   const router = useRouter();
   const toast = useToast();
-  const { token } = useContext(AuthContext);
+  const token = useAuthToken();
 
   const [toastId, setToastId] = useState(0);
   const [username, setUsername] = useState('User');
