@@ -13,35 +13,129 @@ import { HStack } from '~/components/ui/hstack';
 import { Text } from '~/components/ui/text';
 import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
-import { Input, InputField } from '~/components/ui/input';
+import { Input, InputField, InputSlot } from '~/components/ui/input';
 import { Menu, MenuItem, MenuItemLabel } from '~/components/ui/menu';
-import { X, CheckSquare, ChevronDown } from 'lucide-react-native';
-import { Task, generateId } from '~/lib/types/tekTypes';
+import {
+  Select,
+  SelectTrigger,
+  SelectInput,
+  SelectIcon,
+  SelectPortal,
+  SelectBackdrop,
+  SelectContent,
+  SelectDragIndicatorWrapper,
+  SelectDragIndicator,
+  SelectItem,
+} from '~/components/ui/select';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { X, CheckSquare, ChevronDown, CalendarDays, Clock } from 'lucide-react-native';
+import { Task, TaskContext, generateId } from '~/lib/types/tekTypes';
+import { useCurrentGrow, useGrowStore } from '~/lib/stores/growStore';
+import { useCurrentTek, useTeksStore } from '~/lib/stores/teksStore';
 
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (task: Task) => void;
   task?: Task | null;
-  stageStartDate?: string;
+  context: TaskContext; // Determines field visibility
+  stageKey: string; // The stage key for the task
 }
 
 export const TaskModal: React.FC<TaskModalProps> = ({
   isOpen,
   onClose,
-  onSave,
   task,
-  stageStartDate,
+  context,
+  stageKey,
 }) => {
   const [formData, setFormData] = useState({
     action: '',
     repeatCount: '1',
     repeatUnit: 'day' as 'day' | 'week' | 'stage',
     days_after_stage_start: '',
+    start_date: '',
+    start_time: '',
+    end_date: '',
+    status: 'pending' as 'pending' | 'completed',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [activeDatePicker, setActiveDatePicker] = useState<string | null>(null);
+  const [activeTimePicker, setActiveTimePicker] = useState<string | null>(null);
+
+  // Store hooks
+  const growStore = useGrowStore();
+  const teksStore = useTeksStore();
 
   const isEditing = !!task;
+
+  // Date utility functions (following the established pattern)
+  const parseDate = (dateString?: string): Date | null => {
+    if (!dateString) return null;
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day); // month is 0-indexed
+  };
+
+  const formatDateForAPI = (date: Date | null): string | undefined => {
+    if (!date) return undefined;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatTimeForAPI = (date: Date | null): string | undefined => {
+    if (!date) return undefined;
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
+  const parseTime = (timeString?: string): Date | null => {
+    if (!timeString) return null;
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    return date;
+  };
+
+  // Get stage start date for context
+  const getStageStartDate = (): string | undefined => {
+    if (context === 'grow') {
+      return growStore.getStageStartDate(stageKey);
+    }
+    return undefined; // Teks don't have stage start dates
+  };
+
+  // Date/time picker handlers (following established pattern)
+  const handleDateChange = (field: string, date?: Date, event?: any) => {
+    if (event?.type === 'dismissed') {
+      setActiveDatePicker(null);
+      return;
+    }
+
+    if (date) {
+      const formattedDate = formatDateForAPI(date);
+      if (formattedDate) {
+        updateFieldTypeSafe(field, formattedDate);
+      }
+    }
+    setActiveDatePicker(null);
+  };
+
+  const handleTimeChange = (field: string, date?: Date, event?: any) => {
+    if (event?.type === 'dismissed') {
+      setActiveTimePicker(null);
+      return;
+    }
+
+    if (date) {
+      const formattedTime = formatTimeForAPI(date);
+      if (formattedTime) {
+        updateFieldTypeSafe(field, formattedTime);
+      }
+    }
+    setActiveTimePicker(null);
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -51,19 +145,30 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           repeatCount: task.repeatCount?.toString() || '1',
           repeatUnit: task.repeatUnit || 'day',
           days_after_stage_start: task.days_after_stage_start.toString(),
+          start_date: task.start_date || '',
+          start_time: task.start_time || '',
+          end_date: task.end_date || '',
+          status: task.status || 'pending',
         });
       } else {
-        // Default to 0 days for new tasks
+        // For new tasks, initialize start_date from stage start date if available
+        const stageStartDate = getStageStartDate();
         setFormData({
           action: '',
           repeatCount: '1',
           repeatUnit: 'day',
           days_after_stage_start: '0',
+          start_date: stageStartDate || '',
+          start_time: '',
+          end_date: '',
+          status: 'pending',
         });
       }
       setErrors({});
+      setActiveDatePicker(null);
+      setActiveTimePicker(null);
     }
-  }, [isOpen, task]);
+  }, [isOpen, task, stageKey, context]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -78,15 +183,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       const count = parseInt(formData.repeatCount, 10);
       if (isNaN(count) || count < 1 || count > 7) {
         newErrors.repeatCount = 'Must be a number between 1 and 7';
-      }
-    }
-
-    if (!formData.days_after_stage_start.trim()) {
-      newErrors.days_after_stage_start = 'Days after stage start is required';
-    } else {
-      const days = parseInt(formData.days_after_stage_start, 10);
-      if (isNaN(days) || days < 0) {
-        newErrors.days_after_stage_start = 'Must be a valid number of days (0 or greater)';
       }
     }
 
@@ -120,10 +216,28 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       frequency: frequencyString,
       repeatCount: repeatCount,
       repeatUnit: formData.repeatUnit,
-      days_after_stage_start: parseInt(formData.days_after_stage_start, 10),
+      days_after_stage_start: parseInt(formData.days_after_stage_start, 10) || 0,
+      start_date: formData.start_date || undefined,
+      start_time: formData.start_time || undefined,
+      end_date: formData.end_date || undefined,
+      status: 'pending', // Always default to pending, no UI for this
     };
 
-    onSave(taskData);
+    // Use appropriate store function based on context
+    if (context === 'grow') {
+      if (isEditing && task) {
+        growStore.updateTaskInStage(stageKey, task.id, taskData);
+      } else {
+        growStore.addTaskToStage(stageKey, taskData);
+      }
+    } else {
+      if (isEditing && task) {
+        teksStore.updateTaskInStage(stageKey, task.id, taskData);
+      } else {
+        teksStore.addTaskToStage(stageKey, taskData);
+      }
+    }
+
     onClose();
   };
 
@@ -134,41 +248,24 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     }
   };
 
-  // Calculate the actual start date of the task
-  const calculateTaskStartDate = (): string | null => {
-    if (!stageStartDate || !formData.days_after_stage_start.trim()) {
-      return null;
-    }
-
-    const daysToAdd = parseInt(formData.days_after_stage_start, 10);
-    if (isNaN(daysToAdd)) {
-      return null;
-    }
-
-    try {
-      // Parse the stage start date (YYYY-MM-DD format)
-      const [year, month, day] = stageStartDate.split('-').map(Number);
-      const stageDate = new Date(year, month - 1, day); // month is 0-indexed
-
-      // Add the specified number of days
-      const taskStartDate = new Date(stageDate);
-      taskStartDate.setDate(taskStartDate.getDate() + daysToAdd);
-
-      // Format as a readable date string
-      return taskStartDate.toLocaleDateString();
-    } catch {
-      return null;
+  const updateFieldTypeSafe = (field: string, value: string) => {
+    if (field in formData) {
+      updateField(field as keyof typeof formData, value);
     }
   };
+
+
+  // Determine field visibility based on context
+  const shouldShowDateTimeFields = context === 'grow';
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalBackdrop />
       <ModalContent>
         <ModalHeader>
-          <HStack className="items-center  gap-2">
+          <HStack className="items-center gap-2">
             <Icon as={CheckSquare} className="text-primary-600" size="lg" />
-            <Text className="text-lg font-semibold">{isEditing ? 'Edit Task' : 'Add Task'}</Text>
+            <Text className="text-lg font-semibold flex-1">{isEditing ? 'Edit Task' : 'Add Task'}</Text>
           </HStack>
         </ModalHeader>
 
@@ -195,7 +292,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 <Menu
                   trigger={({ ...triggerProps }) => {
                     return (
-                      <Button {...triggerProps} variant="outline" size="sm" className="flex-1">
+                      <Button {...triggerProps} variant="outline" size="sm" className="mx-2">
                         <ButtonText>{formData.repeatCount}</ButtonText>
                         <ButtonIcon as={ChevronDown} className="ml-2" />
                       </Button>
@@ -211,7 +308,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 <Menu
                   trigger={({ ...triggerProps }) => {
                     return (
-                      <Button {...triggerProps} variant="outline" size="sm" className="flex-1">
+                      <Button {...triggerProps} variant="outline" size="sm" className="ml-2">
                         <ButtonText>{formData.repeatUnit}</ButtonText>
                         <ButtonIcon as={ChevronDown} className="ml-2" />
                       </Button>
@@ -233,41 +330,103 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               )}
             </VStack>
 
-            {/* Days After Stage Start */}
-            <VStack space="xs">
-              <HStack className="items-center justify-between">
-                <Text className="font-medium">Start Day</Text>
-                {calculateTaskStartDate() && (
-                  <Text className="text-sm font-medium text-primary-600">
-                    Task starts on: {calculateTaskStartDate()}
-                  </Text>
-                )}
-              </HStack>
-              <Input className={errors.days_after_stage_start ? 'border-error-500' : ''}>
-                <InputField
-                  placeholder="e.g., 0, 14, 30"
-                  value={formData.days_after_stage_start}
-                  onChangeText={(value) => updateField('days_after_stage_start', value)}
-                  keyboardType="numeric"
-                />
-              </Input>
-              {errors.days_after_stage_start && (
-                <Text className="text-sm text-error-600">{errors.days_after_stage_start}</Text>
-              )}
-              <Text className="text-xs text-typography-500">
-                Number of days after {stageStartDate} on which to start the task
-              </Text>
-            </VStack>
+
+            {/* Date/Time Fields - Only show for Grow context */}
+            {shouldShowDateTimeFields && (
+              <>
+                {/* Start Date */}
+                <VStack space="xs">
+                  <Text className="font-medium">Start Date</Text>
+                  <Input isReadOnly>
+                    <InputField
+                      value={parseDate(formData.start_date)?.toDateString() || 'Select date'}
+                      className={!formData.start_date ? 'text-typography-400' : ''}
+                    />
+                    {formData.start_date ? (
+                      <InputSlot onPress={() => updateField('start_date', '')}>
+                        <Icon as={X} className="mr-3 text-typography-400" />
+                      </InputSlot>
+                    ) : (
+                      <InputSlot onPress={() => setActiveDatePicker('start_date')}>
+                        <Icon as={CalendarDays} className="mr-3 text-typography-400" />
+                      </InputSlot>
+                    )}
+                  </Input>
+                  {activeDatePicker === 'start_date' && (
+                    <DateTimePicker
+                      value={parseDate(formData.start_date) || new Date()}
+                      mode="date"
+                      onChange={(event, date) => handleDateChange('start_date', date, event)}
+                    />
+                  )}
+                </VStack>
+
+                {/* Start Time */}
+                <VStack space="xs">
+                  <Text className="font-medium">Start Time</Text>
+                  <Input isReadOnly>
+                    <InputField
+                      value={parseTime(formData.start_time)?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || 'Select time'}
+                      className={!formData.start_time ? 'text-typography-400' : ''}
+                    />
+                    {formData.start_time ? (
+                      <InputSlot onPress={() => updateField('start_time', '')}>
+                        <Icon as={X} className="mr-3 text-typography-400" />
+                      </InputSlot>
+                    ) : (
+                      <InputSlot onPress={() => setActiveTimePicker('start_time')}>
+                        <Icon as={Clock} className="mr-3 text-typography-400" />
+                      </InputSlot>
+                    )}
+                  </Input>
+                  {activeTimePicker === 'start_time' && (
+                    <DateTimePicker
+                      value={parseTime(formData.start_time) || new Date()}
+                      mode="time"
+                      onChange={(event, date) => handleTimeChange('start_time', date, event)}
+                    />
+                  )}
+                </VStack>
+
+                {/* End Date */}
+                <VStack space="xs">
+                  <Text className="font-medium">End Date</Text>
+                  <Input isReadOnly>
+                    <InputField
+                      value={parseDate(formData.end_date)?.toDateString() || 'Select date'}
+                      className={!formData.end_date ? 'text-typography-400' : ''}
+                    />
+                    {formData.end_date ? (
+                      <InputSlot onPress={() => updateField('end_date', '')}>
+                        <Icon as={X} className="mr-3 text-typography-400" />
+                      </InputSlot>
+                    ) : (
+                      <InputSlot onPress={() => setActiveDatePicker('end_date')}>
+                        <Icon as={CalendarDays} className="mr-3 text-typography-400" />
+                      </InputSlot>
+                    )}
+                  </Input>
+                  {activeDatePicker === 'end_date' && (
+                    <DateTimePicker
+                      value={parseDate(formData.end_date) || new Date()}
+                      mode="date"
+                      onChange={(event, date) => handleDateChange('end_date', date, event)}
+                    />
+                  )}
+                </VStack>
+              </>
+            )}
+
           </VStack>
         </ModalBody>
 
         <ModalFooter>
-          <HStack space="md" className="w-full">
-            <Button variant="outline" action="secondary" onPress={onClose} className="flex-1">
+          <HStack space="md" className="w-full justify-around">
+            <Button variant="outline" action="secondary" onPress={onClose} className="">
               <ButtonText>Cancel</ButtonText>
             </Button>
-            <Button variant="solid" action="primary" onPress={handleSave} className="flex-1">
-              <ButtonText>{isEditing ? 'Update' : 'Add'} Task</ButtonText>
+            <Button variant="solid" action="positive" onPress={handleSave} className="">
+              <ButtonText className="text-typography-900">Save</ButtonText>
             </Button>
           </HStack>
         </ModalFooter>

@@ -345,6 +345,14 @@ export async function decryptData<T extends Record<string, any>>(
             decryptedData[field] = numValue;
           }
         }
+
+        // Ensure engagement count fields remain as integers for BulkGrowTek
+        if (dataType === 'BulkGrowTek' && ['view_count', 'import_count', 'like_count'].includes(field)) {
+          const numValue = parseInt(decryptedData[field], 10);
+          if (!isNaN(numValue)) {
+            decryptedData[field] = numValue;
+          }
+        }
       } catch (error) {
         console.warn(`Failed to decrypt field ${field} for ${dataType}:`, error);
         // Keep original value if decryption fails

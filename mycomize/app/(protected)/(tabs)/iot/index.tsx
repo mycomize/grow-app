@@ -3,7 +3,6 @@ import { Alert } from 'react-native';
 import { Button, ButtonIcon, ButtonText } from '~/components/ui/button';
 import { Text } from '~/components/ui/text';
 import { VStack } from '~/components/ui/vstack';
-import { Card } from '~/components/ui/card';
 import { Heading } from '~/components/ui/heading';
 import { HStack } from '~/components/ui/hstack';
 import { Icon } from '~/components/ui/icon';
@@ -20,34 +19,25 @@ import {
 } from '~/components/ui/modal';
 import {
   PlusIcon,
-  SquarePen,
   Search,
   X,
   ArrowUpDown,
   Filter,
   Check,
-  Gauge,
   Wifi,
-  WifiOff,
-  PowerOff,
-  RadioTower,
   CircuitBoard,
-  Trash2,
   CirclePlus,
-  HouseWifi,
 } from 'lucide-react-native';
 import { Pressable } from '~/components/ui/pressable';
 import { View } from '~/components/ui/view';
 import { useRouter } from 'expo-router';
 
 import { useAuthToken } from '~/lib/stores/authEncryptionStore';
-import { IoTGateway, gatewayTypeLabels } from '~/lib/iot/iot';
+import { IoTGateway } from '~/lib/iot/iot';
+import { IoTGatewayCard } from '~/components/iot/IoTGatewayCard';
 import { IoTGatewayCardSkeleton } from '~/components/iot/IoTGatewayCardSkeleton';
-import { ConnectionStatus } from '~/components/ui/connection-status-badge';
-import { InfoBadge, InfoBadgeVariant } from '~/components/ui/info-badge';
-import { CountBadge } from '~/components/ui/count-badge';
+import { InfoBadge } from '~/components/ui/info-badge';
 import { useGateways, useGatewayLoading, useGatewayStore } from '~/lib/stores/iot/gatewayStore';
-import { useLinkedEntitiesByGateway } from '~/lib/stores/iot/entityStore';
 
 interface AddIoTGatewayButtonProps {
   title: string;
@@ -74,129 +64,6 @@ const AddIoTGatewayButton: React.FC<AddIoTGatewayButtonProps> = ({ title, initia
   );
 };
 
-interface IoTGatewayCardProps {
-  gateway: IoTGateway;
-  token: string | null | undefined;
-  connectionStatus: ConnectionStatus;
-  latency?: number;
-  onDelete: (gateway: IoTGateway) => void;
-}
-
-const IoTGatewayCard: React.FC<IoTGatewayCardProps> = ({
-  gateway,
-  token,
-  connectionStatus,
-  latency,
-  onDelete,
-}) => {
-  const router = useRouter();
-  const linkedEntities = useLinkedEntitiesByGateway(gateway.id);
-
-  // Helper function to get InfoBadge props from connection status
-  const getConnectionBadgeProps = (status: ConnectionStatus) => {
-    switch (status) {
-      case 'connected':
-        return {
-          text: 'CONNECTED',
-          icon: Wifi,
-          variant: 'success' as InfoBadgeVariant,
-        };
-      case 'connecting':
-        return {
-          text: 'CONNECTING',
-          icon: RadioTower,
-          variant: 'info' as InfoBadgeVariant,
-        };
-      case 'disconnected':
-        return {
-          text: 'DISCONNECTED',
-          icon: PowerOff,
-          variant: 'error' as InfoBadgeVariant,
-        };
-      default:
-        return {
-          text: 'UNKNOWN',
-          icon: WifiOff,
-          variant: 'error' as InfoBadgeVariant,
-        };
-    }
-  };
-
-  return (
-    <>
-      <Card className="w-11/12 rounded-xl bg-background-0">
-        <VStack className="flex p-0">
-          <Pressable
-            onPress={() => {
-              router.push({
-                pathname: `/iot/[id]`,
-                params: { id: gateway.id },
-              });
-            }}>
-            <HStack className="mb-2 items-center">
-              <Heading size="lg" className="flex-1">
-                {gateway.name || 'Unnamed IoTGateway'}
-              </Heading>
-              <HStack className="items-center" space="xs">
-                <Text size="sm" className="text-typography-500">
-                  {gateway.type
-                    ? gatewayTypeLabels[gateway.type as keyof typeof gatewayTypeLabels] ||
-                      gateway.type
-                    : 'Unknown Type'}
-                </Text>
-                {gateway.type === 'home_assistant' && (
-                  <Icon as={HouseWifi} size="md" className="text-typography-500" />
-                )}
-              </HStack>
-            </HStack>
-
-            <HStack className="mb-1 mt-1">
-              <Text className="text-typography-600">API URL</Text>
-              <Text className="text-md ml-auto" numberOfLines={1} ellipsizeMode="middle">
-                {gateway.api_url || 'No URL set'}
-              </Text>
-            </HStack>
-
-            <HStack className="mb-1 mt-1 items-center">
-              <Text className="text-typography-600">Link Status</Text>
-              <HStack className="ml-auto items-center" space="xs">
-                <InfoBadge {...getConnectionBadgeProps(connectionStatus)} />
-                {latency !== undefined && connectionStatus === 'connected' && (
-                  <CountBadge count={latency} label="ms" variant="green-dark" icon={Gauge} />
-                )}
-              </HStack>
-            </HStack>
-
-            <HStack className="mb-1 mt-1 items-center">
-              <Text className="text-typography-600">IoT Controls</Text>
-              <InfoBadge
-                text={`${linkedEntities.length} LINKED`}
-                variant="default"
-                className="ml-auto"
-              />
-            </HStack>
-          </Pressable>
-
-          {/* Action controls */}
-          <HStack className="mt-4 justify-around" space="md">
-            <Pressable
-              onPress={() => {
-                router.push({
-                  pathname: `/iot/[id]`,
-                  params: { id: gateway.id },
-                });
-              }}>
-              <Icon className="text-typography-300" as={SquarePen} size="md" />
-            </Pressable>
-            <Pressable onPress={() => onDelete(gateway)}>
-              <Icon className="text-typography-300" as={Trash2} size="md" />
-            </Pressable>
-          </HStack>
-        </VStack>
-      </Card>
-    </>
-  );
-};
 
 export default function IoTScreen() {
   const token = useAuthToken();
@@ -345,16 +212,11 @@ export default function IoTScreen() {
 
         {/* IoT Control Card */}
           <VStack className="px-6 pb-3 pt-5 w-full bg-background-0" space="md">
-            <HStack className="items-center" space="sm">
+            <HStack className="items-center gap-2">
               <Icon as={CircuitBoard} size="xl" className="text-typography-600" />
-              <CountBadge count={gateways.length} label="TOTAL" variant="success" />
-              {connectedGateways.length > 0 && (
-                <CountBadge
-                  count={connectedGateways.length}
-                  label="CONNECTED"
-                  variant="green-dark"
-                />
-              )}
+              <Heading className="flex-1">IoT Gateway List</Heading>
+
+              <InfoBadge variant='default' icon={Wifi} text={`${connectedGateways.length} CONNECTED`}/>
             </HStack>
 
             <Input className="mt-2">
@@ -389,17 +251,14 @@ export default function IoTScreen() {
           </VStack>
 
         {/* IoT Gateway Cards */}
-        <ScrollView className="w-full bg-[#1d1d1d]">
-        {filteredAndSortedGateways.map((gateway, index) => (
-          <IoTGatewayCard
-            key={gateway.id}
-            gateway={gateway}
-            token={token}
-            connectionStatus={connectionStatuses[gateway.id] || 'unknown'}
-            latency={connectionLatencies[gateway.id]}
-            onDelete={handleDelete}
-          />
-        ))}
+        <ScrollView className="w-full bg-background-50">
+          {filteredAndSortedGateways.map((gateway, index) => (
+            <IoTGatewayCard
+              key={gateway.id}
+              gateway={gateway}
+              onDelete={handleDelete}
+            />
+          ))}
         </ScrollView>
 
         {filteredAndSortedGateways.length === 0 && (searchQuery || filterConnectedOnly) && (

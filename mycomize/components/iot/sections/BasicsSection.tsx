@@ -273,23 +273,23 @@ export function BasicsSection() {
         </FormControl>
 
         {/* Connection Status and Controls */}
-        <VStack space="md" className="mt-4 rounded-md p-0">
+        <VStack space="md" className="mt-2 rounded-md p-0">
           <HStack className="mb-0 items-center">
             <Icon as={RadioTower} className="mr-2 text-typography-400" />
             <Text className="flex-1 text-lg font-semibold">Link Status</Text>
             <HStack className="items-center" space="xs">
               <InfoBadge {...getConnectionBadgeProps(connectionStatus)} />
               {latency !== undefined && connectionStatus === 'connected' && (
-                <CountBadge count={latency} label="ms" variant="green-dark" icon={Gauge} />
+                <InfoBadge icon={Gauge} text={` ${latency} ms`} variant="healthy" />
               )}
             </HStack>
           </HStack>
 
           {/* Connection Controls */}
-          <HStack space="sm" className="mt-3 w-1/3">
+          <HStack space="sm" className="mt-1 w-1/3">
             <Button
               variant="solid"
-              action="primary"
+              action="positive"
               onPress={() => {
                 // Don't execute if in connecting/testing state or missing required fields
                 if (isTestingConnection || !formData.api_url?.trim() || !formData.api_key?.trim())
@@ -298,9 +298,9 @@ export function BasicsSection() {
                 handleTestConnection();
               }}
               className="flex-1">
-              {isTestingConnection && <Spinner size="small" className="mr-2 text-background-0" />}
-              {!isTestingConnection && <ButtonIcon as={ChevronsLeftRightEllipsis} />}
-              <ButtonText>
+              {isTestingConnection && <Spinner size="small" className="mr-2 text-background-0" color="white" />}
+              {!isTestingConnection && <ButtonIcon className="text-typography-900" as={ChevronsLeftRightEllipsis} />}
+              <ButtonText className="text-typography-900">
                 {isTestingConnection && 'Connecting'}
                 {connectionStatus === 'connected' && !isTestingConnection && 'Test'}
                 {(connectionStatus === 'disconnected' || connectionStatus === 'unknown') &&

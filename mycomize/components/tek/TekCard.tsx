@@ -268,31 +268,32 @@ export const TekCard: React.FC<TekCardProps> = ({
             {/* Like Button */}
             <Pressable onPress={handleLike} disabled={isLiking}>
               <HStack className="items-center gap-1 mt-0.5">
-                {currentTek.user_has_liked
+                {currentTek.user_has_liked || parseNumberCount(currentTek.like_count) > 0
                  ? <AntDesign name="heart" size={16} color="#ff2400" />
                  : <AntDesign name="hearto" size={16} color="#6c6c6c" />
                 }
-                {parseNumberCount(currentTek.like_count) > 0 && (
-                  <Text className={currentTek.user_has_liked ? "text-sm text-[#ff2400] font-semibold" : "text-sm text-typography-300"}>
+                {currentTek.user_has_liked || parseNumberCount(currentTek.like_count) > 0
+                 ? <Text className="text-sm text-[#ff2400] font-semibold">
                     {formatCount(parseNumberCount(currentTek.like_count))}
-                  </Text>
-                )}
+                   </Text>
+                 : <Text className="text-sm text-typography-300">
+                    {formatCount(parseNumberCount(currentTek.like_count))}
+                   </Text>
+                }
               </HStack>
             </Pressable>
 
             {/* Import Button */}
             <Pressable onPress={handleImport} disabled={isImporting}>
               <HStack className="items-center gap-1">
-                {currentTek.user_has_imported
+                {currentTek.user_has_imported || parseNumberCount(currentTek.import_count) > 0 
                  ? <MaterialCommunityIcons name="mushroom" size={18} color="#4DBE6C" />
                  : <MaterialCommunityIcons name="mushroom-outline" size={20} color="#6c6c6c"/>
-
                 }
-                {parseNumberCount(currentTek.import_count) > 0 && (
-                  <Text className="text-sm text-[#4DBE6C] font-semibold">
-                    {formatCount(parseNumberCount(currentTek.import_count))}
-                  </Text>
-                )}
+                {currentTek.user_has_imported || parseNumberCount(currentTek.import_count) > 0 
+                 ? <Text className="text-sm text-[#4DBE6C] font-semibold">{formatCount(parseNumberCount(currentTek.import_count))}</Text>
+                 : <Text className="text-sm text-typography-300">{formatCount(parseNumberCount(currentTek.import_count))}</Text>
+                }
               </HStack>
             </Pressable>
 
@@ -322,7 +323,7 @@ export const TekCard: React.FC<TekCardProps> = ({
           
           <ActionsheetItem onPress={handleImportToNewGrow}>
             <MaterialCommunityIcons name="mushroom-outline" size={22} color="#6c6c6c" />
-            <ActionsheetItemText className="text-xl font-semibold ml-1">Import to new grow</ActionsheetItemText>
+            <ActionsheetItemText className="text-xl font-semibold ml-1">Import tek to new grow</ActionsheetItemText>
           </ActionsheetItem>
         </ActionsheetContent>
       </Actionsheet>

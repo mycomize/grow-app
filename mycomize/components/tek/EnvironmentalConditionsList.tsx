@@ -12,12 +12,14 @@ import { DeleteConfirmationModal } from '~/components/modals/DeleteConfirmationM
 
 interface EnvironmentalConditionsListProps {
   conditions: EnvironmentalCondition[];
-  onUpdateConditions: (conditions: EnvironmentalCondition[]) => void;
+  onUpdateConditions?: (conditions: EnvironmentalCondition[]) => void;
+  readOnly?: boolean;
 }
 
 export const EnvironmentalConditionsList: React.FC<EnvironmentalConditionsListProps> = ({
   conditions,
   onUpdateConditions,
+  readOnly = false,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCondition, setEditingCondition] = useState<EnvironmentalCondition | null>(null);
@@ -40,6 +42,8 @@ export const EnvironmentalConditionsList: React.FC<EnvironmentalConditionsListPr
   };
 
   const handleSaveCondition = (condition: EnvironmentalCondition) => {
+    if (!onUpdateConditions) return;
+    
     if (editingCondition) {
       // Update existing condition
       const updatedConditions = conditions.map((c) => (c.id === condition.id ? condition : c));
@@ -51,6 +55,8 @@ export const EnvironmentalConditionsList: React.FC<EnvironmentalConditionsListPr
   };
 
   const handleCopyCondition = (condition: EnvironmentalCondition) => {
+    if (!onUpdateConditions) return;
+    
     const newCondition: EnvironmentalCondition = {
       ...condition,
       id: Date.now().toString(), // Generate a new ID
@@ -60,11 +66,11 @@ export const EnvironmentalConditionsList: React.FC<EnvironmentalConditionsListPr
   };
 
   const handleConfirmDelete = () => {
-    if (conditionToDelete) {
-      const updatedConditions = conditions.filter((c) => c.id !== conditionToDelete.id);
-      onUpdateConditions(updatedConditions);
-      setConditionToDelete(null);
-    }
+    if (!onUpdateConditions || !conditionToDelete) return;
+    
+    const updatedConditions = conditions.filter((c) => c.id !== conditionToDelete.id);
+    onUpdateConditions(updatedConditions);
+    setConditionToDelete(null);
   };
 
   return (
@@ -72,10 +78,12 @@ export const EnvironmentalConditionsList: React.FC<EnvironmentalConditionsListPr
       {/* Header */}
       <HStack className="mb-2 items-center justify-between">
         <Text className="font-medium text-typography-700">Environmental Conditions</Text>
-        <Button variant="outline" size="sm" onPress={handleAddCondition}>
-          <ButtonIcon as={Plus} size="sm" />
-          <ButtonText>Add</ButtonText>
-        </Button>
+        {!readOnly && (
+          <Button variant="outline" size="sm" onPress={handleAddCondition}>
+            <ButtonIcon as={Plus} size="sm" />
+            <ButtonText>Add</ButtonText>
+          </Button>
+        )}
       </HStack>
 
       {/* Conditions List */}
@@ -107,20 +115,22 @@ export const EnvironmentalConditionsList: React.FC<EnvironmentalConditionsListPr
                 </Text>
               </VStack>
 
-              {/* Action buttons at bottom */}
-              <HStack className="items-center justify-between px-8 pt-3" space="sm">
-                <Pressable onPress={() => handleCopyCondition(condition)} className="rounded px-2">
-                  <Icon as={Copy} className="text-typography-500" size="sm" />
-                </Pressable>
-                <Pressable onPress={() => handleEditCondition(condition)} className="rounded px-2">
-                  <Icon as={Edit2} className="text-typography-500" size="sm" />
-                </Pressable>
-                <Pressable
-                  onPress={() => handleDeleteCondition(condition)}
-                  className="rounded px-2">
-                  <Icon as={Trash2} className="text-typography-500" size="sm" />
-                </Pressable>
-              </HStack>
+              {/* Action buttons at bottom - Hide in read-only mode */}
+              {!readOnly && (
+                <HStack className="items-center justify-between px-8 pt-3" space="sm">
+                  <Pressable onPress={() => handleCopyCondition(condition)} className="rounded px-2">
+                    <Icon as={Copy} className="text-typography-500" size="sm" />
+                  </Pressable>
+                  <Pressable onPress={() => handleEditCondition(condition)} className="rounded px-2">
+                    <Icon as={Edit2} className="text-typography-500" size="sm" />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => handleDeleteCondition(condition)}
+                    className="rounded px-2">
+                    <Icon as={Trash2} className="text-typography-500" size="sm" />
+                  </Pressable>
+                </HStack>
+              )}
             </VStack>
           ))}
         </VStack>

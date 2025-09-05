@@ -25,6 +25,7 @@ interface StageTabsProps {
   stageName?: string; // Stage name for calendar integration
   stageStartDate?: string; // Stage start date for calendar integration
   stageIoTData?: StageIoTData; // Pre-computed IoT data for this stage
+  readOnly?: boolean; // Whether the component should be read-only (used in view-only contexts)
 }
 
 export const StageTabs: React.FC<StageTabsProps> = ({
@@ -32,7 +33,7 @@ export const StageTabs: React.FC<StageTabsProps> = ({
   onUpdateBulkStageData,
   grow,
   stageName,
-  stageStartDate,
+  readOnly = false,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('items');
 
@@ -47,7 +48,7 @@ export const StageTabs: React.FC<StageTabsProps> = ({
   const currentBulkStageData = stageData || defaultBulkStageData;
 
   const handleUpdateItems = (items: typeof currentBulkStageData.items) => {
-    if (onUpdateBulkStageData) {
+    if (onUpdateBulkStageData && !readOnly) {
       onUpdateBulkStageData({
         ...currentBulkStageData,
         items,
@@ -58,7 +59,7 @@ export const StageTabs: React.FC<StageTabsProps> = ({
   const handleUpdateConditions = (
     environmental_conditions: typeof currentBulkStageData.environmental_conditions
   ) => {
-    if (onUpdateBulkStageData) {
+    if (onUpdateBulkStageData && !readOnly) {
       onUpdateBulkStageData({
         ...currentBulkStageData,
         environmental_conditions,
@@ -66,17 +67,9 @@ export const StageTabs: React.FC<StageTabsProps> = ({
     }
   };
 
-  const handleUpdateTasks = (tasks: typeof currentBulkStageData.tasks) => {
-    if (onUpdateBulkStageData) {
-      onUpdateBulkStageData({
-        ...currentBulkStageData,
-        tasks,
-      });
-    }
-  };
 
   const handleUpdateNotes = (notes: string) => {
-    if (onUpdateBulkStageData) {
+    if (onUpdateBulkStageData && !readOnly) {
       onUpdateBulkStageData({
         ...currentBulkStageData,
         notes,
@@ -118,25 +111,32 @@ export const StageTabs: React.FC<StageTabsProps> = ({
       {/* Tab Content */}
       <VStack space="md" className="mb-1">
         {activeTab === 'items' && (
-          <ItemsList items={currentBulkStageData.items} onUpdateItems={handleUpdateItems} />
+          <ItemsList 
+            items={currentBulkStageData.items} 
+            onUpdateItems={handleUpdateItems}
+            readOnly={readOnly}
+          />
         )}
         {activeTab === 'conditions' && (
           <EnvironmentalConditionsList
             conditions={currentBulkStageData.environmental_conditions}
             onUpdateConditions={handleUpdateConditions}
+            readOnly={readOnly}
           />
         )}
         {activeTab === 'tasks' && (
           <TasksList
-            tasks={currentBulkStageData.tasks}
-            onUpdateTasks={handleUpdateTasks}
-            grow={grow}
-            stageName={stageName}
-            stageStartDate={stageStartDate}
+            stageKey={stageName || 'inoculation'}
+            context={grow ? 'grow' : 'tek'}
+            readOnly={readOnly}
           />
         )}
         {activeTab === 'notes' && (
-          <StageNotes notes={currentBulkStageData.notes} onUpdateNotes={handleUpdateNotes} />
+          <StageNotes 
+            notes={currentBulkStageData.notes} 
+            onUpdateNotes={handleUpdateNotes}
+            readOnly={readOnly}
+          />
         )}
       </VStack>
     </VStack>

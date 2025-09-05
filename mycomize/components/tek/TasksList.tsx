@@ -6,48 +6,53 @@ import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
-import { InfoBadge } from '~/components/ui/info-badge';
 import {
   Plus,
   Edit2,
   Trash2,
   CheckSquare,
-  Calendar,
   Copy,
   CalendarPlus,
-  CalendarX,
   CheckCircle,
   Clock,
-  AlertTriangle,
   Repeat,
 } from 'lucide-react-native';
-import { Task } from '~/lib/types/tekTypes';
+import { Task, TaskContext, generateId } from '~/lib/types/tekTypes';
 import { TaskModal } from '~/components/modals/TaskModal';
 import { DeleteConfirmationModal } from '~/components/modals/DeleteConfirmationModal';
-import { useCalendar } from '~/lib/CalendarContext';
-
+import { useGrowStore } from '~/lib/stores/growStore';
+import { useTeksStore } from '~/lib/stores/teksStore';
+import { InfoBadge } from '~/components/ui/info-badge';
 interface TasksListProps {
-  tasks: Task[];
-  onUpdateTasks: (tasks: Task[]) => void;
-  grow?: any; // Grow data for calendar integration
-  stageName?: string; // Stage name for calendar integration
-  stageStartDate?: string; // Stage start date for calendar integration
+  stageKey: string; // The stage key for tasks (e.g., 'inoculation', 'spawn_colonization', etc.)
+  context: TaskContext; // 'grow' or 'tek' - determines which store to use
+  readOnly?: boolean; // Whether the component should be read-only (hides add/edit/delete buttons)
 }
 
 export const TasksList: React.FC<TasksListProps> = ({
-  tasks,
-  onUpdateTasks,
-  grow,
-  stageName,
-  stageStartDate,
+  stageKey,
+  context,
+  readOnly = false,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
-  const { addTaskToCalendar, removeTaskFromCalendar, isTaskInCalendar, calendarState } =
-    useCalendar();
   const { showSuccess } = useUnifiedToast();
+
+  // Store hooks
+  const growStore = useGrowStore();
+  const teksStore = useTeksStore();
+
+  // Get tasks for the current stage using store selectors
+  const tasks: Task[] = context === 'grow' 
+    ? growStore.getTasksForStage(stageKey)
+    : teksStore.getTasksForStage(stageKey);
+
+  // Get stage start date for grow context
+  const stageStartDate: string | undefined = context === 'grow' 
+    ? growStore.getStageStartDate(stageKey)
+    : undefined;
 
   const handleAddTask = () => {
     setEditingTask(null);
@@ -64,139 +69,75 @@ export const TasksList: React.FC<TasksListProps> = ({
     setIsDeleteModalOpen(true);
   };
 
-  const handleSaveTask = (task: Task) => {
-    if (editingTask) {
-      // Update existing task
-      const updatedTasks = tasks.map((t) => (t.id === task.id ? task : t));
-      onUpdateTasks(updatedTasks);
-    } else {
-      // Add new task
-      onUpdateTasks([...tasks, task]);
-    }
-  };
-
   const handleCopyTask = (task: Task) => {
     const newTask: Task = {
       ...task,
-      id: Date.now().toString(), // Generate a new ID
-      action: `${task.action}`,
+      id: generateId(),
+      action: `${task.action} (Copy)`,
+      status: 'pending', // Reset status for copied task
     };
-    onUpdateTasks([...tasks, newTask]);
+    
+    // Use store function to add the copied task
+    if (context === 'grow') {
+      growStore.addTaskToStage(stageKey, newTask);
+    } else {
+      teksStore.addTaskToStage(stageKey, newTask);
+    }
+    
+    showSuccess('Task copied successfully');
   };
 
   const handleConfirmDelete = () => {
     if (taskToDelete) {
-      // Remove task from the tasks list
-      const updatedTasks = tasks.filter((t) => t.id !== taskToDelete.id);
-      onUpdateTasks(updatedTasks);
-
-      // Also remove the task from calendar if it exists there
-      if (grow && isTaskInCalendar(taskToDelete.id, grow.id)) {
-        removeTaskFromCalendar(taskToDelete.id);
-        showSuccess(`Task "${taskToDelete.action}" removed from calendar`);
+      // Use store function to delete the task
+      if (context === 'grow') {
+        growStore.deleteTaskFromStage(stageKey, taskToDelete.id);
+      } else {
+        teksStore.deleteTaskFromStage(stageKey, taskToDelete.id);
       }
-
+      
       setTaskToDelete(null);
+      showSuccess('Task deleted successfully');
     }
   };
 
-  const handleToggleCalendar = (task: Task) => {
-    // Only allow calendar operations if we have the necessary data
-    if (!grow || !stageName || !stageStartDate) {
-      console.warn('Cannot add task to calendar: missing grow, stage name, or stage start date');
-      return;
+  const getDateTimeDisplay = (task: Task) => {
+    const parts = [];
+    
+    if (task.start_date) {
+      const date = new Date(task.start_date + 'T00:00:00');
+      parts.push(`Start: ${date.toLocaleDateString()}`);
+    }
+    
+    if (task.start_time) {
+      parts.push(`Time: ${task.start_time}`);
+    }
+    
+    if (task.end_date) {
+      const date = new Date(task.end_date + 'T00:00:00');
+      parts.push(`End: ${date.toLocaleDateString()}`);
     }
 
-    const taskInCalendar = isTaskInCalendar(task.id, grow.id);
-
-    if (taskInCalendar) {
-      removeTaskFromCalendar(task.id);
-      showSuccess(`Task "${task.action}" removed from calendar`);
-    } else {
-      addTaskToCalendar(task, grow, stageName, stageStartDate);
-      showSuccess(`Task "${task.action}" added to calendar`);
-    }
+    return parts.length > 0 ? parts.join(' • ') : null;
   };
 
-  // Get calendar task status for a given task
-  const getTaskCalendarStatus = (task: Task) => {
-    if (!grow || !canUseCalendar) return null;
-
-    const calendarTasks = calendarState.tasks.filter(
-      (calendarTask) => calendarTask.taskId === task.id && calendarTask.growId === grow.id
-    );
-
-    if (calendarTasks.length === 0) return null;
-
-    // Check if all calendar tasks are completed
-    const completedTasks = calendarTasks.filter((task) => task.completed);
-    const allCompleted = completedTasks.length === calendarTasks.length;
-
-    if (allCompleted) {
-      return {
-        status: 'complete',
-        icon: CheckCircle,
-        text: 'Complete',
-        variant: 'success' as const,
-      };
-    }
-
-    // Find the next upcoming or overdue task
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-
-    const incompleteTasks = calendarTasks.filter((task) => !task.completed);
-    const nextTask = incompleteTasks.sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    )[0];
-
-    if (!nextTask) return null;
-
-    const taskDate = new Date(nextTask.date);
-    const diffTime = taskDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 0) {
-      const daysOverdue = Math.abs(diffDays);
-      return {
-        status: 'overdue',
-        icon: AlertTriangle,
-        text: `${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} overdue`,
-        variant: 'error' as const,
-      };
-    } else if (diffDays === 0) {
-      return { status: 'today', icon: Clock, text: 'Due today', variant: 'warning' as const };
-    } else {
-      return {
-        status: 'upcoming',
-        icon: Clock,
-        text: `${diffDays} day${diffDays !== 1 ? 's' : ''}`,
-        variant: 'default' as const,
-      };
-    }
+  const needsDate = (task: Task) => {
+    // Only show "Needs Date" in grow context when no date fields are set
+    if (context !== 'grow') return false;
+    return !task.start_date && !task.start_time && !task.end_date;
   };
-
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString();
-    } catch {
-      return dateString;
-    }
-  };
-
-  // Check if calendar functionality is available
-  const canUseCalendar = grow && stageName && stageStartDate;
 
   return (
     <VStack space="sm">
       {/* Header */}
       <HStack className="mb-2 items-center justify-between">
         <Text className="font-medium text-typography-700">Tasks</Text>
-        <Button variant="outline" size="sm" onPress={handleAddTask}>
-          <ButtonIcon as={Plus} size="sm" />
-          <ButtonText>Add</ButtonText>
-        </Button>
+        {!readOnly && (
+          <Button variant="outline" size="sm" onPress={handleAddTask}>
+            <ButtonIcon as={Plus} size="sm" />
+            <ButtonText>Add</ButtonText>
+          </Button>
+        )}
       </HStack>
 
       {/* Tasks List */}
@@ -210,7 +151,8 @@ export const TasksList: React.FC<TasksListProps> = ({
       ) : (
         <VStack space="md">
           {tasks.map((task) => {
-            const calendarStatus = getTaskCalendarStatus(task);
+            const dateTimeDisplay = getDateTimeDisplay(task);
+            
             return (
               <VStack
                 key={task.id}
@@ -218,48 +160,48 @@ export const TasksList: React.FC<TasksListProps> = ({
                 space="sm">
                 {/* Main content */}
                 <HStack className="items-start justify-between">
-                  <Text className="flex-1 font-medium text-typography-900">{task.action}</Text>
-                  {calendarStatus && (
-                    <InfoBadge
-                      icon={calendarStatus.icon}
-                      text={calendarStatus.text}
-                      variant={calendarStatus.variant}
-                      size="sm"
-                    />
-                  )}
+                  <VStack className="flex-1" space="xs">
+                    <Text className="font-medium text-typography-900">{task.action}</Text>
+                    
+                    {/* Frequency row */}
+                    <HStack className="items-center" space="xs">
+                      <Icon as={Repeat} className="text-typography-500" size="sm" />
+                      <Text className="text-sm text-typography-600">{task.frequency}</Text>
+                    </HStack>
+
+                    {/* Date/Time info - Only show for grow context */}
+                    {context === 'grow' && dateTimeDisplay && (
+                      <HStack className="items-center" space="xs">
+                        <Icon as={Clock} className="text-typography-500" size="sm" />
+                        <Text className="text-sm text-typography-600">{dateTimeDisplay}</Text>
+                      </HStack>
+                    )}
+                  </VStack>
+                  
+                  {/* Status badge or Needs Date indicator */}
+                  <VStack className="items-end">
+                    {needsDate(task) ? (
+                      <InfoBadge icon={CalendarPlus} text="Needs Date" variant='warning' />
+                    ) : (
+                      <></>
+                    )}
+                  </VStack>
                 </HStack>
 
-                {/* Frequency row */}
-                <HStack className="items-center" space="xs">
-                  <Icon as={Repeat} className="text-typography-500" size="sm" />
-                  <Text className="text-sm text-typography-600">{task.frequency}</Text>
-                </HStack>
-
-                {/* Action buttons at bottom */}
-                <HStack className="items-center justify-between px-8 pt-3" space="sm">
-                  {canUseCalendar && (
-                    <Pressable onPress={() => handleToggleCalendar(task)} className="rounded px-2">
-                      <Icon
-                        as={isTaskInCalendar(task.id, grow.id) ? CalendarX : CalendarPlus}
-                        className={
-                          isTaskInCalendar(task.id, grow.id)
-                            ? 'text-primary-600'
-                            : 'text-typography-500'
-                        }
-                        size="sm"
-                      />
+                {/* Action buttons at bottom - Hide in read-only mode */}
+                {!readOnly && (
+                  <HStack className="items-center justify-between px-8 pt-3" space="sm">
+                    <Pressable onPress={() => handleCopyTask(task)} className="rounded px-2">
+                      <Icon as={Copy} className="text-typography-500" size="sm" />
                     </Pressable>
-                  )}
-                  <Pressable onPress={() => handleCopyTask(task)} className="rounded px-2">
-                    <Icon as={Copy} className="text-typography-500" size="sm" />
-                  </Pressable>
-                  <Pressable onPress={() => handleEditTask(task)} className="rounded px-2">
-                    <Icon as={Edit2} className="text-typography-500" size="sm" />
-                  </Pressable>
-                  <Pressable onPress={() => handleDeleteTask(task)} className="rounded px-2">
-                    <Icon as={Trash2} className="text-typography-500" size="sm" />
-                  </Pressable>
-                </HStack>
+                    <Pressable onPress={() => handleEditTask(task)} className="rounded px-2">
+                      <Icon as={Edit2} className="text-typography-500" size="sm" />
+                    </Pressable>
+                    <Pressable onPress={() => handleDeleteTask(task)} className="rounded px-2">
+                      <Icon as={Trash2} className="text-typography-500" size="sm" />
+                    </Pressable>
+                  </HStack>
+                )}
               </VStack>
             );
           })}
@@ -270,9 +212,9 @@ export const TasksList: React.FC<TasksListProps> = ({
       <TaskModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSave={handleSaveTask}
         task={editingTask}
-        stageStartDate={stageStartDate}
+        context={context}
+        stageKey={stageKey}
       />
 
       {/* Delete Confirmation Modal */}

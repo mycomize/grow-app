@@ -5,13 +5,22 @@ import { StageTabs } from '~/components/ui/stage-tabs';
 
 interface StageSectionProps {
   stageData: BulkStageData;
-  onUpdateBulkStageData: (stageData: BulkStageData) => void;
+  onUpdateBulkStageData?: (stageData: BulkStageData) => void;
+  readOnly?: boolean;
 }
 
-export const StageSection: React.FC<StageSectionProps> = ({ stageData, onUpdateBulkStageData }) => {
+export const StageSection: React.FC<StageSectionProps> = ({ 
+  stageData, 
+  onUpdateBulkStageData,
+  readOnly = false 
+}) => {
   return (
     <VStack space="md" className="p-0">
-      <StageTabs stageData={stageData} onUpdateBulkStageData={onUpdateBulkStageData} />
+      <StageTabs 
+        stageData={stageData} 
+        onUpdateBulkStageData={onUpdateBulkStageData} 
+        readOnly={readOnly}
+      />
     </VStack>
   );
 };

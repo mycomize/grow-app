@@ -8,6 +8,7 @@ import {
   BulkGrowUpdate,
   BulkGrowFlush,
 } from '../types/growTypes';
+import { Task, generateId as generateTekId } from '../types/tekTypes';
 
 // Helper function to handle unauthorized errors consistently
 const handleUnauthorizedError = (error: Error) => {
@@ -69,6 +70,13 @@ interface GrowStore {
   // Date handling utilities
   parseDate: (dateString?: string) => Date | null;
   formatDateForAPI: (date: Date | null) => string | undefined;
+
+  // Task management for grows
+  addTaskToStage: (stageKey: string, task: Task) => void;
+  updateTaskInStage: (stageKey: string, taskId: string, updates: Partial<Task>) => void;
+  deleteTaskFromStage: (stageKey: string, taskId: string) => void;
+  getTasksForStage: (stageKey: string) => Task[];
+  getStageStartDate: (stageKey: string) => string | undefined;
 
   reset: () => void;
 }
@@ -411,13 +419,54 @@ export const useGrowStore = create<GrowStore>((set, get) => ({
         };
       }
 
+      // Update the field first
+      const updatedFormData = {
+        ...state.currentGrow.formData,
+        [field]: value,
+      };
+
+      // Check if this is a stage date field that should trigger task updates
+      const stageDateFields = {
+        'inoculation_date': 'inoculation',
+        'spawn_start_date': 'spawn_colonization', 
+        'bulk_start_date': 'bulk_colonization',
+        'fruiting_start_date': 'fruiting'
+      };
+
+      const stageKey = stageDateFields[field as keyof typeof stageDateFields];
+      
+      // If this is a stage date field and has a value, update tasks without start_date
+      if (stageKey && value && updatedFormData.stages) {
+        const stageData = updatedFormData.stages[stageKey as keyof typeof updatedFormData.stages];
+        
+        if (stageData && stageData.tasks) {
+          // Update tasks that don't have start_date set
+          const updatedTasks = stageData.tasks.map((task: Task) => {
+            // Only update if task doesn't have a start_date already
+            if (!task.start_date) {
+              return {
+                ...task,
+                start_date: value
+              };
+            }
+            return task;
+          });
+
+          // Update the stages with the new tasks
+          updatedFormData.stages = {
+            ...updatedFormData.stages,
+            [stageKey]: {
+              ...stageData,
+              tasks: updatedTasks
+            }
+          };
+        }
+      }
+
       return {
         currentGrow: {
           ...state.currentGrow,
-          formData: {
-            ...state.currentGrow.formData,
-            [field]: value,
-          },
+          formData: updatedFormData,
         },
       };
     });
@@ -495,6 +544,141 @@ export const useGrowStore = create<GrowStore>((set, get) => ({
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  },
+
+  // Task management for grows
+  addTaskToStage: (stageKey: string, task: Task) => {
+    set((state) => {
+      if (!state.currentGrow?.formData?.stages) return state;
+      
+      const stages = state.currentGrow.formData.stages;
+      const currentStageData = stages[stageKey as keyof typeof stages];
+      
+      if (!currentStageData) return state;
+
+      // Get the stage start date if it exists
+      const stageDateFields = {
+        'inoculation': 'inoculation_date',
+        'spawn_colonization': 'spawn_start_date', 
+        'bulk_colonization': 'bulk_start_date',
+        'fruiting': 'fruiting_start_date'
+      };
+      
+      const dateField = stageDateFields[stageKey as keyof typeof stageDateFields];
+      const stageStartDate = dateField ? state.currentGrow.formData[dateField as keyof BulkGrowUpdate] : undefined;
+
+      const newTask = { 
+        ...task, 
+        id: generateTekId(), 
+        status: task.status || 'pending' as const,
+        // Auto-set start_date from stage if task doesn't have one and stage has a start date
+        start_date: task.start_date || (stageStartDate ? stageStartDate as string : undefined)
+      };
+
+      return {
+        ...state,
+        currentGrow: {
+          ...state.currentGrow,
+          formData: {
+            ...state.currentGrow.formData,
+            stages: {
+              ...stages,
+              [stageKey]: {
+                ...currentStageData,
+                tasks: [...currentStageData.tasks, newTask]
+              }
+            }
+          }
+        }
+      };
+    });
+  },
+
+  updateTaskInStage: (stageKey: string, taskId: string, updates: Partial<Task>) => {
+    set((state) => {
+      if (!state.currentGrow?.formData?.stages) return state;
+
+      const stages = state.currentGrow.formData.stages;
+      const currentStageData = stages[stageKey as keyof typeof stages];
+      
+      if (!currentStageData) return state;
+
+      const updatedTasks = currentStageData.tasks.map((task: Task) =>
+        task.id === taskId ? { ...task, ...updates } : task
+      );
+
+      return {
+        ...state,
+        currentGrow: {
+          ...state.currentGrow,
+          formData: {
+            ...state.currentGrow.formData,
+            stages: {
+              ...stages,
+              [stageKey]: {
+                ...currentStageData,
+                tasks: updatedTasks
+              }
+            }
+          }
+        }
+      };
+    });
+  },
+
+  deleteTaskFromStage: (stageKey: string, taskId: string) => {
+    set((state) => {
+      if (!state.currentGrow?.formData?.stages) return state;
+
+      const stages = state.currentGrow.formData.stages;
+      const currentStageData = stages[stageKey as keyof typeof stages];
+      
+      if (!currentStageData) return state;
+
+      const updatedTasks = currentStageData.tasks.filter((task: Task) => task.id !== taskId);
+
+      return {
+        ...state,
+        currentGrow: {
+          ...state.currentGrow,
+          formData: {
+            ...state.currentGrow.formData,
+            stages: {
+              ...stages,
+              [stageKey]: {
+                ...currentStageData,
+                tasks: updatedTasks
+              }
+            }
+          }
+        }
+      };
+    });
+  },
+
+  getTasksForStage: (stageKey: string): Task[] => {
+    const { currentGrow } = get();
+    if (!currentGrow?.formData?.stages) return [];
+    
+    const stages = currentGrow.formData.stages;
+    const stage = stages[stageKey as keyof typeof stages];
+    return stage ? stage.tasks : [];
+  },
+
+  getStageStartDate: (stageKey: string): string | undefined => {
+    const { currentGrow } = get();
+    if (!currentGrow?.formData) return undefined;
+
+    // Map stage keys to their corresponding date fields
+    const stageDateMap: Record<string, string | undefined> = {
+      inoculation: currentGrow.formData.inoculation_date,
+      spawn_colonization: currentGrow.formData.spawn_start_date,
+      bulk_colonization: currentGrow.formData.bulk_start_date,
+      fruiting: currentGrow.formData.fruiting_start_date,
+      harvest: currentGrow.formData.harvest_completion_date
+    };
+
+    return stageDateMap[stageKey];
   },
 
   // Reset store state

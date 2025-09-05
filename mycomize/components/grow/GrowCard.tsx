@@ -7,6 +7,7 @@ import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { View } from '~/components/ui/view';
 import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
+import { GrowActionSheet } from '~/components/ui/grow-action-sheet';
 import { useRouter } from 'expo-router';
 import {
   CircuitBoard,
@@ -37,6 +38,7 @@ interface GrowCardProps {
 export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }) => {
   const router = useRouter();
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [showActionSheet, setShowActionSheet] = useState(false);
 
   // Use efficient selectors for duration and dry yield calculations
   const growAge = useGrowDuration(grow);
@@ -106,7 +108,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
     return 'pending';
   };
 
-  const handleCreateTek = () => {
+  const handleConvertToTek = () => {
     // Navigate to tek creation from grow using router.push with query params
     router.push({
       pathname: '/teks/new',
@@ -424,7 +426,7 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
 
           {/* Individual grow controls */}
           <HStack className="mt-2 justify-around" space="md">
-            <Pressable onPress={handleCreateTek}>
+            <Pressable onPress={() => setShowActionSheet(true)}>
               <Icon as={Layers} size="md" className="text-typography-300" />
             </Pressable>
             <Pressable
@@ -444,6 +446,14 @@ export const GrowCard: React.FC<GrowCardProps> = ({ grow, onDelete, onTagPress }
           </HStack>
         </View>
       </VStack>
+
+      {/* Action Sheet */}
+      <GrowActionSheet
+        isOpen={showActionSheet}
+        onClose={() => setShowActionSheet(false)}
+        onConvertToTek={handleConvertToTek}
+        growName={grow.name || grow.variant || 'grow'}
+      />
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal

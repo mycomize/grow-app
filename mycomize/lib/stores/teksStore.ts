@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { router } from 'expo-router';
 import { apiClient, isUnauthorizedError } from '../api/ApiClient';
-import { BulkGrowTek, BulkGrowTekData, createEmptyTekData, generateId } from '../types/tekTypes';
+import { BulkGrowTek, BulkGrowTekData, createEmptyTekData, generateId, Task } from '../types/tekTypes';
 
 // Helper function to handle unauthorized errors consistently
 const handleUnauthorizedError = (error: Error) => {
@@ -53,6 +53,12 @@ interface TeksStore {
 
   // Saving state management
   setSaving: (saving: boolean) => void;
+
+  // Task management for teks
+  addTaskToStage: (stageKey: string, task: Task) => void;
+  updateTaskInStage: (stageKey: string, taskId: string, updates: Partial<Task>) => void;
+  deleteTaskFromStage: (stageKey: string, taskId: string) => void;
+  getTasksForStage: (stageKey: string) => Task[];
 
   // Engagement Actions
   likeTek: (token: string, tekId: string) => Promise<void>;
@@ -429,6 +435,108 @@ export const useTeksStore = create<TeksStore>((set, get) => {
     set({ isSaving: saving });
   },
 
+  // Task management for teks
+  addTaskToStage: (stageKey: string, task: Task) => {
+    set((state) => {
+      if (!state.currentTek?.formData?.stages) return state;
+      
+      const stages = state.currentTek.formData.stages;
+      const currentStageData = stages[stageKey as keyof typeof stages];
+      
+      if (!currentStageData) return state;
+
+      const newTask = { ...task, id: generateId(), status: task.status || 'pending' as const };
+
+      return {
+        ...state,
+        currentTek: {
+          ...state.currentTek,
+          formData: {
+            ...state.currentTek.formData,
+            stages: {
+              ...stages,
+              [stageKey]: {
+                ...currentStageData,
+                tasks: [...currentStageData.tasks, newTask]
+              }
+            }
+          }
+        }
+      };
+    });
+  },
+
+  updateTaskInStage: (stageKey: string, taskId: string, updates: Partial<Task>) => {
+    set((state) => {
+      if (!state.currentTek?.formData?.stages) return state;
+
+      const stages = state.currentTek.formData.stages;
+      const currentStageData = stages[stageKey as keyof typeof stages];
+      
+      if (!currentStageData) return state;
+
+      const updatedTasks = currentStageData.tasks.map((task: Task) =>
+        task.id === taskId ? { ...task, ...updates } : task
+      );
+
+      return {
+        ...state,
+        currentTek: {
+          ...state.currentTek,
+          formData: {
+            ...state.currentTek.formData,
+            stages: {
+              ...stages,
+              [stageKey]: {
+                ...currentStageData,
+                tasks: updatedTasks
+              }
+            }
+          }
+        }
+      };
+    });
+  },
+
+  deleteTaskFromStage: (stageKey: string, taskId: string) => {
+    set((state) => {
+      if (!state.currentTek?.formData?.stages) return state;
+
+      const stages = state.currentTek.formData.stages;
+      const currentStageData = stages[stageKey as keyof typeof stages];
+      
+      if (!currentStageData) return state;
+
+      const updatedTasks = currentStageData.tasks.filter((task: Task) => task.id !== taskId);
+
+      return {
+        ...state,
+        currentTek: {
+          ...state.currentTek,
+          formData: {
+            ...state.currentTek.formData,
+            stages: {
+              ...stages,
+              [stageKey]: {
+                ...currentStageData,
+                tasks: updatedTasks
+              }
+            }
+          }
+        }
+      };
+    });
+  },
+
+  getTasksForStage: (stageKey: string): Task[] => {
+    const { currentTek } = get();
+    if (!currentTek?.formData?.stages) return [];
+    
+    const stages = currentTek.formData.stages;
+    const stage = stages[stageKey as keyof typeof stages];
+    return stage ? stage.tasks : [];
+  },
+
   // Like/Unlike a tek with optimistic updates
   likeTek: async (token: string, tekId: string) => {
     const { teks } = get();
@@ -443,11 +551,12 @@ export const useTeksStore = create<TeksStore>((set, get) => {
     const originalUserHasLiked = tek.user_has_liked;
     const originalLikeCount = tek.like_count;
 
-    // Optimistic update
+    // Optimistic update - Parse like_count as number to avoid string concatenation
+    const currentLikeCount = typeof originalLikeCount === 'string' ? parseInt(originalLikeCount, 10) : originalLikeCount;
     const newUserHasLiked = !originalUserHasLiked;
     const newLikeCount = originalUserHasLiked 
-      ? Math.max(0, originalLikeCount - 1) 
-      : originalLikeCount + 1;
+      ? Math.max(0, currentLikeCount - 1) 
+      : currentLikeCount + 1;
 
     set((state) => ({
       teks: state.teks.map(t => 
@@ -501,14 +610,14 @@ export const useTeksStore = create<TeksStore>((set, get) => {
       return;
     }
 
-    // Optimistic update
+    // Optimistic update - Parse view_count as number to avoid string concatenation
     set((state) => ({
       teks: state.teks.map(t => 
         t.id.toString() === tekId
           ? { 
               ...t, 
               user_has_viewed: true,
-              view_count: t.view_count + 1
+              view_count: (typeof t.view_count === 'string' ? parseInt(t.view_count, 10) : t.view_count) + 1
             }
           : t
       )
@@ -522,13 +631,14 @@ export const useTeksStore = create<TeksStore>((set, get) => {
       handleUnauthorizedError(error as Error);
       
       // Rollback optimistic update on error
+      const currentViewCount = typeof tek.view_count === 'string' ? parseInt(tek.view_count, 10) : tek.view_count;
       set((state) => ({
         teks: state.teks.map(t => 
           t.id.toString() === tekId
             ? { 
                 ...t, 
                 user_has_viewed: false,
-                view_count: Math.max(0, t.view_count - 1)
+                view_count: Math.max(0, currentViewCount)
               }
             : t
         )
@@ -553,13 +663,14 @@ export const useTeksStore = create<TeksStore>((set, get) => {
     const originalImportCount = tek.import_count;
 
     // Optimistic update - always increment import count, but only set user_has_imported once
+    // Parse import_count as number to avoid string concatenation
     set((state) => ({
       teks: state.teks.map(t => 
         t.id.toString() === tekId
           ? { 
               ...t, 
               user_has_imported: true,
-              import_count: t.import_count + 1
+              import_count: (typeof t.import_count === 'string' ? parseInt(t.import_count, 10) : t.import_count) + 1
             }
           : t
       )

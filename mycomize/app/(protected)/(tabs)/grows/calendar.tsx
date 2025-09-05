@@ -6,12 +6,8 @@ import { VStack } from '~/components/ui/vstack';
 import { HStack } from '~/components/ui/hstack';
 import { Card } from '~/components/ui/card';
 import { ScrollView } from '~/components/ui/scroll-view';
-import { Badge } from '~/components/ui/badge';
-import { Button, ButtonText } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
-import { Checkbox } from '~/components/ui/checkbox';
-import { CheckboxIndicator, CheckboxIcon } from '~/components/ui/checkbox';
 import { Input, InputField, InputIcon } from '~/components/ui/input';
 import { Calendar, DateData } from 'react-native-calendars';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -246,19 +242,6 @@ export default function CalendarScreen() {
   const handleDayPress = useCallback((day: DateData) => {
     setSelectedDate(day.dateString);
   }, []);
-
-  const getTaskTypeColor = (priority: 'low' | 'medium' | 'high') => {
-    switch (priority) {
-      case 'high':
-        return 'bg-red-100 text-red-800';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'low':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {

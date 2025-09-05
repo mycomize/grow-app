@@ -217,8 +217,6 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
       // Call combined endpoint
       const response = await apiClient.createIoTGatewayWithEntities(combinedRequest, token);
 
-      console.log(`[GatewayStore] Combined endpoint response:`, response);
-
       // Create gateway object from response
       const newGateway: IoTGateway = {
         id: response.gateway_id,
@@ -746,10 +744,12 @@ export const useGatewayById = (id: string) =>
   useGatewayStore((state) => state.gateways.find((g) => g.id.toString() === id));
 
 export const useConnectionStatus = (gatewayId: number) =>
-  useGatewayStore((state) => ({
-    status: state.connectionStatuses[gatewayId] || 'unknown',
-    latency: state.connectionLatencies[gatewayId],
-  }));
+  useGatewayStore(
+    useShallow((state) => ({
+      status: state.connectionStatuses[gatewayId] || 'unknown',
+      latency: state.connectionLatencies[gatewayId],
+    }))
+  );
 
 export const useGatewayLoading = () => useGatewayStore((state) => state.loading);
 

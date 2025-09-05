@@ -14,10 +14,11 @@ import { DeleteConfirmationModal } from '~/components/modals/DeleteConfirmationM
 
 interface ItemsListProps {
   items: Item[];
-  onUpdateItems: (items: Item[]) => void;
+  onUpdateItems?: (items: Item[]) => void;
+  readOnly?: boolean;
 }
 
-export const ItemsList: React.FC<ItemsListProps> = ({ items, onUpdateItems }) => {
+export const ItemsList: React.FC<ItemsListProps> = ({ items, onUpdateItems, readOnly = false }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -39,6 +40,8 @@ export const ItemsList: React.FC<ItemsListProps> = ({ items, onUpdateItems }) =>
   };
 
   const handleSaveItem = (item: Item) => {
+    if (!onUpdateItems) return;
+    
     if (editingItem) {
       // Update existing item
       const updatedItems = items.map((i) => (i.id === item.id ? item : i));
@@ -50,6 +53,8 @@ export const ItemsList: React.FC<ItemsListProps> = ({ items, onUpdateItems }) =>
   };
 
   const handleCopyItem = (item: Item) => {
+    if (!onUpdateItems) return;
+    
     const newItem: Item = {
       ...item,
       id: Date.now().toString(), // Generate a new ID
@@ -67,11 +72,11 @@ export const ItemsList: React.FC<ItemsListProps> = ({ items, onUpdateItems }) =>
   };
 
   const handleConfirmDelete = () => {
-    if (itemToDelete) {
-      const updatedItems = items.filter((i) => i.id !== itemToDelete.id);
-      onUpdateItems(updatedItems);
-      setItemToDelete(null);
-    }
+    if (!onUpdateItems || !itemToDelete) return;
+    
+    const updatedItems = items.filter((i) => i.id !== itemToDelete.id);
+    onUpdateItems(updatedItems);
+    setItemToDelete(null);
   };
 
   return (
@@ -79,10 +84,12 @@ export const ItemsList: React.FC<ItemsListProps> = ({ items, onUpdateItems }) =>
       {/* Header */}
       <HStack className="mb-2 items-center justify-between">
         <Text className="font-medium text-typography-700">Items</Text>
-        <Button variant="outline" size="sm" onPress={handleAddItem}>
-          <ButtonIcon as={Plus} size="sm" />
-          <ButtonText>Add</ButtonText>
-        </Button>
+        {!readOnly && (
+          <Button variant="outline" size="sm" onPress={handleAddItem}>
+            <ButtonIcon as={Plus} size="sm" />
+            <ButtonText>Add</ButtonText>
+          </Button>
+        )}
       </HStack>
 
       {/* Items List */}
@@ -131,18 +138,20 @@ export const ItemsList: React.FC<ItemsListProps> = ({ items, onUpdateItems }) =>
                 )}
               </VStack>
 
-              {/* Action buttons at bottom */}
-              <HStack className="items-center justify-between px-8 pt-3" space="sm">
-                <Pressable onPress={() => handleCopyItem(item)} className="rounded px-2">
-                  <Icon as={Copy} className="text-typography-500" size="sm" />
-                </Pressable>
-                <Pressable onPress={() => handleEditItem(item)} className="rounded px-2">
-                  <Icon as={Edit2} className="text-typography-500" size="sm" />
-                </Pressable>
-                <Pressable onPress={() => handleDeleteItem(item)} className="rounded px-2">
-                  <Icon as={Trash2} className="text-typography-500" size="sm" />
-                </Pressable>
-              </HStack>
+              {/* Action buttons at bottom - Hide in read-only mode */}
+              {!readOnly && (
+                <HStack className="items-center justify-between px-8 pt-3" space="sm">
+                  <Pressable onPress={() => handleCopyItem(item)} className="rounded px-2">
+                    <Icon as={Copy} className="text-typography-500" size="sm" />
+                  </Pressable>
+                  <Pressable onPress={() => handleEditItem(item)} className="rounded px-2">
+                    <Icon as={Edit2} className="text-typography-500" size="sm" />
+                  </Pressable>
+                  <Pressable onPress={() => handleDeleteItem(item)} className="rounded px-2">
+                    <Icon as={Trash2} className="text-typography-500" size="sm" />
+                  </Pressable>
+                </HStack>
+              )}
             </VStack>
           ))}
         </VStack>
