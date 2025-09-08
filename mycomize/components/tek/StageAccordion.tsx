@@ -132,6 +132,7 @@ export const StageAccordion: React.FC<StageAccordionProps> = ({ tekData, onUpdat
             <AccordionContent>
               <StageSection
                 stageData={tekData.stages[stage]}
+                stageKey={stage}
                 onUpdateBulkStageData={(stageData) => handleUpdateBulkStageData(stage, stageData)}
               />
             </AccordionContent>

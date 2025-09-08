@@ -79,6 +79,9 @@ class BulkGrow(Base):
     
     # One-to-many relationship with linked IoT entities
     iot_entities = relationship("IoTEntity", foreign_keys="IoTEntity.linked_grow_id", back_populates="linked_grow")
+    
+    # One-to-many relationship with calendar tasks
+    calendar_tasks = relationship("CalendarTask", back_populates="grow", cascade="all, delete-orphan")
 
 class BulkGrowFlush(Base):
     """Model for individual flushes within a bulk grow"""

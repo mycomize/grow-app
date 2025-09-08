@@ -9,6 +9,7 @@ from .routers.auth import router as auth_router
 from .routers.grow import router as grow_router
 from .routers.iot import router as iot_router
 from .routers.tek import router as tek_router
+from .routers.calendar import router as calendar_router
 
 app = FastAPI(title="Mycomize Grow API")
 
@@ -45,6 +46,7 @@ app.include_router(auth_router)
 app.include_router(grow_router)
 app.include_router(iot_router)
 app.include_router(tek_router)
+app.include_router(calendar_router)
 
 @app.get("/")
 async def root():

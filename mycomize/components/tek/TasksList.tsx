@@ -7,22 +7,30 @@ import { Icon } from '~/components/ui/icon';
 import { Pressable } from '~/components/ui/pressable';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
 import {
+  Actionsheet,
+  ActionsheetBackdrop,
+  ActionsheetContent,
+  ActionsheetDragIndicator,
+  ActionsheetDragIndicatorWrapper,
+  ActionsheetItem,
+  ActionsheetItemText,
+  ActionsheetIcon,
+} from '~/components/ui/actionsheet';
+import {
   Plus,
   Edit2,
   Trash2,
   CheckSquare,
-  Copy,
-  CalendarPlus,
-  CheckCircle,
-  Clock,
   Repeat,
+  EllipsisVertical,
+  SquarePen,
 } from 'lucide-react-native';
-import { Task, TaskContext, generateId } from '~/lib/types/tekTypes';
+import { Task, TaskContext } from '~/lib/types/tekTypes';
 import { TaskModal } from '~/components/modals/TaskModal';
 import { DeleteConfirmationModal } from '~/components/modals/DeleteConfirmationModal';
 import { useGrowStore } from '~/lib/stores/growStore';
 import { useTeksStore } from '~/lib/stores/teksStore';
-import { InfoBadge } from '~/components/ui/info-badge';
+import { useAuthEncryption } from '~/lib/stores/authEncryptionStore';
 interface TasksListProps {
   stageKey: string; // The stage key for tasks (e.g., 'inoculation', 'spawn_colonization', etc.)
   context: TaskContext; // 'grow' or 'tek' - determines which store to use
@@ -38,6 +46,8 @@ export const TasksList: React.FC<TasksListProps> = ({
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const { showSuccess } = useUnifiedToast();
 
   // Store hooks
@@ -69,63 +79,56 @@ export const TasksList: React.FC<TasksListProps> = ({
     setIsDeleteModalOpen(true);
   };
 
-  const handleCopyTask = (task: Task) => {
-    const newTask: Task = {
-      ...task,
-      id: generateId(),
-      action: `${task.action} (Copy)`,
-      status: 'pending', // Reset status for copied task
-    };
-    
-    // Use store function to add the copied task
-    if (context === 'grow') {
-      growStore.addTaskToStage(stageKey, newTask);
-    } else {
-      teksStore.addTaskToStage(stageKey, newTask);
+  // Action sheet handlers
+  const handleActionSheetEdit = () => {
+    if (selectedTask) {
+      setIsActionSheetOpen(false);
+      setEditingTask(selectedTask);
+      setIsModalOpen(true);
     }
-    
-    showSuccess('Task copied successfully');
   };
 
-  const handleConfirmDelete = () => {
+  const handleActionSheetDelete = () => {
+    if (selectedTask) {
+      setIsActionSheetOpen(false);
+      setTaskToDelete(selectedTask);
+      setIsDeleteModalOpen(true);
+    }
+  };
+
+  // Authentication hook
+  const { token } = useAuthEncryption();
+
+  const handleConfirmDelete = async () => {
     if (taskToDelete) {
-      // Use store function to delete the task
-      if (context === 'grow') {
-        growStore.deleteTaskFromStage(stageKey, taskToDelete.id);
-      } else {
-        teksStore.deleteTaskFromStage(stageKey, taskToDelete.id);
+      try {
+        if (context === 'grow') {
+          // Get current grow ID from the store
+          const currentGrow = growStore.currentGrow;
+          if (currentGrow && currentGrow.id && token) {
+            // Use API-enabled deletion method for grows
+            await growStore.deleteTaskFromGrow(taskToDelete.id, currentGrow.id, stageKey, token);
+            showSuccess('Task deleted successfully');
+          } else {
+            // Fallback to local deletion if no grow ID or token
+            growStore.deleteTaskFromStage(stageKey, taskToDelete.id);
+            showSuccess('Task deleted successfully');
+          }
+        } else {
+          // For teks, use local deletion only
+          teksStore.deleteTaskFromStage(stageKey, taskToDelete.id);
+          showSuccess('Task deleted successfully');
+        }
+      } catch (error) {
+        console.error('Error deleting task:', error);
+        // Error already handled by the store with automatic login redirect if needed
       }
       
       setTaskToDelete(null);
-      showSuccess('Task deleted successfully');
+      setIsDeleteModalOpen(false);
     }
   };
 
-  const getDateTimeDisplay = (task: Task) => {
-    const parts = [];
-    
-    if (task.start_date) {
-      const date = new Date(task.start_date + 'T00:00:00');
-      parts.push(`Start: ${date.toLocaleDateString()}`);
-    }
-    
-    if (task.start_time) {
-      parts.push(`Time: ${task.start_time}`);
-    }
-    
-    if (task.end_date) {
-      const date = new Date(task.end_date + 'T00:00:00');
-      parts.push(`End: ${date.toLocaleDateString()}`);
-    }
-
-    return parts.length > 0 ? parts.join(' • ') : null;
-  };
-
-  const needsDate = (task: Task) => {
-    // Only show "Needs Date" in grow context when no date fields are set
-    if (context !== 'grow') return false;
-    return !task.start_date && !task.start_time && !task.end_date;
-  };
 
   return (
     <VStack space="sm">
@@ -150,61 +153,39 @@ export const TasksList: React.FC<TasksListProps> = ({
         </VStack>
       ) : (
         <VStack space="md">
-          {tasks.map((task) => {
-            const dateTimeDisplay = getDateTimeDisplay(task);
-            
-            return (
-              <VStack
-                key={task.id}
-                className="rounded-lg border border-background-200 bg-background-0 p-3"
-                space="sm">
-                {/* Main content */}
-                <HStack className="items-start justify-between">
-                  <VStack className="flex-1" space="xs">
-                    <Text className="font-medium text-typography-900">{task.action}</Text>
-                    
-                    {/* Frequency row */}
-                    <HStack className="items-center" space="xs">
-                      <Icon as={Repeat} className="text-typography-500" size="sm" />
-                      <Text className="text-sm text-typography-600">{task.frequency}</Text>
-                    </HStack>
-
-                    {/* Date/Time info - Only show for grow context */}
-                    {context === 'grow' && dateTimeDisplay && (
-                      <HStack className="items-center" space="xs">
-                        <Icon as={Clock} className="text-typography-500" size="sm" />
-                        <Text className="text-sm text-typography-600">{dateTimeDisplay}</Text>
-                      </HStack>
-                    )}
-                  </VStack>
-                  
-                  {/* Status badge or Needs Date indicator */}
-                  <VStack className="items-end">
-                    {needsDate(task) ? (
-                      <InfoBadge icon={CalendarPlus} text="Needs Date" variant='warning' />
-                    ) : (
-                      <></>
-                    )}
-                  </VStack>
-                </HStack>
-
-                {/* Action buttons at bottom - Hide in read-only mode */}
+          {tasks.map((task) => (
+            <VStack
+              key={task.id}
+              className="rounded-lg border border-background-200 bg-background-0 p-3"
+              space="sm">
+              {/* Main content with ellipsis menu */}
+              <HStack className="items-start justify-between">
+                <VStack className="flex-1" space="xs">
+                  <Text className="font-medium text-typography-900">{task.action}</Text>
+                  {/* Show frequency for all task templates */}
+                  <HStack className="items-center" space="xs">
+                    <Icon as={Repeat} className="text-typography-500" size="sm" />
+                    <Text className="text-sm text-typography-600">{task.frequency}</Text>
+                  </HStack>
+                </VStack>
+                
+                {/* Ellipsis menu - Hide in read-only mode */}
                 {!readOnly && (
-                  <HStack className="items-center justify-between px-8 pt-3" space="sm">
-                    <Pressable onPress={() => handleCopyTask(task)} className="rounded px-2">
-                      <Icon as={Copy} className="text-typography-500" size="sm" />
-                    </Pressable>
-                    <Pressable onPress={() => handleEditTask(task)} className="rounded px-2">
-                      <Icon as={Edit2} className="text-typography-500" size="sm" />
-                    </Pressable>
-                    <Pressable onPress={() => handleDeleteTask(task)} className="rounded px-2">
-                      <Icon as={Trash2} className="text-typography-500" size="sm" />
+                  <HStack>
+                    <Pressable 
+                      onPress={() => {
+                        setSelectedTask(task);
+                        setIsActionSheetOpen(true);
+                      }} 
+                      className="rounded p-2"
+                    >
+                      <Icon as={EllipsisVertical} className="text-typography-500" size="md" />
                     </Pressable>
                   </HStack>
                 )}
-              </VStack>
-            );
-          })}
+              </HStack>
+            </VStack>
+          ))}
         </VStack>
       )}
 
@@ -226,6 +207,26 @@ export const TasksList: React.FC<TasksListProps> = ({
         message="Are you sure you want to delete this task?"
         itemName={taskToDelete?.action}
       />
+
+      {/* Action Sheet */}
+      <Actionsheet isOpen={isActionSheetOpen} onClose={() => setIsActionSheetOpen(false)}>
+        <ActionsheetBackdrop />
+        <ActionsheetContent>
+          <ActionsheetDragIndicatorWrapper>
+            <ActionsheetDragIndicator />
+          </ActionsheetDragIndicatorWrapper>
+          
+          <ActionsheetItem onPress={handleActionSheetEdit}>
+            <ActionsheetIcon size="lg" as={SquarePen} />
+            <ActionsheetItemText className="text-typography-600 text-lg">Edit Task</ActionsheetItemText>
+          </ActionsheetItem>
+          
+          <ActionsheetItem onPress={handleActionSheetDelete}>
+            <ActionsheetIcon size="lg" as={Trash2} />
+            <ActionsheetItemText className="text-typography-600 text-lg text-red-600">Delete Task</ActionsheetItemText>
+          </ActionsheetItem>
+        </ActionsheetContent>
+      </Actionsheet>
     </VStack>
   );
 };

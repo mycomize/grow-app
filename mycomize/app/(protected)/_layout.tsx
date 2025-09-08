@@ -1,7 +1,6 @@
 import { Stack, Redirect } from 'expo-router';
 import { Text } from 'react-native';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
-import { CalendarProvider } from '~/lib/CalendarContext';
 import { 
   useAuthToken, 
   useIsAuthLoading,
@@ -48,7 +47,6 @@ export default function ProtectedLayout() {
   }
 
   return (
-    <CalendarProvider>
       <Stack
         screenOptions={{
           headerStyle,
@@ -59,6 +57,5 @@ export default function ProtectedLayout() {
         }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
-    </CalendarProvider>
   );
 }

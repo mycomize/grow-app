@@ -19,12 +19,11 @@ import {
   ChevronRight,
   FileText,
   CircuitBoard,
-  Trash2,
+  Workflow
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { DeleteConfirmationModal } from '~/components/ui/delete-confirmation-modal';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { useAuthToken } from '~/lib/stores/authEncryptionStore';
 import {
@@ -37,6 +36,7 @@ import {
   useFormatDateForAPI,
   useGrowStore,
 } from '~/lib/stores';
+import { useCalendarStore } from '~/lib/stores/calendarStore';
 
 // Import modular sections
 import { BasicsSection } from '~/components/grow/sections/BasicsSection';
@@ -66,6 +66,7 @@ export function GrowForm({ growId, saveButtonText = 'Save' }: GrowFormProps) {
   const createGrow = useGrowStore((state) => state.createGrow);
   const updateGrow = useGrowStore((state) => state.updateGrow);
   const deleteGrow = useGrowStore((state) => state.deleteGrow);
+  const calendarStore = useCalendarStore();
 
   // Local UI state
   const [isSaving, setIsSaving] = useState(false);
@@ -176,7 +177,26 @@ export function GrowForm({ growId, saveButtonText = 'Save' }: GrowFormProps) {
 
         const newGrow = await createGrow(token, createData);
         if (newGrow) {
-          showSuccess('Grow saved successfully!');
+          console.log(`[GrowForm] Grow saved successfully with ID ${newGrow.id}`);
+          
+          // Update any NEW_GROW_ID calendar tasks with the real grow ID
+          try {
+            console.log(`[GrowForm] Updating calendar task grow IDs from NEW_GROW_ID to ${newGrow.id}`);
+            const success = await calendarStore.updateCalendarTaskGrowIds(token, newGrow.id);
+            
+            if (success) {
+              console.log(`[GrowForm] Successfully updated calendar task grow IDs`);
+              showSuccess('Grow saved successfully!');
+            } else {
+              console.log(`[GrowForm] No calendar task updates were needed`);
+              showSuccess('Grow saved successfully!');
+            }
+          } catch (error) {
+            console.error('[GrowForm] Failed to update calendar task grow IDs:', error);
+            // Don't fail the grow creation if calendar task ID updates fail
+            showSuccess('Grow saved successfully!');
+            showError('Some calendar tasks may not have been properly linked');
+          }
         } else {
           showError('Failed to save grow');
           return;
@@ -257,7 +277,7 @@ export function GrowForm({ growId, saveButtonText = 'Save' }: GrowFormProps) {
                   {({ isExpanded }: { isExpanded: boolean }) => (
                     <HStack className="flex-1 items-center justify-between">
                       <HStack className="items-center" space="md">
-                        <MaterialCommunityIcons name="mushroom-outline" size={21} color="#828282" />
+                        <Icon as={Workflow} className="text-typography-400" size="xl" />
                         <Text className="text-lg font-semibold">Stages</Text>
                       </HStack>
                       <Icon

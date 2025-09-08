@@ -15,23 +15,16 @@ import { Button, ButtonText, ButtonIcon } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Input, InputField, InputSlot } from '~/components/ui/input';
 import { Menu, MenuItem, MenuItemLabel } from '~/components/ui/menu';
-import {
-  Select,
-  SelectTrigger,
-  SelectInput,
-  SelectIcon,
-  SelectPortal,
-  SelectBackdrop,
-  SelectContent,
-  SelectDragIndicatorWrapper,
-  SelectDragIndicator,
-  SelectItem,
-} from '~/components/ui/select';
+import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from '~/components/ui/checkbox';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { X, CheckSquare, ChevronDown, CalendarDays, Clock } from 'lucide-react-native';
+import { X, CheckSquare, ChevronDown, CalendarDays, Clock, Check } from 'lucide-react-native';
 import { Task, TaskContext, generateId } from '~/lib/types/tekTypes';
-import { useCurrentGrow, useGrowStore } from '~/lib/stores/growStore';
-import { useCurrentTek, useTeksStore } from '~/lib/stores/teksStore';
+import { createCalendarTaskFromTemplate } from '~/lib/types/calendarTypes';
+import { useGrowStore } from '~/lib/stores/growStore';
+import { useTeksStore } from '~/lib/stores/teksStore';
+import { useCalendarStore } from '~/lib/stores/calendarStore';
+import { useAuthEncryption } from '~/lib/stores/authEncryptionStore';
+import { generateTaskSchedule, calculateTotalTasks, generateScheduleDescription, TaskScheduleParams } from '~/lib/utils/frequencyCalculator';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -52,12 +45,15 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     action: '',
     repeatCount: '1',
     repeatUnit: 'day' as 'day' | 'week' | 'stage',
-    days_after_stage_start: '',
+  });
+  
+  const [calendarData, setCalendarData] = useState({
+    addToCalendar: false,
     start_date: '',
     start_time: '',
     end_date: '',
-    status: 'pending' as 'pending' | 'completed',
   });
+  
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeDatePicker, setActiveDatePicker] = useState<string | null>(null);
   const [activeTimePicker, setActiveTimePicker] = useState<string | null>(null);
@@ -65,10 +61,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   // Store hooks
   const growStore = useGrowStore();
   const teksStore = useTeksStore();
+  const calendarStore = useCalendarStore();
+  const { token } = useAuthEncryption();
+  const currentGrow = growStore.currentGrow;
 
   const isEditing = !!task;
+  const MAX_REPEAT_COUNT = 7;
 
-  // Date utility functions (following the established pattern)
+  // Date utility functions
   const parseDate = (dateString?: string): Date | null => {
     if (!dateString) return null;
     const [year, month, day] = dateString.split('-').map(Number);
@@ -103,10 +103,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     if (context === 'grow') {
       return growStore.getStageStartDate(stageKey);
     }
-    return undefined; // Teks don't have stage start dates
+    return undefined;
   };
 
-  // Date/time picker handlers (following established pattern)
+  // Date/time picker handlers
   const handleDateChange = (field: string, date?: Date, event?: any) => {
     if (event?.type === 'dismissed') {
       setActiveDatePicker(null);
@@ -115,8 +115,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
     if (date) {
       const formattedDate = formatDateForAPI(date);
-      if (formattedDate) {
-        updateFieldTypeSafe(field, formattedDate);
+      if (formattedDate && (field === 'start_date' || field === 'end_date')) {
+        updateCalendarField(field as keyof typeof calendarData, formattedDate);
       }
     }
     setActiveDatePicker(null);
@@ -130,8 +130,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
     if (date) {
       const formattedTime = formatTimeForAPI(date);
-      if (formattedTime) {
-        updateFieldTypeSafe(field, formattedTime);
+      if (formattedTime && field === 'start_time') {
+        updateCalendarField(field as keyof typeof calendarData, formattedTime);
       }
     }
     setActiveTimePicker(null);
@@ -140,28 +140,34 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       if (task) {
+        // Editing existing task
         setFormData({
           action: task.action,
           repeatCount: task.repeatCount?.toString() || '1',
           repeatUnit: task.repeatUnit || 'day',
-          days_after_stage_start: task.days_after_stage_start.toString(),
-          start_date: task.start_date || '',
-          start_time: task.start_time || '',
-          end_date: task.end_date || '',
-          status: task.status || 'pending',
+        });
+        
+        // Calendar data is not part of Task templates
+        setCalendarData({
+          addToCalendar: false,
+          start_date: '',
+          start_time: '',
+          end_date: '',
         });
       } else {
-        // For new tasks, initialize start_date from stage start date if available
+        // Creating new task
         const stageStartDate = getStageStartDate();
         setFormData({
           action: '',
           repeatCount: '1',
           repeatUnit: 'day',
-          days_after_stage_start: '0',
+        });
+        
+        setCalendarData({
+          addToCalendar: false,
           start_date: stageStartDate || '',
           start_time: '',
           end_date: '',
-          status: 'pending',
         });
       }
       setErrors({});
@@ -181,8 +187,30 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       newErrors.repeatCount = 'Repeat count is required';
     } else {
       const count = parseInt(formData.repeatCount, 10);
-      if (isNaN(count) || count < 1 || count > 7) {
-        newErrors.repeatCount = 'Must be a number between 1 and 7';
+      if (isNaN(count) || count < 1 || count > MAX_REPEAT_COUNT) {
+        newErrors.repeatCount = `Must be a number between 1 and ${MAX_REPEAT_COUNT}`;
+      }
+    }
+
+    // Validate calendar fields if checkbox is checked
+    if (calendarData.addToCalendar) {
+      if (!calendarData.start_date) {
+        newErrors.start_date = 'Start date is required when adding to calendar';
+      }
+      if (!calendarData.start_time) {
+        newErrors.start_time = 'Start time is required when adding to calendar';
+      }
+      if (!calendarData.end_date) {
+        newErrors.end_date = 'End date is required when adding to calendar';
+      }
+      
+      // Validate date range
+      if (calendarData.start_date && calendarData.end_date) {
+        const startDate = parseDate(calendarData.start_date);
+        const endDate = parseDate(calendarData.end_date);
+        if (startDate && endDate && startDate > endDate) {
+          newErrors.end_date = 'End date must be after or equal to start date';
+        }
       }
     }
 
@@ -193,7 +221,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   // Helper function to generate frequency string for backward compatibility
   const generateFrequencyString = (count: number, unit: string): string => {
     const unitText = unit === 'day' ? 'day' : unit === 'week' ? 'week' : 'stage';
-    const unitPlural = unit === 'day' ? 'days' : unit === 'week' ? 'weeks' : 'stages';
 
     if (count === 1) {
       return `Once per ${unitText}`;
@@ -202,7 +229,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateForm()) {
       return;
     }
@@ -210,27 +237,80 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     const repeatCount = parseInt(formData.repeatCount, 10);
     const frequencyString = generateFrequencyString(repeatCount, formData.repeatUnit);
 
+    // Create Task template (no date/time/status fields)
     const taskData: Task = {
       id: task?.id || generateId(),
       action: formData.action.trim(),
       frequency: frequencyString,
       repeatCount: repeatCount,
       repeatUnit: formData.repeatUnit,
-      days_after_stage_start: parseInt(formData.days_after_stage_start, 10) || 0,
-      start_date: formData.start_date || undefined,
-      start_time: formData.start_time || undefined,
-      end_date: formData.end_date || undefined,
-      status: 'pending', // Always default to pending, no UI for this
     };
 
-    // Use appropriate store function based on context
+    // Save task template to appropriate store
     if (context === 'grow') {
       if (isEditing && task) {
         growStore.updateTaskInStage(stageKey, task.id, taskData);
       } else {
         growStore.addTaskToStage(stageKey, taskData);
       }
+
+      // Create CalendarTasks if requested (for grow context)
+      if (calendarData.addToCalendar && calendarData.start_date && calendarData.start_time && calendarData.end_date) {
+        console.log(`[TaskModal] Creating calendar tasks for ${isEditing ? 'updated' : 'new'} task: ${taskData.action}`);
+        
+        const scheduleParams: TaskScheduleParams = {
+          repeatCount: repeatCount,
+          repeatUnit: formData.repeatUnit,
+          startDate: calendarData.start_date,
+          endDate: calendarData.end_date,
+          startTime: calendarData.start_time,
+        };
+
+        const schedule = generateTaskSchedule(scheduleParams);
+        console.log(`[TaskModal] Generated ${schedule.length} calendar task instances`);
+
+        if (currentGrow?.id && token) {
+          // Existing grow - create calendar tasks immediately to backend AND zustand store
+          try {
+            console.log(`[TaskModal] Saving calendar tasks immediately for existing grow ${currentGrow.id}`);
+            const createdTasks = await calendarStore.createCalendarTasksFromTask(
+              token,
+              taskData,
+              currentGrow.id,
+              stageKey,
+              schedule
+            );
+            console.log(`[TaskModal] Successfully created ${createdTasks.length} calendar tasks for existing grow`);
+          } catch (error) {
+            console.error('[TaskModal] Failed to create calendar tasks for existing grow:', error);
+            // Note: We don't block the task creation if calendar task creation fails
+            // The task template is still saved successfully
+          }
+        } else {
+          // New grow (no ID yet) - save calendar tasks to zustand store with NEW_GROW_ID placeholder
+          try {
+            console.log(`[TaskModal] Saving calendar tasks to zustand store for new grow with NEW_GROW_ID placeholder`);
+            
+            for (const { date, time } of schedule) {
+              calendarStore.createCalendarTaskForNewGrow({
+                parent_task_id: taskData.id,
+                action: taskData.action,
+                stage_key: stageKey,
+                date,
+                time,
+                status: 'upcoming',
+              });
+            }
+            
+            console.log(`[TaskModal] Successfully added ${schedule.length} calendar tasks with NEW_GROW_ID placeholder`);
+          } catch (error) {
+            console.error('[TaskModal] Failed to create calendar tasks for new grow:', error);
+            // Note: We don't block the task creation if calendar task creation fails
+          }
+        }
+      }
     } else {
+      // For teks, save task template
       if (isEditing && task) {
         teksStore.updateTaskInStage(stageKey, task.id, taskData);
       } else {
@@ -248,15 +328,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     }
   };
 
-  const updateFieldTypeSafe = (field: string, value: string) => {
-    if (field in formData) {
-      updateField(field as keyof typeof formData, value);
+  const updateCalendarField = (field: keyof typeof calendarData, value: string | boolean) => {
+    setCalendarData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: '' }));
     }
   };
-
-
-  // Determine field visibility based on context
-  const shouldShowDateTimeFields = context === 'grow';
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
@@ -284,7 +361,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               {errors.action && <Text className="text-sm text-error-600">{errors.action}</Text>}
             </VStack>
 
-            {/* Repeat Frequency */}
+            {/* Frequency */}
             <VStack space="xs">
               <Text className="font-medium">Frequency</Text>
               <HStack space="sm" className="items-center">
@@ -330,20 +407,36 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               )}
             </VStack>
 
+            {/* Calendar Checkbox - Only show for grow context */}
+            {context === 'grow' && (
+              <VStack space="xs">
+                <Checkbox
+                  value={calendarData.addToCalendar ? 'true' : 'false'}
+                  isChecked={calendarData.addToCalendar}
+                  onChange={(checked: boolean) => updateCalendarField('addToCalendar', checked)}
+                  size="md"
+                >
+                  <CheckboxIndicator className="mr-2">
+                    <CheckboxIcon as={Check} />
+                  </CheckboxIndicator>
+                  <CheckboxLabel>Add tasks to grow calendar</CheckboxLabel>
+                </Checkbox>
+              </VStack>
+            )}
 
-            {/* Date/Time Fields - Only show for Grow context */}
-            {shouldShowDateTimeFields && (
+            {/* Date/Time Fields - Show below checkbox when checked */}
+            {context === 'grow' && calendarData.addToCalendar && (
               <>
                 {/* Start Date */}
                 <VStack space="xs">
                   <Text className="font-medium">Start Date</Text>
-                  <Input isReadOnly>
+                  <Input isReadOnly className={errors.start_date ? 'border-error-500' : ''}>
                     <InputField
-                      value={parseDate(formData.start_date)?.toDateString() || 'Select date'}
-                      className={!formData.start_date ? 'text-typography-400' : ''}
+                      value={parseDate(calendarData.start_date)?.toDateString() || 'Select date'}
+                      className={!calendarData.start_date ? 'text-typography-400' : ''}
                     />
-                    {formData.start_date ? (
-                      <InputSlot onPress={() => updateField('start_date', '')}>
+                    {calendarData.start_date ? (
+                      <InputSlot onPress={() => updateCalendarField('start_date', '')}>
                         <Icon as={X} className="mr-3 text-typography-400" />
                       </InputSlot>
                     ) : (
@@ -352,9 +445,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       </InputSlot>
                     )}
                   </Input>
+                  {errors.start_date && <Text className="text-sm text-error-600">{errors.start_date}</Text>}
                   {activeDatePicker === 'start_date' && (
                     <DateTimePicker
-                      value={parseDate(formData.start_date) || new Date()}
+                      value={parseDate(calendarData.start_date) || new Date()}
                       mode="date"
                       onChange={(event, date) => handleDateChange('start_date', date, event)}
                     />
@@ -364,13 +458,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 {/* Start Time */}
                 <VStack space="xs">
                   <Text className="font-medium">Start Time</Text>
-                  <Input isReadOnly>
+                  <Input isReadOnly className={errors.start_time ? 'border-error-500' : ''}>
                     <InputField
-                      value={parseTime(formData.start_time)?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || 'Select time'}
-                      className={!formData.start_time ? 'text-typography-400' : ''}
+                      value={parseTime(calendarData.start_time)?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || 'Select time'}
+                      className={!calendarData.start_time ? 'text-typography-400' : ''}
                     />
-                    {formData.start_time ? (
-                      <InputSlot onPress={() => updateField('start_time', '')}>
+                    {calendarData.start_time ? (
+                      <InputSlot onPress={() => updateCalendarField('start_time', '')}>
                         <Icon as={X} className="mr-3 text-typography-400" />
                       </InputSlot>
                     ) : (
@@ -379,25 +473,26 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       </InputSlot>
                     )}
                   </Input>
+                  {errors.start_time && <Text className="text-sm text-error-600">{errors.start_time}</Text>}
                   {activeTimePicker === 'start_time' && (
                     <DateTimePicker
-                      value={parseTime(formData.start_time) || new Date()}
+                      value={parseTime(calendarData.start_time) || new Date()}
                       mode="time"
                       onChange={(event, date) => handleTimeChange('start_time', date, event)}
                     />
                   )}
                 </VStack>
 
-                {/* End Date */}
+                {/* End Date - Required */}
                 <VStack space="xs">
                   <Text className="font-medium">End Date</Text>
-                  <Input isReadOnly>
+                  <Input isReadOnly className={errors.end_date ? 'border-error-500' : ''}>
                     <InputField
-                      value={parseDate(formData.end_date)?.toDateString() || 'Select date'}
-                      className={!formData.end_date ? 'text-typography-400' : ''}
+                      value={parseDate(calendarData.end_date)?.toDateString() || 'Select date'}
+                      className={!calendarData.end_date ? 'text-typography-400' : ''}
                     />
-                    {formData.end_date ? (
-                      <InputSlot onPress={() => updateField('end_date', '')}>
+                    {calendarData.end_date ? (
+                      <InputSlot onPress={() => updateCalendarField('end_date', '')}>
                         <Icon as={X} className="mr-3 text-typography-400" />
                       </InputSlot>
                     ) : (
@@ -406,26 +501,27 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       </InputSlot>
                     )}
                   </Input>
+                  {errors.end_date && <Text className="text-sm text-error-600">{errors.end_date}</Text>}
                   {activeDatePicker === 'end_date' && (
                     <DateTimePicker
-                      value={parseDate(formData.end_date) || new Date()}
+                      value={parseDate(calendarData.end_date) || new Date()}
                       mode="date"
                       onChange={(event, date) => handleDateChange('end_date', date, event)}
                     />
                   )}
                 </VStack>
+
               </>
             )}
-
           </VStack>
         </ModalBody>
 
         <ModalFooter>
           <HStack space="md" className="w-full justify-around">
-            <Button variant="outline" action="secondary" onPress={onClose} className="">
+            <Button variant="outline" action="secondary" onPress={onClose}>
               <ButtonText>Cancel</ButtonText>
             </Button>
-            <Button variant="solid" action="positive" onPress={handleSave} className="">
+            <Button variant="solid" action="positive" onPress={handleSave}>
               <ButtonText className="text-typography-900">Save</ButtonText>
             </Button>
           </HStack>

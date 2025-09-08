@@ -9,6 +9,7 @@ import {
   BulkGrowFlush,
 } from '../types/growTypes';
 import { Task, generateId as generateTekId } from '../types/tekTypes';
+import { useCalendarStore } from './calendarStore';
 
 // Helper function to handle unauthorized errors consistently
 const handleUnauthorizedError = (error: Error) => {
@@ -20,6 +21,9 @@ const handleUnauthorizedError = (error: Error) => {
 
 // Generate unique IDs for flushes
 const generateId = () => Math.floor(Math.random() * 1000000);
+
+// Constants for calendar task management
+export const NEW_GROW_ID = -1;
 
 // Current grow being edited/created
 interface CurrentGrow {
@@ -77,6 +81,10 @@ interface GrowStore {
   deleteTaskFromStage: (stageKey: string, taskId: string) => void;
   getTasksForStage: (stageKey: string) => Task[];
   getStageStartDate: (stageKey: string) => string | undefined;
+
+  // Calendar-specific task management
+  toggleTaskCompletion: (taskId: string, growId: number, stageKey: string, token: string) => Promise<void>;
+  deleteTaskFromGrow: (taskId: string, growId: number, stageKey: string, token: string) => Promise<void>;
 
   reset: () => void;
 }
@@ -292,6 +300,15 @@ export const useGrowStore = create<GrowStore>((set, get) => ({
         lastAction: 'delete',
       }));
 
+      // Clean up calendar tasks from zustand store (backend cascade delete handles database)
+      const calendarStore = useCalendarStore.getState();
+      const tasksToRemove = calendarStore.calendarTasks.filter(task => task.grow_id === growIdNum);
+      
+      if (tasksToRemove.length > 0) {
+        console.log(`[GrowStore] Removing ${tasksToRemove.length} calendar tasks from zustand store for deleted grow ${id}`);
+        calendarStore.calendarTasks = calendarStore.calendarTasks.filter(task => task.grow_id !== growIdNum);
+      }
+
       console.log(`[GrowStore] Grow ${id} deletion completed successfully`);
       return true;
     } catch (error) {
@@ -425,43 +442,6 @@ export const useGrowStore = create<GrowStore>((set, get) => ({
         [field]: value,
       };
 
-      // Check if this is a stage date field that should trigger task updates
-      const stageDateFields = {
-        'inoculation_date': 'inoculation',
-        'spawn_start_date': 'spawn_colonization', 
-        'bulk_start_date': 'bulk_colonization',
-        'fruiting_start_date': 'fruiting'
-      };
-
-      const stageKey = stageDateFields[field as keyof typeof stageDateFields];
-      
-      // If this is a stage date field and has a value, update tasks without start_date
-      if (stageKey && value && updatedFormData.stages) {
-        const stageData = updatedFormData.stages[stageKey as keyof typeof updatedFormData.stages];
-        
-        if (stageData && stageData.tasks) {
-          // Update tasks that don't have start_date set
-          const updatedTasks = stageData.tasks.map((task: Task) => {
-            // Only update if task doesn't have a start_date already
-            if (!task.start_date) {
-              return {
-                ...task,
-                start_date: value
-              };
-            }
-            return task;
-          });
-
-          // Update the stages with the new tasks
-          updatedFormData.stages = {
-            ...updatedFormData.stages,
-            [stageKey]: {
-              ...stageData,
-              tasks: updatedTasks
-            }
-          };
-        }
-      }
 
       return {
         currentGrow: {
@@ -569,10 +549,7 @@ export const useGrowStore = create<GrowStore>((set, get) => ({
 
       const newTask = { 
         ...task, 
-        id: generateTekId(), 
-        status: task.status || 'pending' as const,
-        // Auto-set start_date from stage if task doesn't have one and stage has a start date
-        start_date: task.start_date || (stageStartDate ? stageStartDate as string : undefined)
+        id: task.id || generateTekId() // Only generate new ID if task doesn't have one
       };
 
       return {
@@ -654,6 +631,16 @@ export const useGrowStore = create<GrowStore>((set, get) => ({
         }
       };
     });
+
+    // Clean up any CalendarTasks from local state (backend cleanup happens on save)
+    const calendarStore = useCalendarStore.getState();
+    const currentGrowId = get().currentGrow?.id;
+    if (currentGrowId) {
+      // Remove from local state only - backend cleanup happens when grow is saved
+      calendarStore.calendarTasks = calendarStore.calendarTasks.filter(
+        task => !(task.parent_task_id === taskId && task.grow_id === currentGrowId)
+      );
+    }
   },
 
   getTasksForStage: (stageKey: string): Task[] => {
@@ -679,6 +666,178 @@ export const useGrowStore = create<GrowStore>((set, get) => ({
     };
 
     return stageDateMap[stageKey];
+  },
+
+  // Calendar-specific task completion toggle
+  toggleTaskCompletion: async (taskId: string, growId: number, stageKey: string, token: string) => {
+    try {
+      const { grows } = get();
+      const grow = grows.find(g => g.id === growId);
+      
+      if (!grow || !grow.stages) {
+        console.error('Grow or stages not found for task completion toggle');
+        return;
+      }
+
+      const stage = grow.stages[stageKey as keyof typeof grow.stages];
+      if (!stage) {
+        console.error(`Stage ${stageKey} not found in grow ${growId}`);
+        return;
+      }
+
+      const task = stage.tasks.find(t => t.id === taskId);
+      if (!task) {
+        console.error(`Task ${taskId} not found in stage ${stageKey} of grow ${growId}`);
+        return;
+      }
+
+      // Task template toggle is no longer supported - this method is deprecated
+      console.warn(`[GrowStore] toggleTaskCompletion is deprecated - task templates don't have completion status`);
+    } catch (error) {
+      console.error('Error in deprecated toggleTaskCompletion:', error);
+      handleUnauthorizedError(error as Error);
+    }
+  },
+
+  // Delete task from grow with API synchronization
+  deleteTaskFromGrow: async (taskId: string, growId: number, stageKey: string, token: string) => {
+    try {
+      const { grows, currentGrow } = get();
+      const grow = grows.find(g => g.id === growId);
+      
+      if (!grow || !grow.stages) {
+        console.error('Grow or stages not found for task deletion');
+        return;
+      }
+
+      const stage = grow.stages[stageKey as keyof typeof grow.stages];
+      if (!stage) {
+        console.error(`Stage ${stageKey} not found in grow ${growId}`);
+        return;
+      }
+
+      const task = stage.tasks.find(t => t.id === taskId);
+      if (!task) {
+        console.error(`Task ${taskId} not found in stage ${stageKey} of grow ${growId}`);
+        return;
+      }
+
+      // Store the original tasks for potential revert
+      const originalTasks = stage.tasks;
+
+      // Update local state immediately (optimistic update)
+      set((state) => {
+        const updatedState: any = {
+          grows: state.grows.map((existingGrow) => {
+            if (existingGrow.id === growId && existingGrow.stages) {
+              const updatedStages = {
+                ...existingGrow.stages,
+                [stageKey]: {
+                  ...stage,
+                  tasks: stage.tasks.filter(t => t.id !== taskId)
+                }
+              };
+              return { ...existingGrow, stages: updatedStages };
+            }
+            return existingGrow;
+          })
+        };
+
+        // Also update currentGrow if it matches the grow being edited
+        if (state.currentGrow && state.currentGrow.id === growId && state.currentGrow.formData.stages) {
+          const currentStageData = state.currentGrow.formData.stages[stageKey as keyof typeof state.currentGrow.formData.stages];
+          if (currentStageData) {
+            updatedState.currentGrow = {
+              ...state.currentGrow,
+              formData: {
+                ...state.currentGrow.formData,
+                stages: {
+                  ...state.currentGrow.formData.stages,
+                  [stageKey]: {
+                    ...currentStageData,
+                    tasks: currentStageData.tasks.filter((t: Task) => t.id !== taskId)
+                  }
+                }
+              }
+            };
+          }
+        }
+
+        return updatedState;
+      });
+
+      // Update backend - use full grow update
+      const updatedStages = {
+        ...grow.stages,
+        [stageKey]: {
+          ...stage,
+          tasks: stage.tasks.filter(t => t.id !== taskId)
+        }
+      };
+
+      await apiClient.updateBulkGrow(growId.toString(), { stages: updatedStages }, token);
+      
+      // Clean up any CalendarTasks that were created from this task template
+      const calendarStore = useCalendarStore.getState();
+      try {
+        await calendarStore.deleteCalendarTasksByParentTask(token, taskId, growId);
+      } catch (calendarError) {
+        console.error('Error cleaning up CalendarTasks:', calendarError);
+        // Don't fail the task deletion if CalendarTask cleanup fails
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      handleUnauthorizedError(error as Error);
+      
+      // Revert optimistic update on failure
+      const { grows, currentGrow } = get();
+      const grow = grows.find(g => g.id === growId);
+      if (grow && grow.stages) {
+        const stage = grow.stages[stageKey as keyof typeof grow.stages];
+        if (stage) {
+          set((state) => {
+            const revertedState: any = {
+              grows: state.grows.map((existingGrow) => {
+                if (existingGrow.id === growId && existingGrow.stages) {
+                  const revertedStages = {
+                    ...existingGrow.stages,
+                    [stageKey]: {
+                      ...stage,
+                      tasks: [...stage.tasks] // Revert to original state
+                    }
+                  };
+                  return { ...existingGrow, stages: revertedStages };
+                }
+                return existingGrow;
+              })
+            };
+
+            // Also revert currentGrow if it matches
+            if (state.currentGrow && state.currentGrow.id === growId && state.currentGrow.formData.stages) {
+              const currentStageData = state.currentGrow.formData.stages[stageKey as keyof typeof state.currentGrow.formData.stages];
+              if (currentStageData) {
+                revertedState.currentGrow = {
+                  ...state.currentGrow,
+                  formData: {
+                    ...state.currentGrow.formData,
+                    stages: {
+                      ...state.currentGrow.formData.stages,
+                      [stageKey]: {
+                        ...currentStageData,
+                        tasks: [...currentStageData.tasks] // Revert to original
+                      }
+                    }
+                  }
+                };
+              }
+            }
+
+            return revertedState;
+          });
+        }
+      }
+      throw error;
+    }
   },
 
   // Reset store state

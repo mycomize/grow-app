@@ -429,6 +429,51 @@ class ApiClient {
   async removeIoTEntityLink(gatewayId: string, entityId: string, token: string) {
     return this.delete(`/iot-gateways/${gatewayId}/entities/${entityId}/unlink`, token);
   }
+
+  // CalendarTask operations
+  async getCalendarTasks(token: string, growId?: number, parentTaskId?: string) {
+    let endpoint = '/calendar-tasks/';
+    const params = new URLSearchParams();
+    
+    if (growId !== undefined) {
+      params.append('grow_id', growId.toString());
+    }
+    if (parentTaskId) {
+      params.append('parent_task_id', parentTaskId);
+    }
+    
+    if (params.toString()) {
+      endpoint += `?${params.toString()}`;
+    }
+    
+    return this.get(endpoint, token, 'CalendarTask', true);
+  }
+
+  async getCalendarTask(id: string, token: string) {
+    return this.get(`/calendar-tasks/${id}`, token, 'CalendarTask');
+  }
+
+  async createCalendarTask(data: any, token: string) {
+    return this.post('/calendar-tasks/', data, token, 'CalendarTask', 'CalendarTask');
+  }
+
+  async createCalendarTasksBulk(tasks: any[], token: string) {
+    const requestData = { tasks };
+    const response = await this.post('/calendar-tasks/bulk', requestData, token, 'CalendarTaskBulkCreate', 'CalendarTaskBulkResponse');
+    return response.tasks; // Return just the tasks array for consistency with existing code
+  }
+
+  async updateCalendarTask(id: string, data: any, token: string) {
+    return this.put(`/calendar-tasks/${id}`, data, token, 'CalendarTask', 'CalendarTask');
+  }
+
+  async deleteCalendarTask(id: string, token: string) {
+    return this.delete(`/calendar-tasks/${id}`, token);
+  }
+
+  async deleteCalendarTasksByParentTask(parentTaskId: string, growId: number, token: string) {
+    return this.delete(`/calendar-tasks/by-parent-task/${parentTaskId}?grow_id=${growId}`, token);
+  }
 }
 
 // Export singleton instance

@@ -15,7 +15,7 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from '~/components/ui/accordion';
-import { Save, ChevronDown, ChevronRight, FileText, Layers } from 'lucide-react-native';
+import { Save, ChevronDown, ChevronRight, FileText, Workflow } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
 
@@ -25,14 +25,12 @@ import { ConfirmationModal } from '~/components/modals/ConfirmationModal';
 import { useAuthToken } from '~/lib/stores/authEncryptionStore';
 import {
   useCurrentTekFormData,
-  useCurrentTekId,
   useUpdateCurrentTekField,
   useAddTag,
   useRemoveTag,
   useCreateTek,
   useUpdateTek,
   useTekSaving,
-  NEW_TEK_ID,
 } from '~/lib/stores';
 
 interface TekFormProps {
@@ -271,7 +269,7 @@ export function TekForm({ tekId, saveButtonText = 'Save Tek' }: TekFormProps) {
                   {({ isExpanded }: { isExpanded: boolean }) => (
                     <HStack className="flex-1 items-center justify-between">
                       <HStack className="items-center" space="md">
-                        <Icon as={Layers} size="xl" className="text-typography-400" />
+                        <Icon as={Workflow} size="xl" className="text-typography-400" />
                         <Text className="text-lg font-semibold">Stages</Text>
                       </HStack>
                       <Icon

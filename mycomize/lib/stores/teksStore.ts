@@ -445,7 +445,7 @@ export const useTeksStore = create<TeksStore>((set, get) => {
       
       if (!currentStageData) return state;
 
-      const newTask = { ...task, id: generateId(), status: task.status || 'pending' as const };
+      const newTask = { ...task, id: generateId() };
 
       return {
         ...state,

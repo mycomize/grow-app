@@ -49,13 +49,9 @@ const MODEL_SPECIFIC_ALLOWLISTS = {
     // Backend-generated fields present in BulkGrowTek model
     'id',
     'is_public',
-    'usage_count',
     // Backend-computed response fields (not stored user data)
     'creator_name',
     'is_owner',
-    'user_has_liked',    // Backend-computed user engagement state
-    'user_has_viewed',   // Backend-computed user engagement state
-    'user_has_imported', // Backend-computed user engagement state
     // SQLAlchemy relationships present in BulkGrowTek model
     'creator',
     'likes',   // New engagement relationships
@@ -113,6 +109,27 @@ const MODEL_SPECIFIC_ALLOWLISTS = {
   CombinedEntityCreate: [
     // Backend-generated fields for entity creation with pre-set linking
     'linked_grow_id', // Foreign key for grow assignment
+  ] as const,
+
+  CalendarTask: [
+    // Backend-generated fields present in CalendarTask model
+    'id',
+    'parent_task_id', // Foreign key reference to parent Task
+    'grow_id', // Foreign key
+    'created_at',
+    'updated_at',
+    // SQLAlchemy relationships present in CalendarTask model
+    'grow',
+  ] as const,
+
+  CalendarTaskBulkCreate: [
+    // The tasks field itself should remain as a list structure, but individual tasks will be encrypted
+    'tasks',
+  ] as const,
+
+  CalendarTaskBulkResponse: [
+    // Backend-generated fields for bulk response
+    'tasks', // Array of CalendarTaskResponse objects 
   ] as const,
 } as const;
 
@@ -180,6 +197,21 @@ export const ENCRYPTION_CONFIG = {
   CombinedEntityCreate: {
     encryptionStrategy: 'encrypt_all_except_allowlist' as const,
     allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.CombinedEntityCreate,
+  },
+
+  CalendarTask: {
+    encryptionStrategy: 'encrypt_all_except_allowlist' as const,
+    allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.CalendarTask,
+  },
+
+  CalendarTaskBulkCreate: {
+    encryptionStrategy: 'encrypt_all_except_allowlist' as const,
+    allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.CalendarTaskBulkCreate,
+  },
+
+  CalendarTaskBulkResponse: {
+    encryptionStrategy: 'encrypt_all_except_allowlist' as const,
+    allowedUnencryptedFields: MODEL_SPECIFIC_ALLOWLISTS.CalendarTaskBulkResponse,
   },
 } as const;
 
@@ -302,6 +334,32 @@ export async function encryptData<T extends Record<string, any>>(
     );
   }
 
+  // Handle nested objects for combined gateway creation with entities
+  if (dataType === 'CombinedGatewayCreateRequest') {
+    // Encrypt the nested gateway object
+    if (encryptedData.gateway) {
+      encryptedData.gateway = await encryptData('IoTGateway', encryptedData.gateway);
+    }
+    
+    // Encrypt the nested entities array
+    if (encryptedData.entities && Array.isArray(encryptedData.entities)) {
+      encryptedData.entities = await Promise.all(
+        encryptedData.entities.map(async (entity: any) => await encryptData('CombinedEntityCreate', entity))
+      );
+    }
+  }
+
+  // Handle nested arrays for bulk calendar task creation
+  if (
+    dataType === 'CalendarTaskBulkCreate' &&
+    encryptedData.tasks &&
+    Array.isArray(encryptedData.tasks)
+  ) {
+    encryptedData.tasks = await Promise.all(
+      encryptedData.tasks.map(async (task: any) => await encryptData('CalendarTask', task))
+    );
+  }
+
   return encryptedData as T;
 }
 
@@ -404,6 +462,32 @@ export async function decryptData<T extends Record<string, any>>(
   ) {
     decryptedData.iot_entities = await Promise.all(
       decryptedData.iot_entities.map(async (entity: any) => await decryptData('IoTEntity', entity))
+    );
+  }
+
+  // Handle nested objects for combined gateway creation response (if we ever need to decrypt responses)
+  if (dataType === 'CombinedGatewayCreateRequest') {
+    // Decrypt the nested gateway object
+    if (decryptedData.gateway) {
+      decryptedData.gateway = await decryptData('IoTGateway', decryptedData.gateway);
+    }
+    
+    // Decrypt the nested entities array
+    if (decryptedData.entities && Array.isArray(decryptedData.entities)) {
+      decryptedData.entities = await Promise.all(
+        decryptedData.entities.map(async (entity: any) => await decryptData('CombinedEntityCreate', entity))
+      );
+    }
+  }
+
+  // Handle nested arrays for bulk calendar task response decryption
+  if (
+    dataType === 'CalendarTaskBulkResponse' &&
+    decryptedData.tasks &&
+    Array.isArray(decryptedData.tasks)
+  ) {
+    decryptedData.tasks = await Promise.all(
+      decryptedData.tasks.map(async (task: any) => await decryptData('CalendarTask', task))
     );
   }
 

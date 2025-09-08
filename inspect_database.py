@@ -154,6 +154,7 @@ def get_system_fields() -> List[str]:
         'id',
         # Foreign keys  
         'user_id', 'bulk_grow_id', 'gateway_id', 'created_by', 'linked_grow_id', 'tek_id',
+        'parent_task_id', 'grow_id',
         # System timestamps
         'created_at', 'updated_at',
         # System flags and counters
@@ -211,6 +212,10 @@ def get_expected_model_fields() -> Dict[str, Dict[str, List[str]]]:
         'tek_imports': {
             'system': ['id', 'tek_id', 'user_id', 'created_at'],
             'user_data': []  # No encrypted user data fields
+        },
+        'calendar_tasks': {
+            'system': ['id', 'parent_task_id', 'grow_id', 'created_at', 'updated_at'],
+            'user_data': ['action', 'stage_key', 'date', 'time', 'status']
         }
     }
 
@@ -485,12 +490,66 @@ def inspect_user_data(conn: sqlite3.Connection, user_id: int) -> None:
     else:
         print("\n** TEK Imports: None found **")
     
+    # Inspect Calendar Tasks
+    print(f"\n--- Calendar Tasks for User {user_id} ---")
+    cursor.execute("""
+        SELECT ct.* FROM calendar_tasks ct 
+        JOIN bulk_grows bg ON ct.grow_id = bg.id 
+        WHERE bg.user_id = ? ORDER BY ct.date DESC, ct.id DESC;
+    """, (user_id,))
+    calendar_tasks = cursor.fetchall()
+    
+    if not calendar_tasks:
+        print("No calendar tasks found for this user.")
+    else:
+        for task in calendar_tasks:
+            print(f"\n** Calendar Task {task['id']} (Grow {task['grow_id']}) **")
+            analysis = analyze_encryption_status(task)
+            categorized = categorize_fields(task)
+            
+            # Show user data fields first (these should be encrypted)
+            if categorized['user_data']:
+                print("  USER DATA FIELDS:")
+                for field in sorted(categorized['user_data']):
+                    value = format_field_value(task[field])
+                    status = analysis.get(field, "[UNKNOWN]")
+                    print(f"    {field:25}: {status:15} | {value}")
+            
+            # Show system fields (these should be cleartext)
+            if categorized['system']:
+                print("  SYSTEM FIELDS:")
+                for field in sorted(categorized['system']):
+                    value = format_field_value(task[field])
+                    status = analysis.get(field, "[UNKNOWN]")
+                    print(f"    {field:25}: {status:15} | {value}")
+    
     # Show engagement summary for this user
     print(f"\n--- Engagement Summary for User {user_id} ---")
     try:
         like_count = cursor.execute("SELECT COUNT(*) FROM tek_likes WHERE user_id = ?", (user_id,)).fetchone()[0]
         view_count = cursor.execute("SELECT COUNT(*) FROM tek_views WHERE user_id = ?", (user_id,)).fetchone()[0] 
         import_count = cursor.execute("SELECT COUNT(*) FROM tek_imports WHERE user_id = ?", (user_id,)).fetchone()[0]
+        
+        # Calendar tasks summary
+        try:
+            calendar_tasks_count = cursor.execute("""
+                SELECT COUNT(*) FROM calendar_tasks ct 
+                JOIN bulk_grows bg ON ct.grow_id = bg.id 
+                WHERE bg.user_id = ?
+            """, (user_id,)).fetchone()[0]
+            pending_tasks = cursor.execute("""
+                SELECT COUNT(*) FROM calendar_tasks ct 
+                JOIN bulk_grows bg ON ct.grow_id = bg.id 
+                WHERE bg.user_id = ? AND ct.status != 'completed'
+            """, (user_id,)).fetchone()[0]
+            completed_tasks = cursor.execute("""
+                SELECT COUNT(*) FROM calendar_tasks ct 
+                JOIN bulk_grows bg ON ct.grow_id = bg.id 
+                WHERE bg.user_id = ? AND ct.status = 'completed'
+            """, (user_id,)).fetchone()[0]
+            print(f"  Total Calendar Tasks: {calendar_tasks_count} (Pending: {pending_tasks}, Completed: {completed_tasks})")
+        except sqlite3.Error:
+            pass  # Table might not exist yet
         
         print(f"  Total Likes: {like_count}")
         print(f"  Total Views: {view_count}")
@@ -526,7 +585,7 @@ def show_encryption_summary(conn: sqlite3.Connection) -> None:
     """Show a summary of encryption status across all tables."""
     print("\n=== ENCRYPTION SUMMARY ===")
     
-    tables_to_check = ['users', 'bulk_grows', 'flushes', 'bulk_grow_teks', 'iot_gateways', 'iot_entities', 'tek_likes', 'tek_views', 'tek_imports']
+    tables_to_check = ['users', 'bulk_grows', 'flushes', 'bulk_grow_teks', 'iot_gateways', 'iot_entities', 'tek_likes', 'tek_views', 'tek_imports', 'calendar_tasks']
     
     for table_name in tables_to_check:
         cursor = conn.cursor()

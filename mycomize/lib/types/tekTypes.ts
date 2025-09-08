@@ -24,11 +24,6 @@ export interface Task {
   frequency: string; // Free-form text (e.g., "Daily for 7 days", "Once", "Every 3 days") - kept for backward compatibility
   repeatCount?: number; // Number of times to repeat (1-10)
   repeatUnit?: 'day' | 'week' | 'stage'; // Unit for repetition
-  days_after_stage_start: number; // Number of days after the stage begins (e.g., 14 for break and shake on day 14)
-  start_date?: string; // YYYY-MM-DD format
-  start_time?: string; // HH:mm format  
-  end_date?: string; // YYYY-MM-DD format
-  status: 'pending' | 'completed'; // New field, defaults to 'pending'
 }
 
 export type TaskContext = 'grow' | 'tek';

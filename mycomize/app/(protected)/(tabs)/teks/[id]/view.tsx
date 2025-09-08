@@ -295,6 +295,7 @@ export default function TekViewScreen() {
                         {tekData.stages?.[stage] && (
                           <StageSection
                             stageData={tekData.stages[stage]}
+                            stageKey={stage}
                             onUpdateBulkStageData={() => {}} // Read-only, no updates
                             readOnly={true}
                           />

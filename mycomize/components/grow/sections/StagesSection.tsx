@@ -99,10 +99,6 @@ export const StagesSection: React.FC<StagesSectionProps> = ({
   handleDateChange,
   parseDate,
 }) => {
-  const token = useAuthToken();
-  const router = useRouter();
-  const { showError } = useUnifiedToast();
-
   // Store hooks
   const growData = useCurrentGrowFormData();
   const flushes = useCurrentGrowFlushes();
