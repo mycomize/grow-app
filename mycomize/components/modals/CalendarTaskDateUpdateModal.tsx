@@ -16,7 +16,7 @@ import { Icon } from '~/components/ui/icon';
 import { Input, InputField, InputSlot } from '~/components/ui/input';
 import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from '~/components/ui/checkbox';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { X, CalendarDays, Clock, Check } from 'lucide-react-native';
+import { X, CalendarDays, Clock, Check, Trash2 } from 'lucide-react-native';
 import { CalendarTask } from '~/lib/types/calendarTypes';
 import { useCalendarStore } from '~/lib/stores/calendarStore';
 import { useAuthEncryption } from '~/lib/stores/authEncryptionStore';
@@ -47,9 +47,11 @@ export const CalendarTaskDateUpdateModal: React.FC<TaskDateUpdateModalProps> = (
   const [activeDatePicker, setActiveDatePicker] = useState<string | null>(null);
   const [activeTimePicker, setActiveTimePicker] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Store hooks
   const updateCalendarTask = useCalendarStore((state) => state.updateCalendarTask);
+  const deleteCalendarTask = useCalendarStore((state) => state.deleteCalendarTask);
   const parseDate = useCalendarStore((state) => state.parseDate);
   const formatDateForAPI = useCalendarStore((state) => state.formatDateForAPI);
   const { token } = useAuthEncryption();
@@ -275,8 +277,39 @@ export const CalendarTaskDateUpdateModal: React.FC<TaskDateUpdateModalProps> = (
     }
   };
 
+  const handleDelete = async () => {
+    if (!task || !token) {
+      return;
+    }
+
+    const taskId = getTaskId(task);
+    if (!taskId) {
+      setErrors({ general: 'Invalid task ID' });
+      return;
+    }
+
+    setIsDeleting(true);
+    setErrors({}); // Clear any existing errors
+
+    try {
+      const success = await deleteCalendarTask(token, taskId);
+
+      if (success) {
+        console.log(`Successfully deleted task ${taskId}`);
+        onClose();
+      } else {
+        setErrors({ general: 'Failed to delete task. Please try again.' });
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      setErrors({ general: 'An error occurred while deleting the task.' });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleClose = () => {
-    if (!isSubmitting) {
+    if (!isSubmitting && !isDeleting) {
       onClose();
     }
   };
@@ -292,7 +325,7 @@ export const CalendarTaskDateUpdateModal: React.FC<TaskDateUpdateModalProps> = (
         <ModalHeader>
           <HStack className="items-center gap-2">
             <Icon as={CalendarDays} className="text-primary-600" size="lg" />
-            <Text className="text-lg font-semibold flex-1">Update Task Schedule</Text>
+            <Text className="text-lg font-semibold flex-1">Modify Task</Text>
           </HStack>
         </ModalHeader>
 
@@ -364,7 +397,7 @@ export const CalendarTaskDateUpdateModal: React.FC<TaskDateUpdateModalProps> = (
             </VStack>
 
             {/* Notification Checkbox */}
-            <VStack space="xs">
+            <VStack space="xs" className="mt-2">
               <Checkbox
                 value={formData.notificationEnabled ? 'true' : 'false'}
                 isChecked={formData.notificationEnabled}
@@ -386,20 +419,33 @@ export const CalendarTaskDateUpdateModal: React.FC<TaskDateUpdateModalProps> = (
         </ModalBody>
 
         <ModalFooter>
-          <HStack space="md" className="w-full justify-around">
+          <HStack space="md" className="w-full">
             <Button 
               variant="outline" 
               action="secondary" 
               onPress={handleClose}
-              isDisabled={isSubmitting}
+              isDisabled={isSubmitting || isDeleting}
+              className="flex-1"
             >
               <ButtonText>Cancel</ButtonText>
             </Button>
             <Button 
               variant="solid" 
+              action="negative" 
+              onPress={handleDelete}
+              isDisabled={isSubmitting || isDeleting}
+              className="flex-1"
+            >
+              <ButtonText className="text-white">
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </ButtonText>
+            </Button>
+            <Button 
+              variant="solid" 
               action="positive" 
               onPress={handleSave}
-              isDisabled={isSubmitting}
+              isDisabled={isSubmitting || isDeleting}
+              className="flex-1"
             >
               <ButtonText className="text-typography-900">
                 {isSubmitting ? 'Updating...' : 'Update'}

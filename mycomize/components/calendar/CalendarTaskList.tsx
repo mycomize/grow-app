@@ -61,7 +61,7 @@ export const CalendarTaskList: React.FC<CalendarTaskListProps> = ({
     return (
       <>
       <HStack className="items-center justify-between mb-2">
-        <HStack className="items-center" space="sm">
+        <HStack className="items-center" space="md">
           <FontAwesome5 name="tasks" size={16} color="#8c8c8c"  />
           <Text className="text-lg font-semibold text-typography-900">Task Schedule</Text>
         </HStack>

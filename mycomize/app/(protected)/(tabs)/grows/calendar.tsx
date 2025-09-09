@@ -138,7 +138,7 @@ export default function GrowCalendarScreen() {
         </View>
 
         <Text className="text-base text-typography-600">
-          Track your tasks across all your grows.
+          Track tasks across all your grows
         </Text>
 
         {/* Calendar */}
