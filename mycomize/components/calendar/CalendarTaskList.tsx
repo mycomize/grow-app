@@ -6,7 +6,8 @@ import { Button, ButtonIcon } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Divider } from '~/components/ui/divider';
 import { ChevronDown, ChevronRight, CheckSquare, } from 'lucide-react-native';
-import { CalendarTask, formatDateForDisplay, groupTasksByDate, getTaskEffectiveStatus } from '~/lib/utils/calendarUtils';
+import { formatDateForDisplay, groupTasksByDate, getTaskEffectiveStatus } from '~/lib/utils/calendarUtils';
+import { CalendarTask } from '~/lib/types/calendarTypes';
 import { TaskListItem } from './TaskListItem';
 import { InfoBadge } from '../ui/info-badge';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
@@ -31,19 +32,22 @@ export const CalendarTaskList: React.FC<CalendarTaskListProps> = ({
   // Auto-expand today and selected date
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
-    const initialExpanded: Record<string, boolean> = {};
     
-    // Always expand today
-    if (tasksByDate[today]) {
-      initialExpanded[today] = true;
-    }
-    
-    // Also expand selected date if different from today
-    if (selectedDate && selectedDate !== today && tasksByDate[selectedDate]) {
-      initialExpanded[selectedDate] = true;
-    }
-    
-    setExpandedDates(initialExpanded);
+    setExpandedDates(prev => {
+      const newExpanded = { ...prev };
+      
+      // Always expand today
+      if (tasksByDate[today] && newExpanded[today] === undefined) {
+        newExpanded[today] = true;
+      }
+      
+      // Also expand selected date if different from today
+      if (selectedDate && selectedDate !== today && tasksByDate[selectedDate] && newExpanded[selectedDate] === undefined) {
+        newExpanded[selectedDate] = true;
+      }
+      
+      return newExpanded;
+    });
   }, [selectedDate, tasksByDate]);
 
   const toggleDateExpansion = (date: string) => {

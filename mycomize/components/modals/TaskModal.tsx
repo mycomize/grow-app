@@ -4,7 +4,6 @@ import {
   ModalBackdrop,
   ModalContent,
   ModalHeader,
-  ModalCloseButton,
   ModalBody,
   ModalFooter,
 } from '~/components/ui/modal';
@@ -19,12 +18,11 @@ import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from '~/comp
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { X, CheckSquare, ChevronDown, CalendarDays, Clock, Check } from 'lucide-react-native';
 import { Task, TaskContext, generateId } from '~/lib/types/tekTypes';
-import { createCalendarTaskFromTemplate } from '~/lib/types/calendarTypes';
 import { useGrowStore } from '~/lib/stores/growStore';
 import { useTeksStore } from '~/lib/stores/teksStore';
 import { useCalendarStore } from '~/lib/stores/calendarStore';
 import { useAuthEncryption } from '~/lib/stores/authEncryptionStore';
-import { generateTaskSchedule, calculateTotalTasks, generateScheduleDescription, TaskScheduleParams } from '~/lib/utils/frequencyCalculator';
+import { generateTaskSchedule, TaskScheduleParams } from '~/lib/utils/frequencyCalculator';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -49,6 +47,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   
   const [calendarData, setCalendarData] = useState({
     addToCalendar: false,
+    enableNotifications: false,
     start_date: '',
     start_time: '',
     end_date: '',
@@ -150,6 +149,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         // Calendar data is not part of Task templates
         setCalendarData({
           addToCalendar: false,
+          enableNotifications: false,
           start_date: '',
           start_time: '',
           end_date: '',
@@ -165,6 +165,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         
         setCalendarData({
           addToCalendar: false,
+          enableNotifications: false,
           start_date: stageStartDate || '',
           start_time: '',
           end_date: '',
@@ -278,7 +279,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               taskData,
               currentGrow.id,
               stageKey,
-              schedule
+              schedule,
+              calendarData.enableNotifications
             );
             console.log(`[TaskModal] Successfully created ${createdTasks.length} calendar tasks for existing grow`);
           } catch (error) {
@@ -299,6 +301,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 date,
                 time,
                 status: 'upcoming',
+                notification_enabled: calendarData.enableNotifications,
               });
             }
             
@@ -509,6 +512,21 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       onChange={(event, date) => handleDateChange('end_date', date, event)}
                     />
                   )}
+                </VStack>
+
+                {/* Notification Checkbox - Show when calendar tasks are enabled */}
+                <VStack space="xs">
+                  <Checkbox
+                    value={calendarData.enableNotifications ? 'true' : 'false'}
+                    isChecked={calendarData.enableNotifications}
+                    onChange={(checked: boolean) => updateCalendarField('enableNotifications', checked)}
+                    size="md"
+                  >
+                    <CheckboxIndicator className="mr-2">
+                      <CheckboxIcon as={Check} />
+                    </CheckboxIndicator>
+                    <CheckboxLabel>Enable task notifications</CheckboxLabel>
+                  </Checkbox>
                 </VStack>
 
               </>

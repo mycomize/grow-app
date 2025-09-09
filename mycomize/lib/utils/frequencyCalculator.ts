@@ -154,17 +154,48 @@ const generateDailySchedule = (params: TaskScheduleParams): TaskScheduleItem[] =
   const schedule: TaskScheduleItem[] = [];
   const days = calculateDaysBetween(startDate, endDate);
   
-  // Generate time slots for each day
-  const dailyTimeSlots = generateDailyTimeSlots(repeatCount, startTime);
+  // First task uses EXACT user-provided date and time
+  schedule.push({
+    date: startDate,
+    time: startTime,
+  });
   
-  // Create tasks for each day
-  for (let dayOffset = 0; dayOffset < days; dayOffset++) {
+  // If only one task per day, create one task per day using the same time
+  if (repeatCount === 1) {
+    for (let dayOffset = 1; dayOffset < days; dayOffset++) {
+      const currentDate = parseDate(startDate);
+      currentDate.setDate(currentDate.getDate() + dayOffset);
+      const dateString = formatDate(currentDate);
+      
+      schedule.push({
+        date: dateString,
+        time: startTime,
+      });
+    }
+    return schedule;
+  }
+  
+  // Generate additional time slots for the same day, avoiding the start time
+  const additionalTimeSlots = generateDailyTimeSlots(repeatCount - 1);
+  
+  // Add remaining tasks for the first day
+  for (const time of additionalTimeSlots) {
+    schedule.push({
+      date: startDate,
+      time: time,
+    });
+  }
+  
+  // For subsequent days, create tasks with distributed times
+  const allDailyTimeSlots = generateDailyTimeSlots(repeatCount);
+  
+  for (let dayOffset = 1; dayOffset < days; dayOffset++) {
     const currentDate = parseDate(startDate);
     currentDate.setDate(currentDate.getDate() + dayOffset);
     const dateString = formatDate(currentDate);
     
     // Add all time slots for this day
-    for (const time of dailyTimeSlots) {
+    for (const time of allDailyTimeSlots) {
       schedule.push({
         date: dateString,
         time: time,
@@ -183,14 +214,54 @@ const generateWeeklySchedule = (params: TaskScheduleParams): TaskScheduleItem[] 
   const schedule: TaskScheduleItem[] = [];
   const weeks = calculateWeeksBetween(startDate, endDate);
   
-  // Generate time slots distributed across the week
-  const weeklyTimeSlots = generateDailyTimeSlots(repeatCount, startTime);
+  schedule.push({
+    date: startDate,
+    time: startTime,
+  });
   
-  // Calculate day intervals for distributing across the week
+  // If only one task per week, add it to each subsequent week
+  if (repeatCount === 1) {
+    const startDateObj = parseDate(startDate);
+    for (let week = 1; week < weeks; week++) {
+      const weekDate = new Date(startDateObj);
+      weekDate.setDate(weekDate.getDate() + (week * 7));
+      const weekDateString = formatDate(weekDate);
+      
+      if (weekDateString <= endDate) {
+        schedule.push({
+          date: weekDateString,
+          time: startTime,
+        });
+      }
+    }
+    return schedule;
+  }
+  
+  // For multiple tasks per week, distribute remaining tasks in the first week
+  const additionalTimeSlots = generateDailyTimeSlots(repeatCount - 1);
   const dayInterval = Math.floor(7 / repeatCount);
+  const startDateObj = parseDate(startDate);
   
-  for (let week = 0; week < weeks; week++) {
-    const weekStartDate = parseDate(startDate);
+  // Add remaining tasks for the first week
+  for (let taskIndex = 1; taskIndex < repeatCount; taskIndex++) {
+    const dayOffset = taskIndex * dayInterval;
+    const taskDate = new Date(startDateObj);
+    taskDate.setDate(taskDate.getDate() + dayOffset);
+    
+    const taskDateString = formatDate(taskDate);
+    if (taskDateString <= endDate) {
+      schedule.push({
+        date: taskDateString,
+        time: additionalTimeSlots[taskIndex - 1] || startTime,
+      });
+    }
+  }
+  
+  // For subsequent weeks, distribute all tasks evenly
+  const allWeeklyTimeSlots = generateDailyTimeSlots(repeatCount);
+  
+  for (let week = 1; week < weeks; week++) {
+    const weekStartDate = new Date(startDateObj);
     weekStartDate.setDate(weekStartDate.getDate() + (week * 7));
     
     // Distribute tasks across the week
@@ -204,7 +275,7 @@ const generateWeeklySchedule = (params: TaskScheduleParams): TaskScheduleItem[] 
       if (taskDateString <= endDate) {
         schedule.push({
           date: taskDateString,
-          time: weeklyTimeSlots[taskIndex] || weeklyTimeSlots[0],
+          time: allWeeklyTimeSlots[taskIndex] || startTime,
         });
       }
     }
@@ -221,19 +292,21 @@ const generateStageSchedule = (params: TaskScheduleParams): TaskScheduleItem[] =
   const schedule: TaskScheduleItem[] = [];
   const totalDays = calculateDaysBetween(startDate, endDate);
   
+  // First task uses EXACT user-provided date and time
+  schedule.push({
+    date: startDate,
+    time: startTime,
+  });
+  
   if (repeatCount === 1) {
-    // Single task - use provided start time and date
-    return [{
-      date: startDate,
-      time: startTime,
-    }];
+    return schedule;
   }
   
-  // Multiple tasks - distribute evenly across the stage duration
+  // Multiple tasks - distribute remaining tasks evenly across the stage duration
   const dayInterval = Math.floor(totalDays / repeatCount);
-  const timeSlots = generateDailyTimeSlots(repeatCount, startTime);
+  const timeSlots = generateDailyTimeSlots(repeatCount - 1);
   
-  for (let taskIndex = 0; taskIndex < repeatCount; taskIndex++) {
+  for (let taskIndex = 1; taskIndex < repeatCount; taskIndex++) {
     const dayOffset = taskIndex * dayInterval;
     const taskDate = parseDate(startDate);
     taskDate.setDate(taskDate.getDate() + dayOffset);
@@ -243,7 +316,7 @@ const generateStageSchedule = (params: TaskScheduleParams): TaskScheduleItem[] =
     if (taskDateString <= endDate) {
       schedule.push({
         date: taskDateString,
-        time: timeSlots[taskIndex] || timeSlots[0],
+        time: timeSlots[taskIndex - 1] || startTime,
       });
     }
   }

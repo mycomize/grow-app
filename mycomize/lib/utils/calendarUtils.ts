@@ -1,21 +1,6 @@
 import { BulkGrowComplete, stageLabels } from '../types/growTypes';
 import { Task } from '../types/tekTypes';
-
-/**
- * Calendar-specific task interface combining task data with grow context
- */
-export interface CalendarTask {
-  id: string;
-  growId: number;
-  growName: string;
-  stageKey: string;
-  stageName: string;
-  action: string;
-  status: 'upcoming' | 'completed' | 'overdue';
-  date?: string;
-  time?: string;
-  frequency: string;
-}
+import { CalendarTask } from '../types/calendarTypes';
 
 /**
  * Calendar marked dates interface for react-native-calendars
@@ -39,6 +24,8 @@ export const getStageDisplayName = (stageKey: string): string => {
  * Extract all individual tasks from active grows and convert to CalendarTask format
  * Only includes grows that are not completed (status !== 'completed')
  * Now works with individual task instances (no expansion needed)
+ * Note: This function creates pseudo-CalendarTask objects for legacy compatibility
+ * but these won't match the backend CalendarTask structure exactly
  */
 export const getAllTasksFromGrows = (grows: BulkGrowComplete[]): CalendarTask[] => {
   const calendarTasks: CalendarTask[] = [];
@@ -55,18 +42,24 @@ export const getAllTasksFromGrows = (grows: BulkGrowComplete[]): CalendarTask[] 
 
       // Convert each individual task to CalendarTask format
       // Note: Task objects from teks don't have calendar-specific properties
-      // This function might need to be updated to work with actual CalendarTask objects from the backend
+      // This creates a pseudo-CalendarTask for legacy compatibility
       stageData.tasks.forEach((task: Task) => {
         calendarTasks.push({
-          id: task.id,
-          growId: grow.id,
-          growName: grow.name,
-          stageKey,
-          stageName: getStageDisplayName(stageKey),
+          // Backend fields (some are fake/placeholder for legacy compatibility)
+          id: parseInt(task.id) || 0, // Convert string to number
+          parent_task_id: task.id,
           action: task.action,
+          grow_id: grow.id,
+          stage_key: stageKey,
+          date: '', // Task doesn't have calendar dates
+          time: '', // Task doesn't have calendar times
           status: 'upcoming', // Default status since Task doesn't have this property
-          date: undefined, // Task doesn't have calendar dates
-          time: undefined, // Task doesn't have calendar times
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          
+          // Display fields (populated)
+          growName: grow.name,
+          stageName: getStageDisplayName(stageKey),
           frequency: task.frequency
         });
       });
@@ -134,7 +127,9 @@ export const generateMarkedDates = (tasks: CalendarTask[]): MarkedDates => {
  * Get tasks scheduled for today
  */
 export const getTodaysTasks = (tasks: CalendarTask[]): CalendarTask[] => {
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  // Use local timezone for "today" calculation to match task date format
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   return getTasksForDate(tasks, today);
 };
 
@@ -162,16 +157,18 @@ export const sortTasksByStage = (tasks: CalendarTask[]): CalendarTask[] => {
   
   return [...tasks].sort((a, b) => {
     // First sort by stage order
-    const aStageIndex = stageOrder.indexOf(a.stageKey);
-    const bStageIndex = stageOrder.indexOf(b.stageKey);
+    const aStageIndex = stageOrder.indexOf(a.stage_key);
+    const bStageIndex = stageOrder.indexOf(b.stage_key);
     
     if (aStageIndex !== bStageIndex) {
       return aStageIndex - bStageIndex;
     }
     
-    // Then sort by grow name
-    if (a.growName !== b.growName) {
-      return a.growName.localeCompare(b.growName);
+    // Then sort by grow name (handle optional display field)
+    const aGrowName = a.growName || '';
+    const bGrowName = b.growName || '';
+    if (aGrowName !== bGrowName) {
+      return aGrowName.localeCompare(bGrowName);
     }
 
     // Then sort by time (if available)
@@ -205,16 +202,18 @@ export const sortTasksByTime = (tasks: CalendarTask[]): CalendarTask[] => {
 
     // Then by stage order
     const stageOrder = ['inoculation', 'spawn_colonization', 'bulk_colonization', 'fruiting', 'harvest'];
-    const aStageIndex = stageOrder.indexOf(a.stageKey);
-    const bStageIndex = stageOrder.indexOf(b.stageKey);
+    const aStageIndex = stageOrder.indexOf(a.stage_key);
+    const bStageIndex = stageOrder.indexOf(b.stage_key);
     
     if (aStageIndex !== bStageIndex) {
       return aStageIndex - bStageIndex;
     }
     
-    // Then by grow name
-    if (a.growName !== b.growName) {
-      return a.growName.localeCompare(b.growName);
+    // Then by grow name (handle optional display field)
+    const aGrowName = a.growName || '';
+    const bGrowName = b.growName || '';
+    if (aGrowName !== bGrowName) {
+      return aGrowName.localeCompare(bGrowName);
     }
     
     // Finally by action name
@@ -264,17 +263,40 @@ export const formatTimeForDisplay = (timeString?: string): string => {
 };
 
 /**
- * Check if a task is overdue based on its date and status
+ * Check if a task is overdue based on its date, time, and status
  */
 export const isTaskOverdue = (task: CalendarTask): boolean => {
   if (!task.date || task.status === 'completed') {
     return false;
   }
   
-  const today = new Date().toISOString().split('T')[0];
-  const isOverdue = task.date < today && task.status === 'upcoming';
+  const now = new Date();
+  // Use local timezone for "today" calculation to match task date format
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   
-  return isOverdue;
+  // If task is from a previous day, it's overdue
+  if (task.date < today) {
+    return task.status === 'upcoming';
+  }
+  
+  // If task is from a future day, it's not overdue
+  if (task.date > today) {
+    return false;
+  }
+  
+  // Task is scheduled for today - check time if available
+  if (task.date === today && task.time) {
+    // Parse task time and create datetime for comparison
+    const [hours, minutes] = task.time.split(':').map(Number);
+    const taskDateTime = new Date();
+    taskDateTime.setHours(hours, minutes, 0, 0);
+    
+    // Task is overdue if current time has passed the scheduled time
+    return now > taskDateTime && task.status === 'upcoming';
+  }
+  
+  // Task is scheduled for today but has no time specified - not overdue
+  return false;
 };
 
 /**
@@ -292,10 +314,13 @@ export const getTaskEffectiveStatus = (task: CalendarTask): 'upcoming' | 'comple
  * Format date for display (e.g., "2024-01-15" -> "Today", "Tomorrow", or "Jan 15")
  */
 export const formatDateForDisplay = (dateString: string): string => {
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  // Use local timezone for "today" calculation to match task date format
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowString = tomorrow.toISOString().split('T')[0];
+  const tomorrowString = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
   
   if (dateString === today) {
     return 'Today';

@@ -14,15 +14,17 @@ import { Text } from '~/components/ui/text';
 import { Button, ButtonText } from '~/components/ui/button';
 import { Icon } from '~/components/ui/icon';
 import { Input, InputField, InputSlot } from '~/components/ui/input';
+import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from '~/components/ui/checkbox';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { X, CalendarDays, Clock } from 'lucide-react-native';
+import { X, CalendarDays, Clock, Check } from 'lucide-react-native';
 import { CalendarTask } from '~/lib/types/calendarTypes';
-import { CalendarTask as CalendarUtilsTask } from '~/lib/utils/calendarUtils';
 import { useCalendarStore } from '~/lib/stores/calendarStore';
 import { useAuthEncryption } from '~/lib/stores/authEncryptionStore';
+import { useNotificationStore } from '~/lib/stores/notificationStore';
+import { useGrowStore } from '~/lib/stores/growStore';
 
-// Union type to handle both CalendarTask variants
-type TaskForModal = CalendarTask | CalendarUtilsTask | null;
+// Simplified type since we now have a single CalendarTask interface
+type TaskForModal = CalendarTask | null;
 
 interface TaskDateUpdateModalProps {
   isOpen: boolean;
@@ -38,6 +40,7 @@ export const CalendarTaskDateUpdateModal: React.FC<TaskDateUpdateModalProps> = (
   const [formData, setFormData] = useState({
     date: '',
     time: '',
+    notificationEnabled: false,
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -50,6 +53,12 @@ export const CalendarTaskDateUpdateModal: React.FC<TaskDateUpdateModalProps> = (
   const parseDate = useCalendarStore((state) => state.parseDate);
   const formatDateForAPI = useCalendarStore((state) => state.formatDateForAPI);
   const { token } = useAuthEncryption();
+  const growStore = useGrowStore();
+  const { 
+    scheduleTaskNotification,
+    cancelTaskNotification,
+    rescheduleTaskNotification
+  } = useNotificationStore();
 
   // Date utility functions
   const formatTimeForAPI = (date: Date | null): string | undefined => {
@@ -116,12 +125,19 @@ export const CalendarTaskDateUpdateModal: React.FC<TaskDateUpdateModalProps> = (
     return task.time || '';
   };
 
+  // Helper to get notification enabled status from task
+  const getTaskNotificationEnabled = (task: TaskForModal): boolean => {
+    if (!task) return false;
+    return (task as any).notification_enabled || false;
+  };
+
   // Initialize form data when modal opens or task changes
   useEffect(() => {
     if (isOpen && task) {
       setFormData({
         date: getTaskDate(task),
         time: getTaskTime(task),
+        notificationEnabled: getTaskNotificationEnabled(task),
       });
       setErrors({});
       setActiveDatePicker(null);
@@ -135,6 +151,10 @@ export const CalendarTaskDateUpdateModal: React.FC<TaskDateUpdateModalProps> = (
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
+  };
+
+  const updateNotificationField = (checked: boolean) => {
+    setFormData((prev) => ({ ...prev, notificationEnabled: checked }));
   };
 
   const validateForm = () => {
@@ -166,19 +186,89 @@ export const CalendarTaskDateUpdateModal: React.FC<TaskDateUpdateModalProps> = (
     setIsSubmitting(true);
 
     try {
-      const success = await updateCalendarTask(token, taskId, {
+      // Get current task state
+      const wasNotificationEnabled = getTaskNotificationEnabled(task);
+      const currentNotificationId = (task as any).notification_id;
+      const dateChanged = formData.date.trim() !== getTaskDate(task);
+      const timeChanged = formData.time.trim() !== getTaskTime(task);
+      const notificationChanged = formData.notificationEnabled !== wasNotificationEnabled;
+      
+      // Get grow name and stage key for notification context
+      const taskGrowId = (task as any).grow_id;
+      const taskStageKey = (task as any).stage_key;
+      const currentGrow = growStore.grows.find(g => g.id === taskGrowId);
+      const growName = currentGrow?.name;
+      
+      let newNotificationId: string | null = null;
+
+      // Handle notification logic
+      if (wasNotificationEnabled && !formData.notificationEnabled) {
+        // Disable notifications - cancel existing
+        if (currentNotificationId) {
+          await cancelTaskNotification(currentNotificationId);
+        }
+      } else if (!wasNotificationEnabled && formData.notificationEnabled) {
+        // Enable notifications - schedule new
+        newNotificationId = await scheduleTaskNotification(
+          parseInt(taskId),
+          task.action,
+          formData.date.trim(),
+          formData.time.trim(),
+          growName,
+          taskStageKey
+        );
+      } else if (wasNotificationEnabled && formData.notificationEnabled && (dateChanged || timeChanged)) {
+        // Reschedule existing notification with new date/time
+        if (currentNotificationId) {
+          newNotificationId = await rescheduleTaskNotification(
+            parseInt(taskId),
+            currentNotificationId,
+            task.action,
+            formData.date.trim(),
+            formData.time.trim(),
+            growName,
+            taskStageKey
+          );
+        } else {
+          // No existing notification ID, schedule new
+          newNotificationId = await scheduleTaskNotification(
+            parseInt(taskId),
+            task.action,
+            formData.date.trim(),
+            formData.time.trim(),
+            growName,
+            taskStageKey
+          );
+        }
+      } else {
+        // Keep existing notification ID if no notification changes
+        newNotificationId = currentNotificationId;
+      }
+
+      // Update calendar task with new data
+      const updateData: any = {
         date: formData.date.trim(),
         time: formData.time.trim(),
-      });
+        notification_enabled: formData.notificationEnabled,
+      };
+
+      // Only include notification_id if we have one
+      if (formData.notificationEnabled && newNotificationId) {
+        updateData.notification_id = newNotificationId;
+      } else if (!formData.notificationEnabled) {
+        updateData.notification_id = null;
+      }
+
+      const success = await updateCalendarTask(token, taskId, updateData);
 
       if (success) {
-        console.log(`Successfully updated task ${taskId} date and time`);
+        console.log(`Successfully updated task ${taskId} with notifications`);
         onClose();
       } else {
         setErrors({ general: 'Failed to update task. Please try again.' });
       }
     } catch (error) {
-      console.error('Error updating task date/time:', error);
+      console.error('Error updating task:', error);
       setErrors({ general: 'An error occurred while updating the task.' });
     } finally {
       setIsSubmitting(false);
@@ -271,6 +361,21 @@ export const CalendarTaskDateUpdateModal: React.FC<TaskDateUpdateModalProps> = (
                   onChange={(event, date) => handleTimeChange('time', date, event)}
                 />
               )}
+            </VStack>
+
+            {/* Notification Checkbox */}
+            <VStack space="xs">
+              <Checkbox
+                value={formData.notificationEnabled ? 'true' : 'false'}
+                isChecked={formData.notificationEnabled}
+                onChange={(checked: boolean) => updateNotificationField(checked)}
+                size="md"
+              >
+                <CheckboxIndicator className="mr-2">
+                  <CheckboxIcon as={Check} />
+                </CheckboxIndicator>
+                <CheckboxLabel>Enable task notification</CheckboxLabel>
+              </Checkbox>
             </VStack>
 
             {/* General Error Display */}

@@ -22,6 +22,8 @@ class CalendarTask(Base):
     date = Column(Text, nullable=False)  # YYYY-MM-DD format
     time = Column(Text, nullable=False)  # HH:mm format  
     status = Column(Text, nullable=False, default='pending')  # 'pending' or 'completed'
+    notification_enabled = Column(Text, nullable=True)  # Boolean stored as encrypted text
+    notification_id = Column(Text, nullable=True)  # Expo notification identifier stored as encrypted text
 
     # Relationship with BulkGrow
     grow = relationship("BulkGrow", back_populates="calendar_tasks")

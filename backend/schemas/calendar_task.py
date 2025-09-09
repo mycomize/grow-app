@@ -12,6 +12,8 @@ class CalendarTaskBase(BaseModel):
     date: Optional[str] = None  # Encrypted - YYYY-MM-DD format
     time: Optional[str] = None  # Encrypted - HH:mm format
     status: Optional[str] = None  # Encrypted - 'pending' or 'completed'
+    notification_enabled: Optional[str] = None  # Encrypted - Boolean as string
+    notification_id: Optional[str] = None  # Encrypted - Expo notification identifier
 
 
 class CalendarTaskCreate(CalendarTaskBase):
@@ -31,6 +33,8 @@ class CalendarTaskUpdate(BaseModel):
     date: Optional[str] = None
     time: Optional[str] = None
     status: Optional[str] = None
+    notification_enabled: Optional[str] = None
+    notification_id: Optional[str] = None
 
 
 class CalendarTask(CalendarTaskBase):

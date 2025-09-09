@@ -6,6 +6,7 @@ import { CalendarTask, CalendarTaskCreate, CalendarTaskUpdate } from '../types/c
 import { Task } from '../types/tekTypes';
 import { NEW_GROW_ID } from './growStore';
 import { useGrowStore } from './growStore';
+import { useNotificationStore } from './notificationStore';
 
 // Helper function to handle unauthorized errors consistently
 const handleUnauthorizedError = (error: Error) => {
@@ -38,7 +39,8 @@ interface CalendarStore {
     task: Task,
     growId: number,
     stageKey: string,
-    dates: { date: string; time: string }[]
+    dates: { date: string; time: string }[],
+    notificationEnabled?: boolean
   ) => Promise<CalendarTask[]>;
 
   // Calendar task management
@@ -119,6 +121,14 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
   // Delete a calendar task
   deleteCalendarTask: async (token: string, id: string) => {
     try {
+      const taskToDelete = get().calendarTasks.find((task) => task.id.toString() === id);
+      
+      // Cancel notification if it exists
+      if (taskToDelete?.notification_enabled && taskToDelete.notification_id) {
+        const { cancelTaskNotification } = useNotificationStore.getState();
+        await cancelTaskNotification(taskToDelete.notification_id);
+      }
+
       await apiClient.deleteCalendarTask(id, token);
 
       set((state) => ({
@@ -137,19 +147,31 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
   deleteCalendarTasksByParentTask: async (token: string, parentTaskId: string, growId: number) => {
     try {
       console.log(`[CalendarStore] Deleting calendar tasks for parent task ${parentTaskId} in grow ${growId}`);
+      
+      // Find tasks to delete and cancel their notifications
+      const tasksToDelete = get().calendarTasks.filter(
+        (task) => task.parent_task_id === parentTaskId && task.grow_id === growId
+      );
+
+      // Cancel notifications for tasks that have them
+      const { cancelTaskNotification } = useNotificationStore.getState();
+      const notificationPromises = tasksToDelete
+        .filter(task => task.notification_enabled && task.notification_id)
+        .map(task => cancelTaskNotification(task.notification_id!));
+      
+      if (notificationPromises.length > 0) {
+        await Promise.all(notificationPromises);
+      }
+
       await apiClient.deleteCalendarTasksByParentTask(parentTaskId, growId, token);
 
-      const removedCount = get().calendarTasks.filter(
-        (task) => task.parent_task_id === parentTaskId && task.grow_id === growId
-      ).length;
+      set((state) => ({
+        calendarTasks: state.calendarTasks.filter(
+          (task) => !(task.parent_task_id === parentTaskId && task.grow_id === growId)
+        ),
+      }));
 
-    set((state) => ({
-      calendarTasks: state.calendarTasks.filter(
-        (task) => !(task.parent_task_id === parentTaskId && task.grow_id === growId)
-      ),
-    }));
-
-      console.log(`[CalendarStore] Successfully deleted ${removedCount} calendar tasks for parent task ${parentTaskId}`);
+      console.log(`[CalendarStore] Successfully deleted ${tasksToDelete.length} calendar tasks for parent task ${parentTaskId}`);
       return true;
     } catch (error) {
       console.error('Error deleting calendar tasks by parent:', error);
@@ -267,7 +289,8 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
     task: Task,
     growId: number,
     stageKey: string,
-    dates: { date: string; time: string }[]
+    dates: { date: string; time: string }[],
+    notificationEnabled: boolean = false
   ) => {
     try {
       if (dates.length === 0) {
@@ -291,13 +314,77 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
       // Use bulk creation API
       const createdTasks: CalendarTask[] = await apiClient.createCalendarTasksBulk(tasksToCreate, token);
 
-      // Update zustand state with all created tasks
-      set((state) => ({
-        calendarTasks: [...state.calendarTasks, ...createdTasks],
-      }));
+      // Handle notifications if enabled
+      if (notificationEnabled) {
+        console.log(`[CalendarStore] Scheduling notifications for ${createdTasks.length} calendar tasks`);
+        
+        const { scheduleTaskNotification } = useNotificationStore.getState();
+        const updatedTasks: CalendarTask[] = [];
+        
+        // Get grow name for notification context
+        const growStore = useGrowStore.getState();
+        const grows = growStore.grows;
+        const currentGrow = grows.find(g => g.id === growId);
+        const growName = currentGrow?.name;
+        
+        // Schedule notifications for each task
+        for (const createdTask of createdTasks) {
+          try {
+            const notificationId = await scheduleTaskNotification(
+              createdTask.id,
+              createdTask.action,
+              createdTask.date,
+              createdTask.time,
+              growName,
+              stageKey
+            );
+            
+            if (notificationId) {
+              // Update the task with notification information
+              const taskUpdate: CalendarTaskUpdate = {
+                notification_enabled: true,
+                notification_id: notificationId,
+              };
+              
+              const success = await get().updateCalendarTask(token, createdTask.id.toString(), taskUpdate);
+              
+              if (success) {
+                // Add updated task to our list with notification info
+                updatedTasks.push({
+                  ...createdTask,
+                  notification_enabled: true,
+                  notification_id: notificationId,
+                });
+              } else {
+                console.warn(`[CalendarStore] Failed to update task ${createdTask.id} with notification info`);
+                updatedTasks.push(createdTask);
+              }
+            } else {
+              console.warn(`[CalendarStore] Failed to schedule notification for task ${createdTask.id}`);
+              updatedTasks.push(createdTask);
+            }
+          } catch (notificationError) {
+            console.error(`[CalendarStore] Error scheduling notification for task ${createdTask.id}:`, notificationError);
+            updatedTasks.push(createdTask);
+          }
+        }
+        
+        // Update zustand state with tasks that have notification info
+        set((state) => ({
+          calendarTasks: [...state.calendarTasks, ...updatedTasks],
+        }));
 
-      console.log(`[CalendarStore] Successfully created ${createdTasks.length} calendar tasks via bulk API`);
-      return createdTasks;
+        console.log(`[CalendarStore] Successfully created ${updatedTasks.length} calendar tasks with notifications via bulk API`);
+        return updatedTasks;
+      } else {
+        // Update zustand state with created tasks (no notifications)
+        set((state) => ({
+          calendarTasks: [...state.calendarTasks, ...createdTasks],
+        }));
+
+        console.log(`[CalendarStore] Successfully created ${createdTasks.length} calendar tasks via bulk API`);
+        return createdTasks;
+      }
     } catch (error) {
       console.error('Error creating calendar tasks from template:', error);
       handleUnauthorizedError(error as Error);

@@ -11,10 +11,10 @@ import { useTheme } from '~/components/ui/themeprovider/themeprovider';
 import { useShallow } from 'zustand/react/shallow';
 import { useGrowStore } from '~/lib/stores/growStore';
 import { useCalendarStore } from '~/lib/stores/calendarStore';
-import { generateMarkedDates, CalendarTask as DisplayCalendarTask, getStageDisplayName } from '~/lib/utils/calendarUtils';
+import { generateMarkedDates, getStageDisplayName } from '~/lib/utils/calendarUtils';
 import { CalendarTaskList } from '~/components/calendar/CalendarTaskList';
 import { useAuthEncryption } from '~/lib/stores/authEncryptionStore';
-import { CalendarTask as StoreCalendarTask } from '~/lib/types/calendarTypes';
+import { CalendarTask } from '~/lib/types/calendarTypes';
 
 export default function GrowCalendarScreen() {
   const { theme } = useTheme();
@@ -51,21 +51,16 @@ export default function GrowCalendarScreen() {
     }
   }, [toggleCalendarTaskCompletion, token]);
 
-  // Convert calendar tasks from store format to display format
-  const calendarTasksForDisplay = useMemo((): DisplayCalendarTask[] => {
-    return calendarTasks.map((task: StoreCalendarTask): DisplayCalendarTask => {
+  // Enrich calendar tasks with display information
+  const calendarTasksForDisplay = useMemo((): CalendarTask[] => {
+    return calendarTasks.map((task: CalendarTask): CalendarTask => {
       const grow = grows.find(g => g.id === task.grow_id);
       return {
-        id: task.id.toString(),
-        growId: task.grow_id,
-        growName: grow?.name || `Grow ${task.grow_id}`,
-        stageKey: task.stage_key,
-        stageName: getStageDisplayName(task.stage_key),
-        action: task.action,
-        status: task.status,
-        date: task.date,
-        time: task.time,
-        frequency: 'once' // Calendar tasks are individual instances
+        ...task,
+        // Populate display fields if not already present
+        growName: task.growName || grow?.name || `Grow ${task.grow_id}`,
+        stageName: task.stageName || getStageDisplayName(task.stage_key),
+        frequency: task.frequency || 'once' // Calendar tasks are individual instances
       };
     });
   }, [calendarTasks, grows]);
