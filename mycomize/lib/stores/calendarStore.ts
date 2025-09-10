@@ -32,6 +32,7 @@ interface CalendarStore {
   createCalendarTaskForNewGrow: (data: Omit<CalendarTaskCreate, 'grow_id'>) => CalendarTask;
   getCalendarTasksForNewGrow: () => CalendarTask[];
   updateCalendarTaskGrowIds: (token: string, newGrowId: number) => Promise<boolean>;
+  cleanupNewGrowCalendarTasks: () => void;
 
   // Task template to CalendarTask generation
   createCalendarTasksFromTask: (
@@ -194,6 +195,8 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
       date: data.date,
       time: data.time,
       status: data.status || 'upcoming',
+      notification_enabled: data.notification_enabled || false,
+      notification_id: data.notification_id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -234,6 +237,8 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
       
       // Prepare all tasks for bulk creation with real grow ID and current task IDs
       const tasksToCreate: CalendarTaskCreate[] = [];
+      // Track tasks that need notifications scheduled after creation
+      const tasksNeedingNotifications: { originalTask: CalendarTask, newTaskData: CalendarTaskCreate }[] = [];
       
       for (const task of newGrowTasks) {
         // Find the current task in the grow store by matching action and stage
@@ -245,7 +250,7 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
           continue;
         }
 
-        tasksToCreate.push({
+        const taskData: CalendarTaskCreate = {
           parent_task_id: currentTask.id, // Use current task ID from grow store
           grow_id: newGrowId,
           action: task.action,
@@ -253,7 +258,14 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
           date: task.date,
           time: task.time,
           status: task.status,
-        });
+        };
+
+        tasksToCreate.push(taskData);
+
+        // Track if this task needs notifications scheduled
+        if (task.notification_enabled) {
+          tasksNeedingNotifications.push({ originalTask: task, newTaskData: taskData });
+        }
       }
 
       if (tasksToCreate.length === 0) {
@@ -266,21 +278,106 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
       // Use bulk creation API for better performance
       const createdTasks: CalendarTask[] = await apiClient.createCalendarTasksBulk(tasksToCreate, token);
 
-      // Remove the temporary NEW_GROW_ID tasks from state and add the new ones
+      // Schedule notifications for tasks that were marked with notification_enabled
+      const tasksWithNotifications: CalendarTask[] = [];
+      if (tasksNeedingNotifications.length > 0) {
+        console.log(`[CalendarStore] Scheduling notifications for ${tasksNeedingNotifications.length} calendar tasks`);
+        
+        const { scheduleTaskNotification } = useNotificationStore.getState();
+        
+        // Get grow name for notification context
+        const growName = currentGrow?.formData?.name;
+        
+        for (let i = 0; i < createdTasks.length; i++) {
+          const createdTask = createdTasks[i];
+          const needsNotification = tasksNeedingNotifications.find(
+            (item) => item.newTaskData.action === createdTask.action && 
+                     item.newTaskData.date === createdTask.date && 
+                     item.newTaskData.time === createdTask.time
+          );
+
+          if (needsNotification) {
+            try {
+              const notificationId = await scheduleTaskNotification(
+                createdTask.id,
+                createdTask.action,
+                createdTask.date,
+                createdTask.time,
+                growName,
+                createdTask.stage_key
+              );
+              
+              if (notificationId) {
+                // Update the task with notification information
+                const taskUpdate: CalendarTaskUpdate = {
+                  notification_enabled: true,
+                  notification_id: notificationId,
+                };
+                
+                const success = await get().updateCalendarTask(token, createdTask.id.toString(), taskUpdate);
+                
+                if (success) {
+                  // Add updated task with notification info
+                  tasksWithNotifications.push({
+                    ...createdTask,
+                    notification_enabled: true,
+                    notification_id: notificationId,
+                  });
+                } else {
+                  console.warn(`[CalendarStore] Failed to update task ${createdTask.id} with notification info`);
+                  tasksWithNotifications.push(createdTask);
+                }
+              } else {
+                console.warn(`[CalendarStore] Failed to schedule notification for task ${createdTask.id}`);
+                tasksWithNotifications.push(createdTask);
+              }
+            } catch (notificationError) {
+              console.error(`[CalendarStore] Error scheduling notification for task ${createdTask.id}:`, notificationError);
+              tasksWithNotifications.push(createdTask);
+            }
+          } else {
+            // Task doesn't need notifications
+            tasksWithNotifications.push(createdTask);
+          }
+        }
+      } else {
+        // No tasks need notifications
+        tasksWithNotifications.push(...createdTasks);
+      }
+
+      // Remove the temporary NEW_GROW_ID tasks from state and add the new ones (with notification info if applicable)
       set((state) => ({
         calendarTasks: [
           ...state.calendarTasks.filter((task) => task.grow_id !== NEW_GROW_ID),
-          ...createdTasks,
+          ...tasksWithNotifications,
         ],
       }));
 
-      console.log(`[CalendarStore] Successfully updated ${createdTasks.length} calendar tasks to grow ${newGrowId} via bulk API`);
+      console.log(`[CalendarStore] Successfully updated ${tasksWithNotifications.length} calendar tasks to grow ${newGrowId} via bulk API`);
       return true;
     } catch (error) {
       console.error('Error updating calendar task grow IDs:', error);
       handleUnauthorizedError(error as Error);
       return false;
     }
+  },
+
+  cleanupNewGrowCalendarTasks: () => {
+    const newGrowTasks = get().getCalendarTasksForNewGrow();
+    
+    if (newGrowTasks.length === 0) {
+      console.log(`[CalendarStore] No NEW_GROW_ID calendar tasks to cleanup`);
+      return;
+    }
+
+    console.log(`[CalendarStore] Cleaning up ${newGrowTasks.length} NEW_GROW_ID calendar tasks`);
+    
+    // Remove all calendar tasks with NEW_GROW_ID from the store
+    set((state) => ({
+      calendarTasks: state.calendarTasks.filter((task) => task.grow_id !== NEW_GROW_ID),
+    }));
+
+    console.log(`[CalendarStore] Successfully cleaned up NEW_GROW_ID calendar tasks`);
   },
 
   // Generate CalendarTasks from Task template using bulk API

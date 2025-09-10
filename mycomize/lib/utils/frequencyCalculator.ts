@@ -325,6 +325,26 @@ const generateStageSchedule = (params: TaskScheduleParams): TaskScheduleItem[] =
 };
 
 /**
+ * Check if a date/time combination is in the past
+ */
+const isDateTimeInPast = (dateString: string, timeString: string): boolean => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  const [hours, minutes] = timeString.split(':').map(Number);
+  
+  const taskDateTime = new Date(year, month - 1, day, hours, minutes);
+  const now = new Date();
+  
+  return taskDateTime < now;
+};
+
+/**
+ * Filter out tasks that are scheduled for past date/time combinations
+ */
+const filterFutureTasks = (schedule: TaskScheduleItem[]): TaskScheduleItem[] => {
+  return schedule.filter(item => !isDateTimeInPast(item.date, item.time));
+};
+
+/**
  * Main function to generate task schedule based on frequency parameters
  */
 export const generateTaskSchedule = (params: TaskScheduleParams): TaskScheduleItem[] => {
@@ -344,16 +364,23 @@ export const generateTaskSchedule = (params: TaskScheduleParams): TaskScheduleIt
     throw new Error('Start date must be before or equal to end date');
   }
   
+  let schedule: TaskScheduleItem[];
   switch (repeatUnit) {
     case 'day':
-      return generateDailySchedule(params);
+      schedule = generateDailySchedule(params);
+      break;
     case 'week':
-      return generateWeeklySchedule(params);
+      schedule = generateWeeklySchedule(params);
+      break;
     case 'stage':
-      return generateStageSchedule(params);
+      schedule = generateStageSchedule(params);
+      break;
     default:
       throw new Error(`Unsupported repeat unit: ${repeatUnit}`);
   }
+  
+  // Filter out any tasks that would be scheduled for past date/time combinations
+  return filterFutureTasks(schedule);
 };
 
 /**

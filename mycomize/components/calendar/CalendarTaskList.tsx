@@ -11,6 +11,7 @@ import { CalendarTask } from '~/lib/types/calendarTypes';
 import { TaskListItem } from './TaskListItem';
 import { InfoBadge } from '../ui/info-badge';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { NEW_GROW_ID } from '~/lib/stores/growStore';
 
 interface CalendarTaskListProps {
   tasks: CalendarTask[];
@@ -25,8 +26,13 @@ export const CalendarTaskList: React.FC<CalendarTaskListProps> = ({
 }) => {
   const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
 
+  // Filter out tasks with NEW_GROW_ID to prevent showing temporary calendar tasks
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task => task.grow_id !== NEW_GROW_ID);
+  }, [tasks]);
+
   // Group tasks by date - memoized to prevent infinite re-renders
-  const tasksByDate = useMemo(() => groupTasksByDate(tasks), [tasks]);
+  const tasksByDate = useMemo(() => groupTasksByDate(filteredTasks), [filteredTasks]);
   const dateKeys = useMemo(() => Object.keys(tasksByDate).sort(), [tasksByDate]);
 
   // Auto-expand today and selected date

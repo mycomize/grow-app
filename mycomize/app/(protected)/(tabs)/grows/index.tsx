@@ -105,15 +105,6 @@ export default function GrowScreen() {
     }
   };
 
-  // Calculate in-progress grows (have inoculation date but not harvested/completed)
-  const inProgressGrows = grows.filter((grow) => {
-    return (
-      grow.inoculation_date &&
-      grow.status !== bulkGrowStatuses.HARVESTED &&
-      grow.status !== bulkGrowStatuses.COMPLETED
-    );
-  });
-
   // Sort grows function
   const sortGrows = (growsToSort: BulkGrowComplete[]) => {
     return [...growsToSort].sort((a, b) => {
@@ -227,7 +218,7 @@ export default function GrowScreen() {
   if (loading) {
     return (
       <ScrollView className="m-0 flex-1 bg-background-[#181818]">
-        <VStack className="flex-1 items-center gap-4">
+        <VStack className="flex-1 items-center bg-background-50 gap-4">
           <View className="mt-2" />
           {/* Show 3 skeleton cards while loading */}
           {Array.from({ length: 1 }).map((_, index) => (

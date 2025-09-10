@@ -174,19 +174,19 @@ class NotificationServiceClass {
         .join(' ');
     };
 
-    const title = 'OpenTek Task Reminder';
+    const title = 'OpenTek Reminder';
     
     // Build notification body with available context
-    let body = `Time for: ${taskAction}`;
+    let body = `Task: ${taskAction}`;
     
     if (growName && stageKey) {
       const formattedStage = formatStageKey(stageKey);
-      body = `${growName} • ${formattedStage}: ${taskAction}`;
+      body = `Grow: ${growName}\nStage: ${formattedStage}\nTask: ${taskAction}`;
     } else if (growName) {
-      body = `${growName}: ${taskAction}`;
+      body = `Grow: ${growName}\nTask: ${taskAction}`;
     } else if (stageKey) {
       const formattedStage = formatStageKey(stageKey);
-      body = `${formattedStage}: ${taskAction}`;
+      body = `Stage: ${formattedStage}\nTask: ${taskAction}`;
     }
     
     return { title, body };
