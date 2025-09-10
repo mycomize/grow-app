@@ -74,7 +74,6 @@ export default function IoTScreen() {
   const loading = useGatewayLoading();
   const { deleteGateway } = useGatewayStore();
   const connectionStatuses = useGatewayStore((state) => state.connectionStatuses);
-  const connectionLatencies = useGatewayStore((state) => state.connectionLatencies);
 
   // Local UI state
   const [searchQuery, setSearchQuery] = useState('');

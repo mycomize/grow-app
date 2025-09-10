@@ -18,6 +18,11 @@ export default function TekLayout() {
         headerStyle,
         headerTintColor,
         headerTitleAlign: 'center',
+        contentStyle: {
+          backgroundColor: theme === 'dark' ? '#0a0a0a' : '#fafafa',
+        },
+        animation: 'slide_from_right',
+        animationDuration: 25,
       }}>
       <Stack.Screen
         name="index"

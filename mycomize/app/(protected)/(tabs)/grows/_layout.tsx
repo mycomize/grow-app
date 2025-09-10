@@ -1,6 +1,6 @@
 import { Drawer } from 'expo-router/drawer';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
-import { List, Layers, Calendar, ChartNoAxesCombined, ArrowLeft } from 'lucide-react-native';
+import { List, CalendarDays, ChartNoAxesCombined, ArrowLeft } from 'lucide-react-native';
 import { TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -14,9 +14,9 @@ export default function GrowsLayout() {
   };
 
   const headerTintColor = theme === 'dark' ? '#ffffff' : '#000000';
-  const drawerActiveTintColor = theme === 'dark' ? '#4ade80' : '#16a34a';
+  const drawerActiveTintColor = theme === 'dark' ? '#5f8afe' : '#16a34a';
   const drawerInactiveTintColor = theme === 'dark' ? '#9ca3af' : '#6b7280';
-  const drawerBackgroundColor = theme === 'dark' ? '#111827' : '#f9fafb';
+  const drawerBackgroundColor = theme === 'dark' ? '#0a0a0a' : '#f9fafb';
 
   // Custom back button component
   const BackButton = () => (
@@ -53,7 +53,7 @@ export default function GrowsLayout() {
           title: 'Grow',
           drawerLabel: 'Calendar',
           drawerIcon: ({ color, size }: { color: string; size: number }) => (
-            <Calendar size={size} color={color} />
+            <CalendarDays size={size} color={color} />
           ),
         }}
       />

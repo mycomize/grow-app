@@ -18,6 +18,11 @@ export default function IoTGatewayLayout() {
         headerStyle,
         headerTintColor,
         headerTitleAlign: 'center',
+        contentStyle: {
+          backgroundColor: theme === 'dark' ? '#0a0a0a' : '#fafafa',
+        },
+        animation: 'slide_from_right',
+        animationDuration: 25,
       }}>
       <Stack.Screen name="index" options={{ title: 'IoT Gateway', headerShown: true }} />
       <Stack.Screen name="new" options={{ title: 'New IoT Gateway', headerShown: true }} />
