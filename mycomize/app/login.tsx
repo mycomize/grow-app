@@ -57,10 +57,11 @@ export default function LoginScreen() {
         <View className="mt-36 flex items-center gap-4">
           <VStack space="xl">
             <Center>
+              <Heading size="3xl" className="mb-10">opentek</Heading>
               <OpenTekLogo width={111} height={131} />
             </Center>
             {errorMessage && <Text className="mt-6 text-error-500">{errorMessage}</Text>}
-            <FormControl className="mt-16 rounded-lg border border-outline-300 p-4">
+            <FormControl className="mt-10 rounded-lg border border-outline-300 p-4">
               <VStack space="xl">
                 <Heading className="text-typography-900">Login</Heading>
                 <VStack space="xs">

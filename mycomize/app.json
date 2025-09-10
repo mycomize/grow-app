@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "mycomize",
-    "slug": "mycomize",
+    "name": "opentek",
+    "slug": "opentek",
     "version": "1.0.0",
-    "scheme": "mycomize",
+    "scheme": "opentek",
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -14,7 +14,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon.png",
+          "icon": "./assets/opentek-notification-icon.png",
           "color": "#ffffff",
           "defaultChannel": "opentek-task-reminders"
         }
@@ -25,27 +25,27 @@
       "tsconfigPaths": true
     },
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/opentek-icon.png",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/opentek-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#000000"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.mycomize",
+      "bundleIdentifier": "com.mycomize.opentek",
       "jsEngine": "hermes"
     },
     "android": {
       "architectures": ["arm64-v8a", "armeabi-v7a"],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/opentek-icon.png",
+        "backgroundColor": "#000000"
       },
       "softwareKeyboardLayoutMode": "pan",
-      "package": "com.anonymous.mycomize",
+      "package": "com.mycomize.opentek",
       "jsEngine": "hermes"
     },
     "extra": {
