@@ -100,7 +100,6 @@ export class EncryptionService {
 
       return true;
     } catch (error) {
-      console.error('Failed to initialize encryption:', error);
       this.clearKeys();
       return false;
     }

@@ -6,7 +6,7 @@ import { SafeAreaView } from '~/components/ui/safe-area-view';
 import { HStack } from '~/components/ui/hstack';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
 import { Icon } from '~/components/ui/icon';
-import { useInitializeEncryption } from '~/lib/stores/authEncryptionStore';
+import { useInitializeEncryption, useSignOut } from '~/lib/stores/authEncryptionStore';
 import { CheckCircle, CircleX } from 'lucide-react-native';
 import {
   IntroductionStep,
@@ -20,6 +20,7 @@ type EncryptionSetupFlow = 'create' | 'recover';
 
 export default function EncryptionEncryptionSetupScreen() {
   const initializeEncryption = useInitializeEncryption();
+  const signOut = useSignOut();
   const { showError, showSuccess } = useUnifiedToast();
 
   // Step and flow management
@@ -45,7 +46,6 @@ export default function EncryptionEncryptionSetupScreen() {
         showError('Failed to set up encryption');
       }
     } catch (error) {
-      console.error('Encryption setup failed:', error);
       showError('An error occurred during setup');
     } finally {
       setIsSettingUp(false);
@@ -91,7 +91,11 @@ export default function EncryptionEncryptionSetupScreen() {
           <EncryptionHeader currentStep={currentStep} totalSteps={3} />
 
           {currentStep === 'introduction' && (
-            <IntroductionStep onCreateSeed={handleCreateSeed} onRecoverData={handleRecoverData} />
+            <IntroductionStep 
+              onCreateSeed={handleCreateSeed} 
+              onRecoverData={handleRecoverData} 
+              onSignOut={signOut}
+            />
           )}
 
           {currentStep === 'seed-generation' && (
