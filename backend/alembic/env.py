@@ -13,10 +13,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 # Import the Base and all models for autogenerate support
 from backend.database import Base
 from backend.models.user import User
-from backend.models.grow import Grow
+from backend.models.grow import BulkGrow, BulkGrowFlush
+from backend.models.tek import BulkGrowTek
+from backend.models.tek_engagement import TekLike, TekView, TekImport
 from backend.models.iot import IoTGateway
 from backend.models.iot_entity import IoTEntity
-from backend.models.template import BulkGrowTekTemplate
+from backend.models.calendar_task import CalendarTask
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
