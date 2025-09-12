@@ -12,6 +12,7 @@ import {
   AuthResponse,
   RegisterResponse,
 } from '../types/authEncryptionTypes';
+import { PaymentStatusResponse } from '../types/paymentTypes';
 
 /**
  * Unified Zustand store for authentication and encryption state management.
@@ -25,6 +26,8 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
   isEncryptionReady: false,
   isEncryptionLoading: false,
   needsEncryptionSetup: false,
+  needsPayment: false,
+  isPaymentLoading: false,
   isInitializing: false,
 
   // Utility function to extract user ID from JWT token
@@ -86,6 +89,7 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
         username: userResponse.username,
         hasEncryptionKey: false, // Will be determined by checkUserEncryptionStatus
         encryptionInitialized: false,
+        paymentStatus: 'unpaid', // Default status, will be updated by checkPaymentStatus
       };
       
       const userId = user.id;
@@ -104,12 +108,17 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
       // Check encryption status for this user (this is the single place this happens)
       await get().checkUserEncryptionStatus(userId);
 
+      // Check payment status for this user
+      await get().checkPaymentStatus();
+
       console.log(`[AuthEncryptionStore] Sign in completed successfully for user: ${username}`);
       set({ isInitializing: false });
 
-      // Navigate to home unless we need encryption setup
+      // Navigate based on what's needed: payment first, then encryption, then main app
       const state = get();
-      if (state.needsEncryptionSetup) {
+      if (state.needsPayment || state.currentUser?.paymentStatus === 'unpaid') {
+        router.replace('/payment-setup');
+      } else if (state.needsEncryptionSetup) {
         router.replace('/encryption-setup');
       } else {
         router.replace('/');
@@ -371,6 +380,93 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
     });
   },
 
+  // Payment actions
+  checkPaymentStatus: async () => {
+    console.log('[AuthEncryptionStore] Checking payment status');
+    const { token, currentUser } = get();
+    
+    if (!token || !currentUser) {
+      console.warn('[AuthEncryptionStore] No token or user for payment status check');
+      return;
+    }
+
+    set({ isPaymentLoading: true });
+
+    try {
+      const response = await apiClient.call({
+        endpoint: '/payment/status',
+        config: {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        },
+      });
+
+      const paymentData = response as PaymentStatusResponse;
+      
+      // Update user with payment information
+      const updatedUser: User = {
+        ...currentUser,
+        paymentStatus: paymentData.payment_status as any,
+        paymentMethod: paymentData.payment_method as any,
+        paymentDate: paymentData.payment_date,
+      };
+
+      const needsPayment = paymentData.payment_status === 'unpaid';
+
+      set({
+        currentUser: updatedUser,
+        needsPayment,
+        isPaymentLoading: false,
+      });
+
+      console.log(`[AuthEncryptionStore] Payment status updated: ${paymentData.payment_status}`);
+
+    } catch (error: any) {
+      console.error('[AuthEncryptionStore] Failed to check payment status:', error);
+      
+      // Check if it's an authorization error
+      if (error.message === 'UNAUTHORIZED') {
+        console.warn('[AuthEncryptionStore] Token expired/invalid during payment check, redirecting to login');
+        
+        // Get current user ID before clearing state
+        const currentUserId = currentUser?.id;
+        
+        // Clear authentication state
+        set({
+          token: null,
+          currentUser: null,
+          needsPayment: false,
+          isPaymentLoading: false,
+        });
+        
+        // Clear stored data and redirect to login
+        await UserContextManager.performLogoutCleanup(currentUserId);
+        router.replace('/login');
+        return;
+      }
+      
+      set({
+        needsPayment: true, // Default to needing payment on error
+        isPaymentLoading: false,
+      });
+    }
+  },
+
+  refreshPaymentStatus: async () => {
+    // Alias for checkPaymentStatus to refresh the payment status
+    await get().checkPaymentStatus();
+  },
+
+  resetPaymentState: () => {
+    set({
+      needsPayment: false,
+      isPaymentLoading: false,
+    });
+  },
+
   // Combined initialization for app startup
   initializeStore: async () => {
     console.log('[AuthEncryptionStore] Initializing store from persisted data');
@@ -402,6 +498,7 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
         username: authState.user.username,
         hasEncryptionKey: false, // Will be determined by checkUserEncryptionStatus
         encryptionInitialized: false,
+        paymentStatus: 'unpaid', // Default status, will be updated by checkPaymentStatus
       };
 
       // Restore auth state
@@ -412,6 +509,9 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
 
       // Check encryption status
       await get().checkUserEncryptionStatus(currentUserId);
+      
+      // Check payment status
+      await get().checkPaymentStatus();
 
       console.log(`[AuthEncryptionStore] Store initialized successfully for user: ${currentUserId}`);
 
@@ -477,6 +577,11 @@ export const useAuthEncryption = () =>
 
 export const useIsInitializing = () => useAuthEncryptionStore((state) => state.isInitializing);
 
+// Payment selectors
+export const useNeedsPayment = () => useAuthEncryptionStore((state) => state.needsPayment);
+export const useIsPaymentLoading = () => useAuthEncryptionStore((state) => state.isPaymentLoading);
+export const usePaymentStatus = () => useAuthEncryptionStore((state) => state.currentUser?.paymentStatus || 'unpaid');
+
 // Action selectors to prevent infinite loops
 export const useSignIn = () => useAuthEncryptionStore((state) => state.signIn);
 export const useSignOut = () => useAuthEncryptionStore((state) => state.signOut);
@@ -484,6 +589,11 @@ export const useRegister = () => useAuthEncryptionStore((state) => state.registe
 export const useInitializeEncryption = () => useAuthEncryptionStore((state) => state.initializeEncryption);
 export const useCheckUserEncryptionStatus = () => useAuthEncryptionStore((state) => state.checkUserEncryptionStatus);
 export const useInitializeStore = () => useAuthEncryptionStore((state) => state.initializeStore);
+
+// Payment action selectors
+export const useCheckPaymentStatus = () => useAuthEncryptionStore((state) => state.checkPaymentStatus);
+export const useRefreshPaymentStatus = () => useAuthEncryptionStore((state) => state.refreshPaymentStatus);
+export const useResetPaymentState = () => useAuthEncryptionStore((state) => state.resetPaymentState);
 
 // Export the main store for direct access when needed
 export default useAuthEncryptionStore;

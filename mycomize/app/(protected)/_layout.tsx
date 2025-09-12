@@ -7,7 +7,10 @@ import {
   useIsEncryptionReady,
   useIsEncryptionLoading, 
   useNeedsEncryptionSetup,
-  useIsInitializing
+  useIsInitializing,
+  usePaymentStatus,
+  useIsPaymentLoading,
+  useNeedsPayment
 } from '~/lib/stores/authEncryptionStore';
 
 export default function ProtectedLayout() {
@@ -17,6 +20,9 @@ export default function ProtectedLayout() {
   const isEncryptionLoading = useIsEncryptionLoading();
   const needsEncryptionSetup = useNeedsEncryptionSetup();
   const isInitializing = useIsInitializing();
+  const needsPayment = useNeedsPayment();
+  const isPaymentLoading = useIsPaymentLoading();
+  const paymentStatus = usePaymentStatus();
   const { theme } = useTheme();
 
   // Set header styles based on theme
@@ -26,14 +32,19 @@ export default function ProtectedLayout() {
 
   const headerTintColor = theme === 'dark' ? '#ffffff' : '#000000';
 
-  // Show loading while the store is initializing or checking auth/encryption status
-  if (isInitializing || isAuthLoading || isEncryptionLoading) {
+  // Show loading while the store is initializing or checking auth/encryption/payment status
+  if (isInitializing || isAuthLoading || isEncryptionLoading || isPaymentLoading) {
     return <Text>Loading...</Text>;
   }
 
   // First check authentication
   if (!token) {
     return <Redirect href="/login" />;
+  }
+
+  // Then check payment status - redirect if user needs payment
+  if (needsPayment || paymentStatus === 'unpaid') {
+    return <Redirect href="/payment-setup" />;
   }
 
   // Then check encryption setup - redirect if user needs encryption setup

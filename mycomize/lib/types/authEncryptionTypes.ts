@@ -1,5 +1,7 @@
 // TypeScript interfaces for the unified authentication and encryption store
 
+import { PaymentStatus, PaymentMethod } from './paymentTypes';
+
 /**
  * User authentication and encryption state
  */
@@ -8,6 +10,10 @@ export interface User {
   username: string;
   hasEncryptionKey: boolean;
   encryptionInitialized: boolean;
+  // Payment status fields
+  paymentStatus: PaymentStatus;
+  paymentMethod?: PaymentMethod;
+  paymentDate?: string;
 }
 
 /**
@@ -23,6 +29,10 @@ export interface AuthEncryptionState {
   isEncryptionReady: boolean;
   isEncryptionLoading: boolean;
   needsEncryptionSetup: boolean;
+
+  // Payment state
+  needsPayment: boolean;
+  isPaymentLoading: boolean;
 
   // Combined loading state
   isInitializing: boolean;
@@ -40,6 +50,11 @@ export interface AuthEncryptionActions {
   // Encryption actions
   initializeEncryption: (seedWords: string[], password?: string) => Promise<boolean>;
   checkUserEncryptionStatus: (userId: string) => Promise<void>;
+
+  // Payment actions
+  checkPaymentStatus: () => Promise<void>;
+  refreshPaymentStatus: () => Promise<void>;
+  resetPaymentState: () => void;
 
   // Internal state management
   setToken: (token: string | null) => void;
