@@ -151,7 +151,7 @@ export function IntroductionStep({ onCreateSeed, onRecoverData, onSignOut }: Int
         <Button 
           size="lg" 
           variant="outline" 
-          className="w-full mx-4 border-outline-200" 
+          className="w-10/12 mx-4 border-outline-200" 
           onPress={onSignOut}
         >
           <ButtonIcon as={LogOut} size="md" className="text-typography-500" />

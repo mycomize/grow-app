@@ -10,20 +10,28 @@ import { Card } from '~/components/ui/card';
 import { Spinner } from '~/components/ui/spinner';
 import { CardField, useStripe } from '@stripe/stripe-react-native';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
-import { PaymentMethodType } from '~/lib/types/paymentTypes';
-import { Crown, Check, CreditCard, ArrowLeft } from 'lucide-react-native';
+import { useStripeErrorHandler } from '~/lib/utils/stripeErrorHandler';
+import { PaymentMethodType, PriceResponse } from '~/lib/types/paymentTypes';
+import { Crown, CreditCard, ArrowLeft, XCircle } from 'lucide-react-native';
 import { Icon } from '~/components/ui/icon';
 import { Heading } from '~/components/ui/heading';
 import OpenTekLogo from '~/assets/opentek-logo.svg';
+import { paymentService } from '~/lib/services/PaymentService';
+import { usePaymentFlow } from '~/lib/stores/authEncryptionStore';
+import useAuthEncryptionStore from '~/lib/stores/authEncryptionStore';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Entypo from '@expo/vector-icons/Entypo';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 interface PaymentMethodSelectorProps {
   selectedMethod: 'stripe' | 'bitcoin' | null;
   onMethodChange: (method: 'stripe' | 'bitcoin') => void;
-  onPaymentSuccess: (paymentMethodId: string) => void;
+  onPaymentConfirmed: (confirmationCode: string) => void;
   onBackToPlan: () => void;
   clientSecret?: string;
+  paymentIntentId?: string;
   disabled?: boolean;
-  isProcessing?: boolean;
+  priceData?: PriceResponse | null;
 }
 
 const paymentMethods: PaymentMethodType[] = [
@@ -44,21 +52,33 @@ const paymentMethods: PaymentMethodType[] = [
 export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   selectedMethod,
   onMethodChange,
-  onPaymentSuccess,
   onBackToPlan,
   clientSecret,
   disabled = false,
-  isProcessing = false,
 }) => {
   const { confirmPayment } = useStripe();
-  const { showError } = useUnifiedToast();
+  const { showError, showSuccess } = useUnifiedToast();
+  const { handleStripeErrorWithReset } = useStripeErrorHandler();
   const [isCardComplete, setIsCardComplete] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const paymentFlow = usePaymentFlow();
+  
+  // Get selected plan from the zustand store
+  const selectedPlan = useAuthEncryptionStore((state) => state.selectedPlan);
 
   const handleCardChange = (cardDetails: any) => {
     setIsCardComplete(cardDetails.complete);
-    if (cardDetails.error?.message) {
-      showError(cardDetails.error.message);
+    if (cardDetails.error) {
+      // Use unified Stripe error handling for card validation errors
+      handleStripeErrorWithReset(
+        cardDetails.error,
+        () => {
+          // No processing state to reset for card validation errors
+        },
+        {
+          title: 'Card Validation Error',
+          fallbackMessage: 'Please check your card information.',
+        }
+      );
     }
   };
 
@@ -68,29 +88,62 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       return;
     }
 
-    setIsSubmitting(true);
-
     try {
+      // Start payment processing in the store
+      await paymentFlow.processPayment(clientSecret);
+
       const { error, paymentIntent } = await confirmPayment(clientSecret, {
         paymentMethodType: 'Card',
       });
 
       if (error) {
-        console.error('Payment confirmation error:', error);
-        showError(error.message || 'Payment failed');
+        // Use unified Stripe error handling with processing state reset
+        handleStripeErrorWithReset(
+          error,
+          () => {
+            // Reset payment flow processing states
+            paymentFlow.reset();
+          },
+          {
+            title: 'Payment Failed',
+            fallbackMessage: 'Payment failed. Please check your card details and try again.',
+          }
+        );
       } else if (paymentIntent) {
         console.log('Payment succeeded:', paymentIntent.id);
-        onPaymentSuccess(paymentIntent.id);
+        // SSE will handle the payment completion via the auth store
       }
     } catch (error: any) {
       console.error('Payment processing error:', error);
-      showError('An unexpected error occurred during payment processing');
-    } finally {
-      setIsSubmitting(false);
+      
+      // Use unified Stripe error handling with processing state reset
+      handleStripeErrorWithReset(
+        error,
+        () => {
+          // Reset payment flow processing states
+          paymentFlow.reset();
+        },
+        {
+          title: 'Payment Error',
+          fallbackMessage: 'An unexpected error occurred during payment processing. Please try again.',
+        }
+      );
     }
   };
 
-  const isLoading = isProcessing || isSubmitting;
+  // Format the price for display
+  const formatPrice = (amountCents: number) => {
+    const formatted = paymentService.formatPaymentAmount(amountCents);
+    // Split on decimal point and remove $ symbol
+    const parts = formatted.replace('$', '').split('.');
+    return { dollars: parts[0], cents: parts[1] || '00' };
+  };
+
+  // Use selected plan price instead of priceData
+  const priceFormatted = selectedPlan ? formatPrice(selectedPlan.price) : null;
+  const priceString = selectedPlan ? paymentService.formatPaymentAmount(selectedPlan.price) : null;
+
+  const isLoading = paymentFlow.isProcessing || paymentFlow.isSubmitting;
 
   return (
     <VStack className="flex-1 min-h-full">
@@ -112,29 +165,39 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         <VStack space="lg" className="mb-6">
           <Text className="text-typography-800 font-medium text-lg">Selected Plan:</Text>
           <Card size="md" variant="elevated" className="w-full bg-background-0 border border-outline-200 rounded-xl">
-            <VStack space="sm" className="py-4 px-4">
-              <HStack space="xs" className="items-center justify-center">
-                <Icon as={Crown} size="lg" className="text-success-400" />
-                <Text className="text-typography-900 font-semibold text-base">Lifetime Access</Text>
+            <VStack space="sm" className="py-2 px-2">
+              <HStack space="xs" className="items-center justify-center px-3 py-1">
+                <Icon as={Crown} size="lg" className="text-typography-900" />
+                <Text className="text-2xl text-typography-900 font-semibold mt-0.5">
+                  {selectedPlan?.name || 'Loading...'}
+                </Text>
               </HStack>
               
-              <HStack space="xs" className="items-baseline justify-center">
-                <Text className="text-2xl font-bold text-green-400">$19</Text>
-                <Text className="text-lg text-typography-600">.99</Text>
-              </HStack>
+              {priceFormatted ? (
+                <HStack space="xs" className="items-baseline justify-center my-3">
+                  <Text className="text-2xl font-bold text-green-400">${priceFormatted.dollars}</Text>
+                  <Text className="text-lg text-typography-600">.{priceFormatted.cents}</Text>
+                </HStack>
+              ) : (
+                <Text className="text-lg text-typography-500 text-center my-3">Loading price...</Text>
+              )}
               
               <VStack space="xs" className="items-start pl-2 mx-auto">
-                <HStack space="xs" className="items-center">
-                  <Icon as={Check} size="xs" className="text-success-400" />
-                  <Text className="text-typography-700 text-sm">Unlimited grow tracking</Text>
+                <HStack space="sm" className="items-center">
+                  <MaterialCommunityIcons name="mushroom" color="#57F481" size={16}/>
+                  <Text className="text-typography-700 text-md">Unlimited grow tracking</Text>
                 </HStack>
-                <HStack space="xs" className="items-center">
-                  <Icon as={Check} size="xs" className="text-success-400" />
-                  <Text className="text-typography-700 text-sm">IoT device integration</Text>
+                <HStack space="sm" className="items-center">
+                  <MaterialCommunityIcons name="home-assistant" color="#57F481" size={16}/>
+                  <Text className="text-typography-700 text-md">Home Assistant integration</Text>
                 </HStack>
-                <HStack space="xs" className="items-center">
-                  <Icon as={Check} size="xs" className="text-success-400" />
-                  <Text className="text-typography-700 text-sm">Complete tek library access</Text>
+                <HStack space="sm" className="items-center">
+                  <Entypo name="share" size={16} color="#57F481" />
+                  <Text className="text-typography-700 text-md">Tek template creation & sharing</Text>
+                </HStack>
+                <HStack space="sm" className="items-center">
+                  <MaterialCommunityIcons name="update" color="#57F481" size={16}/>
+                  <Text className="text-typography-700 text-md">All future updates included</Text>
                 </HStack>
               </VStack>
             </VStack>
@@ -206,11 +269,15 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                 disabled={disabled || isLoading}
               />
             </View>
+            <HStack className="items-center mx-auto gap-2 ">
+              <Text className="text-center text-typography-500">Secure payments powered by</Text>
+              <FontAwesome5 name="stripe" size={30} color="white" />
+            </HStack>
           </VStack>
         )}
       </VStack>
 
-      <VStack className="px-6">
+      <VStack className="px-6" space="md">
         {selectedMethod === 'stripe' ? (
           <HStack space="md" className="w-full">
             <Button 
@@ -226,17 +293,18 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
             
             <Button
               size="lg"
-              className="flex-1 bg-success-400 border-success-400"
+              className="flex-1 bg-success-300 border-success-300"
               onPress={handlePayment}
               isDisabled={!isCardComplete || !clientSecret || disabled || isLoading}
             >
               {isLoading ? (
                 <HStack space="sm" className="items-center">
-                  <Spinner size="small" color="white" />
                   <ButtonText className="text-typography-900">Processing...</ButtonText>
                 </HStack>
               ) : (
-                <ButtonText className="text-typography-900 font-semibold">Pay $19.99</ButtonText>
+                <ButtonText className="text-typography-900 font-semibold">
+                  {priceString ? `Pay ${priceString}` : 'Pay'}
+                </ButtonText>
               )}
             </Button>
           </HStack>
@@ -251,6 +319,31 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
             <ButtonIcon as={ArrowLeft} size="md" className="text-typography-500" />
             <ButtonText className="text-lg text-typography-600">Back</ButtonText>
           </Button>
+        )}
+        
+        {/* Inline processing status UI */}
+        {isLoading && (
+          <VStack space="sm" className="items-center py-6">
+            <Spinner size="large" color="white" />
+            <Text className="text-center text-typography-600 text-md">
+              {paymentFlow.isSubmitting ? 'Processing your payment...' : paymentFlow.isProcessing ? 'Waiting for payment confirmation...' : 'Preparing payment...'}
+            </Text>
+          </VStack>
+        )}
+
+        {/* Payment Error Display */}
+        {paymentFlow.error && (
+          <VStack space="sm" className="items-center py-4">
+            <VStack space="sm" className="items-center">
+              <XCircle size={48} className="text-error-500" />
+              <Text className="text-center text-typography-900 text-lg font-semibold">
+                Payment Failed
+              </Text>
+              <Text className="text-center text-typography-600 text-sm">
+                {paymentFlow.error}
+              </Text>
+            </VStack>
+          </VStack>
         )}
       </VStack>
     </VStack>

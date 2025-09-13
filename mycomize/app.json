@@ -52,7 +52,8 @@
       "router": {},
       "eas": {
         "projectId": "aaa8278e-1f4f-44c4-a8dd-06c577a70e53"
-      }
+      },
+      "backendUrl": "http://localhost:8000"
     },
     "owner": "connojd"
   }

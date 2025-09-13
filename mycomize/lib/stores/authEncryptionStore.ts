@@ -12,7 +12,10 @@ import {
   AuthResponse,
   RegisterResponse,
 } from '../types/authEncryptionTypes';
-import { PaymentStatusResponse } from '../types/paymentTypes';
+import { PaymentStatusResponse, PaymentSSEEvent, PaymentPlan } from '../types/paymentTypes';
+import { paymentService } from '../services/PaymentService';
+import { SSEService } from '../services/SSEService';
+import { getStripeErrorMessage } from '../utils/stripeErrorHandler';
 
 /**
  * Unified Zustand store for authentication and encryption state management.
@@ -29,6 +32,29 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
   needsPayment: false,
   isPaymentLoading: false,
   isInitializing: false,
+
+  // Payment Flow State
+  paymentFlowStep: 'plan-selection',
+  showPaymentConfirmation: false,
+  selectedPaymentMethod: null,
+  selectedPlan: null,
+  availablePlans: [],
+  paymentIntentData: null,
+  priceData: null,
+  stripePublishableKey: '',
+
+  // Payment Processing State
+  isPaymentProcessing: false,
+  isPaymentSubmitting: false,
+  paymentConfirmationCode: null,
+  paymentFlowError: null,
+
+  // SSE State
+  sseConnectionState: {
+    isConnected: false,
+    isConnecting: false,
+  },
+  sseService: null,
 
   // Utility function to extract user ID from JWT token
   getUserIdFromToken: (token: string): string | null => {
@@ -127,7 +153,6 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
       return { success: true };
 
     } catch (error: any) {
-      console.error('[AuthEncryptionStore] Failed to sign in:', error);
       set({
         isAuthLoading: false,
         isInitializing: false,
@@ -148,11 +173,14 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
     const { currentUser } = get();
 
     try {
+      // Disconnect SSE service
+      get().disconnectPaymentSSE();
+
       // Clear encryption service state
       const encryptionService = getEncryptionService();
       encryptionService.clearKeys();
 
-      // Clear store state
+      // Clear store state including payment flow state
       set({
         token: null,
         currentUser: null,
@@ -160,7 +188,26 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
         isEncryptionReady: false,
         isEncryptionLoading: false,
         needsEncryptionSetup: false,
+        needsPayment: false,
+        isPaymentLoading: false,
         isInitializing: false,
+        // Reset payment flow state
+        paymentFlowStep: 'plan-selection',
+        showPaymentConfirmation: false,
+        selectedPaymentMethod: null,
+        paymentIntentData: null,
+        priceData: null,
+        stripePublishableKey: '',
+        isPaymentProcessing: false,
+        isPaymentSubmitting: false,
+        paymentConfirmationCode: null,
+        paymentFlowError: null,
+        // Reset SSE state
+        sseConnectionState: {
+          isConnected: false,
+          isConnecting: false,
+        },
+        sseService: null,
       });
 
       // Clear user context data
@@ -425,12 +472,8 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
       console.log(`[AuthEncryptionStore] Payment status updated: ${paymentData.payment_status}`);
 
     } catch (error: any) {
-      console.error('[AuthEncryptionStore] Failed to check payment status:', error);
-      
       // Check if it's an authorization error
       if (error.message === 'UNAUTHORIZED') {
-        console.warn('[AuthEncryptionStore] Token expired/invalid during payment check, redirecting to login');
-        
         // Get current user ID before clearing state
         const currentUserId = currentUser?.id;
         
@@ -465,6 +508,290 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
       needsPayment: false,
       isPaymentLoading: false,
     });
+  },
+
+  // Payment Flow Actions
+  initializePaymentFlow: async () => {
+    console.log('[AuthEncryptionStore] Initializing payment flow');
+    const { token } = get();
+    
+    if (!token) {
+      set({ paymentFlowError: 'Authentication required' });
+      return;
+    }
+
+    set({ 
+      paymentFlowError: null,
+      paymentFlowStep: 'plan-selection',
+      selectedPaymentMethod: null,
+      selectedPlan: null,
+      paymentIntentData: null,
+      isPaymentProcessing: false,
+    });
+
+    try {
+      // Get payment plans, price data and publishable key in parallel
+      const [plansData, priceData, keyData] = await Promise.all([
+        paymentService.getPaymentPlans(token),
+        paymentService.getPrice(token),
+        paymentService.getPublishableKey(token),
+      ]);
+
+      // Select the lifetime plan by default since it's the only one
+      const lifetimePlan = plansData.plans.find(plan => plan.id === 'lifetime');
+
+      set({
+        availablePlans: plansData.plans,
+        selectedPlan: lifetimePlan || null,
+        priceData,
+        stripePublishableKey: keyData.publishable_key,
+      });
+
+      // Connect to SSE for payment updates
+      await get().connectPaymentSSE();
+
+    } catch (error: any) {
+      console.error('[AuthEncryptionStore] Failed to initialize payment flow:', error);
+      if (error.message === 'UNAUTHORIZED') {
+        router.replace('/login');
+        return;
+      }
+      set({ paymentFlowError: error.message });
+    }
+  },
+
+  selectPaymentPlan: (plan: PaymentPlan) => {
+    console.log(`[AuthEncryptionStore] Selecting payment plan: ${plan.id}`);
+    set({ 
+      selectedPlan: plan,
+      paymentFlowError: null,
+    });
+  },
+
+  setPaymentFlowStep: (step: 'plan-selection' | 'method-selection') => {
+    set({ paymentFlowStep: step, paymentFlowError: null });
+  },
+
+  selectPaymentMethod: async (method: 'stripe' | 'bitcoin') => {
+    console.log(`[AuthEncryptionStore] Selecting payment method: ${method}`);
+    const { token, priceData } = get();
+    
+    if (!token) {
+      set({ paymentFlowError: 'Authentication required' });
+      return;
+    }
+
+    set({ 
+      selectedPaymentMethod: method,
+      paymentFlowError: null,
+      isPaymentProcessing: true,
+    });
+
+    try {
+      if (method === 'stripe') {
+        // Create payment intent for Stripe
+        const selectedPlan = get().selectedPlan;
+        if (!selectedPlan) {
+          throw new Error('No payment plan selected');
+        }
+        
+        const paymentIntent = await paymentService.createPaymentIntent(token, {
+          amount: selectedPlan.price,
+          currency: selectedPlan.currency,
+          plan_id: selectedPlan.id,
+        });
+
+        set({
+          paymentIntentData: paymentIntent,
+          paymentFlowStep: 'method-selection',
+          isPaymentProcessing: false,
+        });
+      } else if (method === 'bitcoin') {
+        // Bitcoin payment would be handled differently
+        // For now, just set the step
+        set({
+          paymentFlowStep: 'method-selection', 
+          isPaymentProcessing: false,
+        });
+      }
+    } catch (error: any) {
+      console.error('[AuthEncryptionStore] Failed to select payment method:', error);
+      if (error.message === 'UNAUTHORIZED') {
+        router.replace('/login');
+        return;
+      }
+      
+      // Use Stripe error message extraction for payment method selection errors
+      const errorMessage = getStripeErrorMessage(error, 'Failed to initialize payment. Please try again.');
+      
+      set({ 
+        paymentFlowError: errorMessage,
+        isPaymentProcessing: false,
+      });
+    }
+  },
+
+  processStripePayment: async (clientSecret: string) => {
+    console.log('[AuthEncryptionStore] Processing Stripe payment');
+    set({ 
+      isPaymentSubmitting: true,
+      paymentFlowError: null,
+    });
+
+    try {
+      // The actual Stripe payment processing is handled by the Stripe component
+      // This method just tracks the submission state
+      // The SSE connection will handle the payment completion event
+      
+    } catch (error: any) {
+      console.error('[AuthEncryptionStore] Payment processing failed:', error);
+      
+      // Use Stripe error message extraction
+      const errorMessage = getStripeErrorMessage(error, 'Payment processing failed. Please try again.');
+      
+      set({ 
+        paymentFlowError: errorMessage,
+        isPaymentSubmitting: false,
+      });
+    }
+  },
+
+  handleSSEPaymentEvent: (event: PaymentSSEEvent) => {
+    console.log('[AuthEncryptionStore] Handling SSE payment event:', event);
+    
+    if (event.payment_status === 'paid' && event.confirmation_code) {
+      set({
+        paymentConfirmationCode: event.confirmation_code,
+        showPaymentConfirmation: true,
+        isPaymentProcessing: false,
+        isPaymentSubmitting: false,
+        paymentFlowError: null,
+      });
+
+      // Update payment status
+      get().refreshPaymentStatus();
+      
+      // Payment completed successfully - disconnect SSE as we no longer need to listen
+      console.log('[AuthEncryptionStore] Payment completed successfully, disconnecting SSE');
+      get().disconnectPaymentSSE();
+      
+    } else if (event.payment_status === 'failed') {
+      set({
+        paymentFlowError: 'Payment failed. Please try again.',
+        isPaymentProcessing: false,
+        isPaymentSubmitting: false,
+      });
+      
+      // Payment failed - disconnect SSE as we no longer need to listen
+      console.log('[AuthEncryptionStore] Payment failed, disconnecting SSE');
+      get().disconnectPaymentSSE();
+    }
+  },
+
+  completePaymentFlow: async () => {
+    console.log('[AuthEncryptionStore] Completing payment flow');
+    
+    // Refresh payment status to ensure everything is up to date
+    await get().refreshPaymentStatus();
+    
+    // Ensure SSE is disconnected and cleaned up
+    console.log('[AuthEncryptionStore] Cleaning up SSE connection');
+    get().disconnectPaymentSSE();
+    
+    // Reset payment flow state
+    get().resetPaymentFlow();
+    
+    // Navigate to main app or encryption setup if needed
+    const state = get();
+    if (state.needsEncryptionSetup) {
+      router.replace('/encryption-setup');
+    } else {
+      router.replace('/');
+    }
+  },
+
+  resetPaymentFlow: () => {
+    set({
+      paymentFlowStep: 'plan-selection',
+      showPaymentConfirmation: false,
+      selectedPaymentMethod: null,
+      paymentIntentData: null,
+      isPaymentProcessing: false,
+      isPaymentSubmitting: false,
+      paymentConfirmationCode: null,
+      paymentFlowError: null,
+    });
+  },
+
+  // SSE Integration Actions
+  connectPaymentSSE: async () => {
+    const { token, sseService } = get();
+    
+    if (!token) {
+      console.warn('[AuthEncryptionStore] No token for SSE connection');
+      return;
+    }
+    
+    if (sseService) {
+      console.log('[AuthEncryptionStore] SSE service already connected');
+      return;
+    }
+
+    set({
+      sseConnectionState: {
+        isConnected: false,
+        isConnecting: true,
+      }
+    });
+
+    try {
+      const newSSEService = new SSEService();
+      
+      // Add event listener for payment events
+      newSSEService.addEventListener(get().handleSSEPaymentEvent);
+      
+      // Add connection state listener
+      newSSEService.addConnectionListener((connectionState) => {
+        set({ sseConnectionState: connectionState });
+      });
+      
+      // Connect to SSE
+      await newSSEService.connect(token);
+      
+      set({ sseService: newSSEService });
+      
+    } catch (error: any) {
+      console.error('[AuthEncryptionStore] Failed to connect SSE:', error);
+      set({
+        sseConnectionState: {
+          isConnected: false,
+          isConnecting: false,
+          error: error.message,
+        }
+      });
+    }
+  },
+
+  disconnectPaymentSSE: () => {
+    console.log('[AuthEncryptionStore] Disconnecting payment SSE service');
+    const { sseService } = get();
+    
+    if (sseService) {
+      // Clean up the service (this will remove event listeners and close connection)
+      sseService.cleanup();
+      
+      set({ 
+        sseService: null,
+        sseConnectionState: {
+          isConnected: false,
+          isConnecting: false,
+        }
+      });
+      
+      console.log('[AuthEncryptionStore] Payment SSE service disconnected and cleaned up');
+    } else {
+      console.log('[AuthEncryptionStore] No active SSE service to disconnect');
+    }
   },
 
   // Combined initialization for app startup
@@ -594,6 +921,40 @@ export const useInitializeStore = () => useAuthEncryptionStore((state) => state.
 export const useCheckPaymentStatus = () => useAuthEncryptionStore((state) => state.checkPaymentStatus);
 export const useRefreshPaymentStatus = () => useAuthEncryptionStore((state) => state.refreshPaymentStatus);
 export const useResetPaymentState = () => useAuthEncryptionStore((state) => state.resetPaymentState);
+
+// Payment Flow selectors
+export const usePaymentFlow = () => 
+  useAuthEncryptionStore(
+    useShallow((state) => ({
+      step: state.paymentFlowStep,
+      selectedMethod: state.selectedPaymentMethod,
+      isProcessing: state.isPaymentProcessing,
+      isSubmitting: state.isPaymentSubmitting,
+      error: state.paymentFlowError,
+      confirmationCode: state.paymentConfirmationCode,
+      showConfirmation: state.showPaymentConfirmation,
+      paymentIntentData: state.paymentIntentData,
+      priceData: state.priceData,
+      stripePublishableKey: state.stripePublishableKey,
+      // Actions
+      initialize: state.initializePaymentFlow,
+      setStep: state.setPaymentFlowStep,
+      selectMethod: state.selectPaymentMethod,
+      processPayment: state.processStripePayment,
+      complete: state.completePaymentFlow,
+      reset: state.resetPaymentFlow,
+    }))
+  );
+
+// SSE selectors
+export const useSSEConnection = () => 
+  useAuthEncryptionStore(
+    useShallow((state) => ({
+      connectionState: state.sseConnectionState,
+      connect: state.connectPaymentSSE,
+      disconnect: state.disconnectPaymentSSE,
+    }))
+  );
 
 // Export the main store for direct access when needed
 export default useAuthEncryptionStore;

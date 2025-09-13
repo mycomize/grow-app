@@ -7,7 +7,8 @@ from backend.models.user import User
 from backend.schemas.payment import (
     PaymentStatusResponse,
     CreatePaymentIntentRequest,
-    CreatePaymentIntentResponse
+    CreatePaymentIntentResponse,
+    PriceResponse
 )
 from backend.database import get_mycomize_db
 from backend.security import get_current_active_user
@@ -78,6 +79,7 @@ async def create_payment_intent(
         
         if not customer:
             customer = stripe.Customer.create(
+                name=current_user.username,  # Display username prominently in Stripe dashboard
                 metadata={
                     'user_id': str(current_user.id),
                     'username': current_user.username
@@ -94,7 +96,8 @@ async def create_payment_intent(
             customer=customer.id,
             metadata={
                 'user_id': str(current_user.id),
-                'username': current_user.username
+                'username': current_user.username,
+                'plan_id': request.plan_id
             },
             automatic_payment_methods={
                 'enabled': True,
@@ -126,3 +129,65 @@ async def create_payment_intent(
 async def get_publishable_key():
     """Get Stripe publishable key for frontend"""
     return {"publishable_key": config.get("stripe_publishable_key")}
+
+@router.get("/plans")
+async def get_payment_plans():
+    """Get available payment plans"""
+    plans_config = config.get("payment_plans", {})
+    return {"plans": list(plans_config.values())}
+
+@router.get("/price", response_model=PriceResponse)
+async def get_price(product_type: str = "opentek-lifetime"):
+    """Get product price from Stripe based on product type"""
+    try:
+        # Map product types to payment plan IDs
+        plan_id_map = {
+            "opentek-lifetime": "lifetime"
+        }
+        
+        plan_id = plan_id_map.get(product_type)
+        if not plan_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unknown product type: {product_type}"
+            )
+        
+        # Get payment plan configuration
+        plans_config = config.get("payment_plans", {})
+        plan_config = plans_config.get(plan_id)
+        
+        if not plan_config:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Payment plan '{plan_id}' not found in configuration"
+            )
+            
+        price_id = plan_config.get("stripe_price_id")
+        if not price_id:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Stripe price ID not configured for plan '{plan_id}'"
+            )
+        
+        # Retrieve price from Stripe
+        price = stripe.Price.retrieve(price_id)
+        
+        return {
+            "price_id": price.id,
+            "product_id": price.product,
+            "product_type": product_type,
+            "amount": price.unit_amount,  # Amount in cents
+            "currency": price.currency,
+            "recurring": price.recurring is not None
+        }
+        
+    except stripe.error.StripeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Stripe error: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve price information: {str(e)}"
+        )

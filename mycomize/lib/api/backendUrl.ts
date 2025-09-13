@@ -1,12 +1,21 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-export function getBackendUrl() {
+export function getBackendUrl(): string | null {
+  // Get backend URL from environment variable or Expo config
+  const envUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+  const configUrl = Constants.expoConfig?.extra?.backendUrl;
+  
+  // Priority: environment variable > config > fallback
+  const backendUrl = envUrl || configUrl || 'http://localhost:8000';
+  
   if (Platform.OS === 'web') {
-    return 'http://localhost:8000';
+    return backendUrl;
   } else if (Platform.OS === 'android') {
-    return 'http://localhost:8000';
+    return backendUrl;
   } else if (Platform.OS === 'ios') {
-    console.warn('iOS is not supported yet');
-    return null;
+    return backendUrl;
   }
+  
+  return backendUrl;
 }

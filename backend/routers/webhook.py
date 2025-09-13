@@ -1,11 +1,14 @@
 import json
 import stripe
+import secrets
+import string
 from fastapi import APIRouter, Request, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime
 
 from backend.models.user import User, PaymentStatus, PaymentMethod
 from backend.database import get_mycomize_db
+from backend.services.sse_service import sse_manager
 
 # Load configuration
 def load_config():
@@ -39,6 +42,11 @@ router = APIRouter(
     tags=["webhook"],
 )
 
+def generate_confirmation_code() -> str:
+    """Generate a random 12-digit alphanumeric confirmation code"""
+    alphabet = string.ascii_uppercase + string.digits
+    return ''.join(secrets.choice(alphabet) for _ in range(12))
+
 def verify_webhook_signature(payload: bytes, signature: str, secret: str) -> bool:
     """Verify Stripe webhook signature"""
     try:
@@ -51,13 +59,15 @@ def verify_webhook_signature(payload: bytes, signature: str, secret: str) -> boo
         # Invalid signature
         return False
 
+# This is only called after webhook has been validated
 def update_user_payment_status(
     db: Session,
     user_id: int,
     payment_status: PaymentStatus,
     payment_method: PaymentMethod,
     payment_intent_id: str = None,
-    customer_id: str = None
+    customer_id: str = None,
+    plan_id: str = None
 ):
     """Update user payment status in database"""
     user = db.query(User).filter(User.id == user_id).first()
@@ -67,8 +77,15 @@ def update_user_payment_status(
     
     user.payment_status = payment_status
     user.payment_method = payment_method
+
     if payment_status == PaymentStatus.paid:
         user.payment_date = datetime.now()
+        # Set plan_id when payment is successful
+        if plan_id:
+            user.plan_id = plan_id
+        else:
+            print(f"Warning: No plan_id provided for successful payment of user {user_id}")
+            
     if payment_intent_id:
         user.stripe_payment_intent_id = payment_intent_id
     if customer_id:
@@ -76,7 +93,7 @@ def update_user_payment_status(
         
     user.updated_at = datetime.now()
     db.commit()
-    print(f"Updated payment status for user {user_id} to {payment_status.value}")
+    print(f"Updated payment status for user {user_id} to {payment_status.value}, plan: {user.plan_id}")
     return user
 
 @router.post("/stripe")
@@ -111,11 +128,17 @@ async def stripe_webhook(
         if event['type'] == 'payment_intent.succeeded':
             payment_intent = event['data']['object']
             
-            # Extract user ID from metadata
+            # Extract user ID and plan ID from metadata
             user_id = payment_intent.get('metadata', {}).get('user_id')
+            plan_id = payment_intent.get('metadata', {}).get('plan_id')
+            
             if not user_id:
                 print("No user_id found in payment_intent metadata")
                 return {"status": "error", "message": "No user_id in metadata"}
+            
+            if not plan_id:
+                print("No plan_id found in payment_intent metadata")
+                return {"status": "error", "message": "No plan_id in metadata"}
 
             # Update user payment status to paid
             user = update_user_payment_status(
@@ -124,11 +147,23 @@ async def stripe_webhook(
                 payment_status=PaymentStatus.paid,
                 payment_method=PaymentMethod.stripe,
                 payment_intent_id=payment_intent['id'],
-                customer_id=payment_intent.get('customer')
+                customer_id=payment_intent.get('customer'),
+                plan_id=plan_id
             )
 
             if user:
-                print(f"Payment successful for user {user_id}")
+                # Generate confirmation code for successful payment
+                confirmation_code = generate_confirmation_code()
+                
+                # Broadcast SSE event for payment success with confirmation code
+                await sse_manager.broadcast_payment_status(
+                    user_id=int(user_id),
+                    payment_status="paid",
+                    payment_method="stripe",
+                    payment_intent_id=payment_intent['id'],
+                    confirmation_code=confirmation_code
+                )
+                print(f"Payment successful for user {user_id}, confirmation code: {confirmation_code}")
                 return {"status": "success", "message": "Payment confirmed"}
             else:
                 return {"status": "error", "message": "User not found"}
@@ -153,6 +188,13 @@ async def stripe_webhook(
             )
 
             if user:
+                # Broadcast SSE event for payment failure
+                await sse_manager.broadcast_payment_status(
+                    user_id=int(user_id),
+                    payment_status="failed",
+                    payment_method="stripe",
+                    payment_intent_id=payment_intent['id']
+                )
                 print(f"Payment failed for user {user_id}")
                 return {"status": "success", "message": "Payment failure recorded"}
             else:
@@ -177,6 +219,13 @@ async def stripe_webhook(
             )
 
             if user:
+                # Broadcast SSE event for payment cancellation
+                await sse_manager.broadcast_payment_status(
+                    user_id=int(user_id),
+                    payment_status="unpaid",
+                    payment_method="stripe",
+                    payment_intent_id=payment_intent['id']
+                )
                 print(f"Payment canceled for user {user_id}")
                 return {"status": "success", "message": "Payment cancellation recorded"}
             else:

@@ -1,6 +1,7 @@
 // TypeScript interfaces for the unified authentication and encryption store
 
-import { PaymentStatus, PaymentMethod } from './paymentTypes';
+import { PaymentStatus, PaymentMethod, PaymentSSEEvent, SSEConnectionState, CreatePaymentIntentResponse, PriceResponse, PaymentPlan } from './paymentTypes';
+import { SSEService } from '../services/SSEService';
 
 /**
  * User authentication and encryption state
@@ -34,6 +35,26 @@ export interface AuthEncryptionState {
   needsPayment: boolean;
   isPaymentLoading: boolean;
 
+  // Payment Flow State
+  paymentFlowStep: 'plan-selection' | 'method-selection';
+  showPaymentConfirmation: boolean;
+  selectedPaymentMethod: 'stripe' | 'bitcoin' | null;
+  selectedPlan: PaymentPlan | null;
+  availablePlans: PaymentPlan[];
+  paymentIntentData: CreatePaymentIntentResponse | null;
+  priceData: PriceResponse | null;
+  stripePublishableKey: string;
+
+  // Payment Processing State
+  isPaymentProcessing: boolean;
+  isPaymentSubmitting: boolean;
+  paymentConfirmationCode: string | null;
+  paymentFlowError: string | null;
+
+  // SSE State
+  sseConnectionState: SSEConnectionState;
+  sseService: SSEService | null;
+
   // Combined loading state
   isInitializing: boolean;
 }
@@ -55,6 +76,20 @@ export interface AuthEncryptionActions {
   checkPaymentStatus: () => Promise<void>;
   refreshPaymentStatus: () => Promise<void>;
   resetPaymentState: () => void;
+
+  // Payment Flow Actions
+  initializePaymentFlow: () => Promise<void>;
+  selectPaymentPlan: (plan: PaymentPlan) => void;
+  setPaymentFlowStep: (step: 'plan-selection' | 'method-selection') => void;
+  selectPaymentMethod: (method: 'stripe' | 'bitcoin') => Promise<void>;
+  processStripePayment: (clientSecret: string) => Promise<void>;
+  handleSSEPaymentEvent: (event: PaymentSSEEvent) => void;
+  completePaymentFlow: () => Promise<void>;
+  resetPaymentFlow: () => void;
+
+  // SSE Integration Actions
+  connectPaymentSSE: () => Promise<void>;
+  disconnectPaymentSSE: () => void;
 
   // Internal state management
   setToken: (token: string | null) => void;

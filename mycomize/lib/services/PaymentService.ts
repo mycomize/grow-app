@@ -4,6 +4,8 @@ import {
   CreatePaymentIntentRequest,
   CreatePaymentIntentResponse,
   PublishableKeyResponse,
+  PriceResponse,
+  PaymentPlansResponse,
 } from '../types/paymentTypes';
 
 /**
@@ -37,7 +39,6 @@ class PaymentService {
       if (isUnauthorizedError(error)) {
         throw new Error('UNAUTHORIZED');
       }
-      console.error('[PaymentService] Failed to check payment status:', error);
       throw new Error('Failed to check payment status. Please try again.');
     }
   }
@@ -119,6 +120,68 @@ class PaymentService {
       }
       console.error('[PaymentService] Failed to get publishable key:', error);
       throw new Error('Failed to get payment configuration. Please try again.');
+    }
+  }
+
+  /**
+   * Get product price information from Stripe
+   */
+  async getPrice(token: string, productType: string = 'opentek-lifetime'): Promise<PriceResponse> {
+    if (!token) {
+      console.warn('[PaymentService] No token provided for getPrice');
+      throw new Error('UNAUTHORIZED');
+    }
+
+    try {
+      const response = await apiClient.call({
+        endpoint: `/payment/price?product_type=${encodeURIComponent(productType)}`,
+        config: {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+        },
+      });
+
+      return response as PriceResponse;
+    } catch (error: any) {
+      if (isUnauthorizedError(error)) {
+        throw new Error('UNAUTHORIZED');
+      }
+      console.error('[PaymentService] Failed to get price information:', error);
+      throw new Error('Failed to get pricing information. Please try again.');
+    }
+  }
+
+  /**
+   * Get available payment plans
+   */
+  async getPaymentPlans(token: string): Promise<PaymentPlansResponse> {
+    if (!token) {
+      console.warn('[PaymentService] No token provided for getPaymentPlans');
+      throw new Error('UNAUTHORIZED');
+    }
+
+    try {
+      const response = await apiClient.call({
+        endpoint: '/payment/plans',
+        config: {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+        },
+      });
+
+      return response as PaymentPlansResponse;
+    } catch (error: any) {
+      if (isUnauthorizedError(error)) {
+        throw new Error('UNAUTHORIZED');
+      }
+      console.error('[PaymentService] Failed to get payment plans:', error);
+      throw new Error('Failed to get payment plans. Please try again.');
     }
   }
 

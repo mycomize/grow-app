@@ -33,6 +33,7 @@ class User(Base):
     payment_status = Column(Enum(PaymentStatus), default=PaymentStatus.unpaid, nullable=False)
     payment_method = Column(Enum(PaymentMethod), nullable=True)
     payment_date = Column(DateTime, nullable=True)
+    plan_id = Column(String, nullable=True)
     stripe_customer_id = Column(String, nullable=True)
     stripe_payment_intent_id = Column(String, nullable=True)
 

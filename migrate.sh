@@ -11,15 +11,18 @@ MESSAGE="$1"
 
 echo "🔄 Generating migration: $MESSAGE"
 
+# Change to backend directory where alembic operations should run
+cd backend
+
 # Activate virtual environment if it exists
-if [ -d "backend/.venv" ]; then
+if [ -d ".venv" ]; then
     echo "📦 Activating virtual environment..."
-    source backend/.venv/bin/activate
+    source .venv/bin/activate
 fi
 
 # Generate migration
 echo "📝 Creating migration file..."
-alembic -c backend/alembic.ini revision --autogenerate -m "$MESSAGE"
+alembic revision --autogenerate -m "$MESSAGE"
 
 if [ $? -ne 0 ]; then
     echo "❌ Failed to generate migration"
@@ -30,7 +33,7 @@ echo "✅ Migration generated successfully"
 
 # Apply migration
 echo "🚀 Applying migration to database..."
-alembic -c backend/alembic.ini upgrade head
+alembic upgrade head
 
 if [ $? -ne 0 ]; then
     echo "❌ Failed to apply migration"
