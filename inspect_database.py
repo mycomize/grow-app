@@ -171,8 +171,16 @@ def get_expected_model_fields() -> Dict[str, Dict[str, List[str]]]:
     """
     return {
         'users': {
-            'system': ['id', 'username', 'hashed_password', 'is_active', 'created_at', 'updated_at'],
+            'system': ['id', 'username', 'hashed_password', 'is_active', 'created_at', 'updated_at', 
+                      'payment_status', 'payment_method', 'payment_date', 'plan_id', 
+                      'stripe_customer_id', 'stripe_payment_intent_id'],
             'user_data': ['profile_image']  # Text field, encrypted
+        },
+        'orders': {
+            'system': ['id', 'user_id', 'plan_id', 'plan_name', 'plan_description', 'amount', 
+                      'currency', 'billing_interval', 'confirmation_number', 'payment_method', 
+                      'payment_intent_id', 'created_at', 'updated_at'],
+            'user_data': []  # No encrypted user data fields - all system/order tracking data
         },
         'bulk_grows': {
             'system': ['id', 'user_id'],
