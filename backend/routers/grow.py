@@ -16,7 +16,7 @@ from backend.schemas.grow import (
     BulkGrowFlushCreate
 )
 from backend.database import get_mycomize_db, engine
-from backend.security import get_current_active_user, load_config
+from backend.security import get_current_paid_user, load_config
 
 # Create the models
 from backend.models.grow import Base
@@ -36,7 +36,7 @@ class BulkGrowCreateWithFlushes(BulkGrowCreate):
 async def create_grow(
     grow: BulkGrowCreateWithFlushes,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Create a new grow for the current user"""
     # Create the grow
@@ -95,7 +95,7 @@ async def read_grows(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Get all grows for the current user"""
     grows = db.query(BulkGrow).filter(BulkGrow.user_id == current_user.id).offset(skip).limit(limit).all()
@@ -104,7 +104,7 @@ async def read_grows(
 @router.get("/with-iot", response_model=List[BulkGrowWithIoTEntities])
 async def read_grows_with_iot(
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Get all grows with IoT entities (but no flushes) for the current user"""
     # Query all grows for the current user with their IoT entities relationships loaded
@@ -116,7 +116,7 @@ async def read_grows_with_iot(
 @router.get("/all", response_model=List[BulkGrowComplete])
 async def read_all_grows(
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Get all grows with complete data for the current user"""
     # Query all grows for the current user with their IoT entities and flushes relationships loaded
@@ -130,7 +130,7 @@ async def read_all_grows(
 async def read_grow(
     grow_id: int,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Get a specific grow by ID with its IoT entities and flushes"""
     grow = db.query(BulkGrow).options(
@@ -153,7 +153,7 @@ async def update_grow(
     grow_id: int,
     grow: BulkGrowUpdateWithFlushes,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Update a grow"""
     db_grow = db.query(BulkGrow).filter(BulkGrow.id == grow_id, BulkGrow.user_id == current_user.id).first()
@@ -194,7 +194,7 @@ async def update_grow(
 async def delete_grow(
     grow_id: int,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Delete a grow"""
     db_grow = db.query(BulkGrow).filter(BulkGrow.id == grow_id, BulkGrow.user_id == current_user.id).first()

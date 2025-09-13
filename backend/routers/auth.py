@@ -13,6 +13,7 @@ from backend.security import (
     authenticate_user,
     create_access_token,
     get_current_active_user,
+    get_current_paid_user,
     access_token_expiration
 )
 
@@ -86,7 +87,7 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
 @router.post("/change-password", status_code=status.HTTP_200_OK)
 async def change_password(
     password_data: ChangePassword,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_paid_user),
     db: Session = Depends(get_mycomize_db)
 ):
     """Change user password"""
@@ -109,7 +110,7 @@ async def change_password(
 @router.put("/profile-image", response_model=UserResponse)
 async def update_profile_image(
     profile_data: UserProfileImageUpdate,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_paid_user),
     db: Session = Depends(get_mycomize_db)
 ):
     """Update user profile image"""

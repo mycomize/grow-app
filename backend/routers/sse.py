@@ -9,6 +9,7 @@ from backend.database import get_mycomize_db
 from backend.models.user import User
 from backend.services.sse_service import sse_manager
 from backend.security import jwt_secret_key, ALGORITHM, get_user
+from backend.models.user import PaymentStatus
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,14 @@ async def get_current_active_user_from_token(token: str, db: Session) -> User:
     if not user.is_active:
         logger.warning(f"Inactive user attempted SSE connection: {username}")
         raise HTTPException(status_code=400, detail="Inactive user")
+    
+    # Check payment status
+    if user.payment_status != PaymentStatus.paid:
+        logger.warning(f"User with unpaid status attempted SSE connection: {username}")
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Payment required to access this resource"
+        )
 
     return user
 

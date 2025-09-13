@@ -14,7 +14,7 @@ from backend.schemas.calendar_task import (
     CalendarTaskBulkResponse
 )
 from backend.database import get_mycomize_db, engine
-from backend.security import get_current_active_user
+from backend.security import get_current_paid_user
 
 # Create the models
 from backend.models.calendar_task import Base
@@ -31,7 +31,7 @@ router = APIRouter(
 async def create_calendar_task(
     task: CalendarTaskCreate,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Create a new calendar task"""
     # Verify the grow exists and belongs to the current user
@@ -63,7 +63,7 @@ async def create_calendar_task(
 async def create_calendar_tasks_bulk(
     bulk_data: CalendarTaskBulkCreate,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Create multiple calendar tasks in a single request"""
     if not bulk_data.tasks:
@@ -116,7 +116,7 @@ async def read_calendar_tasks(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Get calendar tasks with optional filtering"""
     query = db.query(CalendarTask).join(BulkGrow).filter(BulkGrow.user_id == current_user.id)
@@ -135,7 +135,7 @@ async def read_calendar_tasks(
 async def read_calendar_task(
     task_id: int,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Get a specific calendar task by ID"""
     task = db.query(CalendarTask).join(BulkGrow).filter(
@@ -154,7 +154,7 @@ async def update_calendar_task(
     task_id: int,
     task: CalendarTaskUpdate,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Update a calendar task"""
     db_task = db.query(CalendarTask).join(BulkGrow).filter(
@@ -179,7 +179,7 @@ async def update_calendar_task(
 async def delete_calendar_task(
     task_id: int,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Delete a calendar task"""
     db_task = db.query(CalendarTask).join(BulkGrow).filter(
@@ -200,7 +200,7 @@ async def delete_calendar_tasks_by_parent(
     parent_task_id: str,
     grow_id: int,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Delete all calendar tasks for a specific parent task"""
     # Verify the grow belongs to the current user

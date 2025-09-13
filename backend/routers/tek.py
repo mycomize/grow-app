@@ -13,7 +13,7 @@ from backend.schemas.tek import (
     BulkGrowTekCreate,
     BulkGrowTekUpdate,
 )
-from backend.security import get_current_user
+from backend.security import get_current_paid_user
 
 # Create the models
 from backend.models.tek import Base
@@ -26,7 +26,7 @@ async def get_all_teks(
     limit: int = Query(50, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Get all teks (public teks + current user's private teks)"""
     # Get public teks and user's own teks
@@ -70,7 +70,7 @@ async def get_all_teks(
 async def create_tek(
     tek_data: BulkGrowTekCreate,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Create a new bulk_grow tek"""
     tek_dict = tek_data.dict()
@@ -117,7 +117,7 @@ async def create_tek(
 async def get_tek(
     tek_id: int,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Get a specific bulk_grow tek"""
     tek = db.query(BulkGrowTek).options(joinedload(BulkGrowTek.creator)).filter(
@@ -173,7 +173,7 @@ async def update_tek(
     tek_id: int,
     tek_data: BulkGrowTekUpdate,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Update a bulk_grow tek"""
     tek = db.query(BulkGrowTek).filter(BulkGrowTek.id == tek_id).first()
@@ -237,7 +237,7 @@ async def update_tek(
 async def delete_tek(
     tek_id: int,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Delete a bulk_grow tek"""
     tek = db.query(BulkGrowTek).filter(BulkGrowTek.id == tek_id).first()
@@ -297,7 +297,7 @@ def get_engagement_counts(db: Session, tek_id: int) -> dict:
 async def like_tek(
     tek_id: int,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Toggle like status for a tek (persistent state)"""
     # Verify tek exists and user has access
@@ -341,7 +341,7 @@ async def like_tek(
 async def track_view(
     tek_id: int,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Record tek view (once per user, persistent)"""
     # Verify tek exists and user has access
@@ -378,7 +378,7 @@ async def track_view(
 async def track_import(
     tek_id: int,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Record tek import (allows multiple imports per user)"""
     # Verify tek exists and user has access

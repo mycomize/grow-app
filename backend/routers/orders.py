@@ -7,7 +7,7 @@ from backend.models.order import Order
 from backend.models.user import User
 from backend.schemas.order import OrderResponse, OrderListResponse
 from backend.database import get_mycomize_db
-from backend.routers.auth import get_current_active_user
+from backend.security import get_current_paid_user
 
 router = APIRouter(
     prefix="/orders",
@@ -43,7 +43,7 @@ async def get_orders(
     page: int = Query(1, ge=1, description="Page number (starts from 1)"),
     size: int = Query(20, ge=1, le=100, description="Number of orders per page"),
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """
     Get paginated list of orders for the authenticated user.
@@ -91,7 +91,7 @@ async def get_orders(
 async def get_order_by_id(
     order_id: int,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """
     Get a specific order by ID for the authenticated user.

@@ -23,7 +23,7 @@ from backend.schemas.iot_entity import (
     BulkEntityDeleteRequest,
 )
 from backend.database import get_mycomize_db, engine
-from backend.security import get_current_active_user
+from backend.security import get_current_paid_user
 
 # Create the models
 from backend.models.iot import Base
@@ -43,7 +43,7 @@ router = APIRouter(
 async def create_gateway_with_entities(
     request: CombinedGatewayCreateRequest,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Create a new IoT gateway with entities in a single atomic transaction"""
     
@@ -134,7 +134,7 @@ async def create_gateway_with_entities(
 async def create_iot_gateway(
     gateway: IoTGatewayCreate, 
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Create a new IoT gateway for the current user"""
     db_gateway = IoTGateway(
@@ -157,7 +157,7 @@ async def read_iot_gateways(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Get all IoT gateways for the current user"""
     gateways = db.query(IoTGateway).filter(IoTGateway.user_id == current_user.id).offset(skip).limit(limit).all()
@@ -167,7 +167,7 @@ async def read_iot_gateways(
 async def read_iot_gateway(
     gateway_id: int, 
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Get a specific IoT gateway by ID"""
     gateway = db.query(IoTGateway).filter(IoTGateway.id == gateway_id, IoTGateway.user_id == current_user.id).first()
@@ -183,7 +183,7 @@ async def read_iot_gateway(
 async def get_gateway_entities(
     gateway_id: int,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Get all enabled entities for a gateway"""
     # Verify gateway exists and belongs to user
@@ -200,7 +200,7 @@ async def add_entity_to_gateway(
     gateway_id: int,
     entity: IoTEntityCreate,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Add an entity to a gateway"""
     # Verify gateway exists and belongs to user
@@ -231,7 +231,7 @@ async def bulk_create_entities(
     gateway_id: int,
     bulk_request: BulkEntityCreateRequest,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Bulk create multiple entities for a gateway"""
     # Verify gateway exists and belongs to user
@@ -272,7 +272,7 @@ async def bulk_delete_entities(
     gateway_id: int,
     bulk_request: BulkEntityDeleteRequest,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Bulk delete multiple entities from a gateway"""
     # Verify gateway exists and belongs to user
@@ -303,7 +303,7 @@ async def bulk_link_entities_to_grow(
     gateway_id: int,
     linking_request: BulkEntityLinkingRequest,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Bulk link multiple IoT entities to a grow and stage"""
     # Verify gateway exists and belongs to user
@@ -349,7 +349,7 @@ async def bulk_unlink_entities_from_grow(
     gateway_id: int,
     bulk_request: BulkEntityDeleteRequest,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Bulk unlink multiple IoT entities from their grows (makes them linkable again)"""
     # Verify gateway exists and belongs to user
@@ -402,7 +402,7 @@ async def link_entity_to_grow(
     entity_id: int,
     linking_request: EntityLinkingRequest,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Link an IoT entity to a grow and stage"""
     # Verify gateway exists and belongs to user
@@ -442,7 +442,7 @@ async def remove_entity_link(
     gateway_id: int,
     entity_id: int,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Remove an IoT entity's grow/stage link (makes entity linkable again)"""
     # Verify gateway exists and belongs to user
@@ -487,7 +487,7 @@ async def update_entity(
     entity_id: int,
     entity_update: IoTEntityUpdate,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Update an entity"""
     # Verify gateway exists and belongs to user
@@ -519,7 +519,7 @@ async def remove_entity_from_gateway(
     gateway_id: int,
     entity_id: int,
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Remove an entity from a gateway"""
     # Verify gateway exists and belongs to user
@@ -547,7 +547,7 @@ async def update_iot_gateway(
     gateway_id: int, 
     gateway: IoTGatewayUpdate, 
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Update a IoT gateway"""
     db_gateway = db.query(IoTGateway).filter(IoTGateway.id == gateway_id, IoTGateway.user_id == current_user.id).first()
@@ -568,7 +568,7 @@ async def update_iot_gateway(
 async def delete_iot_gateway(
     gateway_id: int, 
     db: Session = Depends(get_mycomize_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_paid_user)
 ):
     """Delete a IoT gateway"""
     db_gateway = db.query(IoTGateway).filter(IoTGateway.id == gateway_id, IoTGateway.user_id == current_user.id).first()

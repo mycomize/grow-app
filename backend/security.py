@@ -9,7 +9,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from backend.schemas.user import TokenData
-from backend.models.user import User
+from backend.models.user import User, PaymentStatus
 from backend.database import get_mycomize_db
 
 # Security configurations
@@ -118,4 +118,14 @@ async def get_current_active_user(current_user: User = Depends(get_current_user)
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
 
+    return current_user
+
+async def get_current_paid_user(current_user: User = Depends(get_current_active_user)):
+    """Get the current user, ensuring they are active and have paid status"""
+    if current_user.payment_status != PaymentStatus.paid:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Payment required to access this resource"
+        )
+    
     return current_user
