@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 
 from backend.models.user import User, PaymentStatus, PaymentMethod
+from backend.models.order import Order, PaymentMethodEnum
+from backend.schemas.order import OrderCreate
 from backend.database import get_mycomize_db
 from backend.services.sse_service import sse_manager
 
@@ -46,6 +48,52 @@ def generate_confirmation_code() -> str:
     """Generate a random 12-digit alphanumeric confirmation code"""
     alphabet = string.ascii_uppercase + string.digits
     return ''.join(secrets.choice(alphabet) for _ in range(12))
+
+def get_plan_data_from_config(plan_id: str) -> dict:
+    """Extract plan details from configuration"""
+    payment_plans = config.get("payment_plans", {})
+    plan_data = payment_plans.get(plan_id)
+    
+    if not plan_data:
+        print(f"Plan {plan_id} not found in configuration")
+        return None
+    
+    return plan_data
+
+def create_order(
+    db: Session,
+    user_id: int,
+    plan_data: dict,
+    confirmation_number: str,
+    payment_intent_id: str,
+    payment_method: PaymentMethodEnum = PaymentMethodEnum.stripe
+) -> Order:
+    """Create order record when payment succeeds"""
+    try:
+        order = Order(
+            user_id=user_id,
+            plan_id=plan_data["id"],
+            plan_name=plan_data["name"],
+            plan_description=plan_data.get("description"),
+            amount=plan_data["price"],
+            currency=plan_data.get("currency", "usd"),
+            billing_interval=plan_data["billing_interval"],
+            confirmation_number=confirmation_number,
+            payment_method=payment_method,
+            payment_intent_id=payment_intent_id
+        )
+        
+        db.add(order)
+        db.commit()
+        db.refresh(order)
+        
+        print(f"Created order {order.id} for user {user_id}, plan {plan_data['id']}, confirmation: {confirmation_number}")
+        return order
+    
+    except Exception as e:
+        print(f"Error creating order for user {user_id}: {str(e)}")
+        db.rollback()
+        raise e
 
 def verify_webhook_signature(payload: bytes, signature: str, secret: str) -> bool:
     """Verify Stripe webhook signature"""
@@ -154,6 +202,26 @@ async def stripe_webhook(
             if user:
                 # Generate confirmation code for successful payment
                 confirmation_code = generate_confirmation_code()
+                
+                # Get plan data from configuration
+                plan_data = get_plan_data_from_config(plan_id)
+                if plan_data:
+                    # Create order record
+                    try:
+                        order = create_order(
+                            db=db,
+                            user_id=int(user_id),
+                            plan_data=plan_data,
+                            confirmation_number=confirmation_code,
+                            payment_intent_id=payment_intent['id'],
+                            payment_method=PaymentMethodEnum.stripe
+                        )
+                        print(f"Order {order.id} created successfully for user {user_id}")
+                    except Exception as e:
+                        print(f"Error creating order for user {user_id}: {str(e)}")
+                        # Continue with SSE broadcast even if order creation fails
+                else:
+                    print(f"Warning: Plan data not found for plan_id {plan_id}")
                 
                 # Broadcast SSE event for payment success with confirmation code
                 await sse_manager.broadcast_payment_status(

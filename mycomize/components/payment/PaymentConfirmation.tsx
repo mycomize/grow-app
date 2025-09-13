@@ -119,7 +119,7 @@ export const PaymentConfirmation: React.FC<PaymentConfirmationProps> = ({
               <VStack space="xs" className="mt-2">
                 <HStack className="items-center " space="md">
                 <Foundation name="alert" size={24} color="yellow" />
-                <Text className="text-typography-700 text-lg font-medium">
+                <Text className="text-typography-800 text-lg font-semibold">
                   Important: Save this confirmation code
                 </Text>
                 </HStack>

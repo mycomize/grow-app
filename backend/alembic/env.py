@@ -13,6 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 # Import the Base and all models for autogenerate support
 from backend.database import Base
 from backend.models.user import User
+from backend.models.order import Order
 from backend.models.grow import BulkGrow, BulkGrowFlush
 from backend.models.tek import BulkGrowTek
 from backend.models.tek_engagement import TekLike, TekView, TekImport

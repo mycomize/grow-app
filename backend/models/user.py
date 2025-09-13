@@ -45,3 +45,6 @@ class User(Base):
 
     # Relationship with BulkGrowTek (one-to-many)
     bulk_grow_teks = relationship("BulkGrowTek", back_populates="creator", cascade="all, delete-orphan")
+
+    # Relationship with Order (one-to-many)
+    orders = relationship("Order", back_populates="user", cascade="all, delete-orphan")
