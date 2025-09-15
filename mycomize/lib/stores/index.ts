@@ -2,3 +2,4 @@
 export * from './iot';
 export * from './growStore';
 export * from './teksStore';
+export * from './profileStore';

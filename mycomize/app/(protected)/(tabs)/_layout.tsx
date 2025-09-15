@@ -3,7 +3,7 @@ import { Tabs, useRouter, useSegments } from 'expo-router';
 import { CircuitBoard, User, FlaskConical, Layers } from 'lucide-react-native';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
 import { useAuthToken } from '~/lib/stores/authEncryptionStore';
-import { useGrowStore, useTeksStore } from '~/lib/stores';
+import { useGrowStore, useTeksStore, useFetchProfile } from '~/lib/stores';
 import { useCalendarStore } from '~/lib/stores/calendarStore';
 import { useGatewayStore } from '~/lib/stores/iot/gatewayStore';
 import { useEntityStore } from '~/lib/stores/iot/entityStore';
@@ -17,6 +17,7 @@ export default function TabLayout() {
   const token = useAuthToken();
   const fetchGrows = useGrowStore((state) => state.fetchGrows);
   const fetchTeks = useTeksStore((state) => state.fetchTeks);
+  const fetchProfile = useFetchProfile();
   const fetchCalendarTasks = useCalendarStore((state) => state.fetchCalendarTasks);
   const initializeAllGatewayData = useGatewayStore((state) => state.initializeAllGatewayData);
   const gateways = useGatewayStore((state) => state.gateways);
@@ -31,6 +32,7 @@ export default function TabLayout() {
       }
       
       try {
+        await fetchProfile(token);
         await fetchGrows(token);
         await fetchCalendarTasks(token);
         await initializeAllGatewayData(token);
@@ -40,7 +42,7 @@ export default function TabLayout() {
     };
 
     initialSetup();
-  }, [token, fetchGrows, fetchTeks, fetchCalendarTasks, initializeAllGatewayData, router]);
+  }, [token, fetchProfile, fetchGrows, fetchTeks, fetchCalendarTasks, initializeAllGatewayData, router]);
 
   // Initial registration of real-time listeners for all linked entities after gateway data is loaded
   useEffect(() => {

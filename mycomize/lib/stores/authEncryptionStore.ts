@@ -16,6 +16,7 @@ import { PaymentStatusResponse, PaymentSSEEvent, PaymentPlan } from '../types/pa
 import { paymentService } from '../services/PaymentService';
 import { SSEService } from '../services/SSEService';
 import { getStripeErrorMessage } from '../utils/stripeErrorHandler';
+import { useProfileStore } from './profileStore';
 
 /**
  * Unified Zustand store for authentication and encryption state management.
@@ -179,6 +180,9 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
       // Clear encryption service state
       const encryptionService = getEncryptionService();
       encryptionService.clearKeys();
+
+      // Clear profile store state
+      useProfileStore.getState().clearProfile();
 
       // Clear store state including payment flow state
       set({

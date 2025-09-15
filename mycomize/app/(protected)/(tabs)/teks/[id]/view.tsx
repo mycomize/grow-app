@@ -27,11 +27,11 @@ import {
   CheckSquare,
   Eye
 } from 'lucide-react-native';
-import { getCachedProfileImage } from '~/lib/imageCache';
 import { BulkGrowTekIcon } from '~/lib/types/bulkGrowTypes';
 import { BULK_GROW_TEK_STAGES, BulkGrowCultivationStage } from '~/lib/types/tekTypes';
 import { StageSection } from '~/components/tek/StageSection';
 import { useAuthToken } from '~/lib/stores/authEncryptionStore';
+import { useProfile, useProfileImage } from '~/lib/stores/profileStore';
 import { formatCount, parseNumberCount } from '~/lib/utils/numberFormatting';
 import {
   useFetchTeks,
@@ -45,11 +45,12 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 export default function TekViewScreen() {
   const { id } = useLocalSearchParams();
   const token = useAuthToken();
+  const profile = useProfile();
+  const profileImage = useProfileImage();
   const fetchTeks = useFetchTeks();
   const viewTek = useViewTek();
   const tekData = useTekById(id as string);
   
-  const [cachedImage, setCachedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useFocusEffect(
@@ -77,29 +78,23 @@ export default function TekViewScreen() {
     }, [fetchTeks, viewTek, id, token, tekData])
   );
 
-  // Load cached image for the tek creator
-  useEffect(() => {
-    const loadCachedImage = async () => {
-      if (tekData?.creator_name) {
-        try {
-          const cached = await getCachedProfileImage(tekData.creator_name);
-          if (cached) {
-            setCachedImage(cached);
-          }
-        } catch (error) {
-          console.error('Error loading cached image:', error);
-        }
-      }
-    };
-
-    loadCachedImage();
-  }, [tekData?.creator_name, tekData?.creator_profile_image]);
+  // Get the appropriate profile image for the tek creator
+  const getCreatorProfileImage = () => {
+    // If this is the current user's tek (private tek), use profile store image
+    if (profile && tekData?.creator_name === profile.username) {
+      return profileImage;
+    }
+    // Otherwise, use the creator_profile_image from the tek data (public teks)
+    return tekData?.creator_profile_image;
+  };
 
   // Get the first two letters of creator name for avatar fallback
   const getCreatorInitials = (name: string | undefined) => {
     if (!name) return 'U';
     return name.length >= 2 ? name.substring(0, 2).toUpperCase() : name.toUpperCase();
   };
+
+  const creatorProfileImage = getCreatorProfileImage();
 
   const getItemCounts = (stage: BulkGrowCultivationStage) => {
     const stageData = tekData?.stages?.[stage];
@@ -180,8 +175,8 @@ export default function TekViewScreen() {
           <VStack className="bg-background-0 rounded-md pt-4 px-6 pb-6" space="md">
             <HStack className="items-center" space="md">
               <Avatar size="lg">
-                {cachedImage || tekData.creator_profile_image ? (
-                  <AvatarImage source={{ uri: cachedImage || tekData.creator_profile_image }} />
+                {creatorProfileImage ? (
+                  <AvatarImage source={{ uri: creatorProfileImage }} />
                 ) : (
                   <AvatarFallbackText>{getCreatorInitials(tekData.creator_name)}</AvatarFallbackText>
                 )}

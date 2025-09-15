@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { router } from 'expo-router';
 import { apiClient, isUnauthorizedError } from '../api/ApiClient';
 import { BulkGrowTek, BulkGrowTekData, createEmptyTekData, generateId, Task } from '../types/tekTypes';
+import { encryptData } from '../crypto/DataEncryption';
 
 // Helper function to handle unauthorized errors consistently
 const handleUnauthorizedError = (error: Error) => {
@@ -150,7 +151,30 @@ export const useTeksStore = create<TeksStore>((set, get) => {
           }
         });
 
-        const newTek: BulkGrowTek = await apiClient.createBulkGrowTek(apiData, token);
+        // Exclude profile_image for private teks to prevent duplication
+        // Profile images for private teks should be retrieved from the profile store
+        if (!apiData.is_public && 'profile_image' in apiData) {
+          delete apiData.profile_image;
+        }
+
+        // For private teks, add engagement count fields with initial values if not present
+        // These will be encrypted automatically by the encryptData function
+        if (!apiData.is_public) {
+          if (!('like_count' in apiData)) {
+            (apiData as any).like_count = 0;
+          }
+          if (!('import_count' in apiData)) {
+            (apiData as any).import_count = 0;
+          }
+          if (!('view_count' in apiData)) {
+            (apiData as any).view_count = 1; // Private teks start with 1 view count
+          }
+        }
+
+        // Encrypt data for private teks using the DataEncryption utility
+        const encryptedApiData = await encryptData('BulkGrowTek', apiData);
+
+        const newTek: BulkGrowTek = await apiClient.createBulkGrowTek(encryptedApiData, token);
 
         set((state) => ({
           teks: [...state.teks, newTek],
@@ -194,7 +218,33 @@ export const useTeksStore = create<TeksStore>((set, get) => {
           }
         });
 
-        const updatedTek: BulkGrowTek = await apiClient.updateBulkGrowTek(id, apiData, token);
+        // Exclude profile_image for private teks to prevent duplication
+        // Profile images for private teks should be retrieved from the profile store
+        if (!apiData.is_public && 'profile_image' in apiData) {
+          delete apiData.profile_image;
+        }
+
+        // For private teks, ensure engagement count fields exist with current values
+        // These will be encrypted automatically by the encryptData function
+        if (!apiData.is_public) {
+          const { teks } = get();
+          const currentTek = teks.find(t => t.id.toString() === id);
+          
+          if (!('like_count' in apiData)) {
+            (apiData as any).like_count = currentTek?.like_count || 0;
+          }
+          if (!('import_count' in apiData)) {
+            (apiData as any).import_count = currentTek?.import_count || 0;
+          }
+          if (!('view_count' in apiData)) {
+            (apiData as any).view_count = currentTek?.view_count || 0;
+          }
+        }
+
+        // Encrypt data for private teks using the DataEncryption utility
+        const encryptedApiData = await encryptData('BulkGrowTek', apiData);
+
+        const updatedTek: BulkGrowTek = await apiClient.updateBulkGrowTek(id, encryptedApiData, token);
 
         // Update local state directly from PUT response
         set((state) => ({

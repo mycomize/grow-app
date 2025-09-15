@@ -9,7 +9,6 @@ import { View } from '~/components/ui/view';
 import { Avatar, AvatarFallbackText, AvatarImage } from '~/components/ui/avatar';
 import { Alert } from 'react-native';
 import { Eye, EllipsisVertical, Users, Lock, Sprout } from 'lucide-react-native';
-import { getCachedProfileImage, cacheProfileImage } from '~/lib/imageCache';
 import { BulkGrowTek } from '~/lib/types/tekTypes';
 import { TekActionSheet } from '~/components/ui/tek-action-sheet';
 import {
@@ -23,6 +22,7 @@ import {
   ActionsheetIcon,
 } from '~/components/ui/actionsheet';
 import { useAuthToken } from '~/lib/stores/authEncryptionStore';
+import { useProfile, useProfileImage } from '~/lib/stores/profileStore';
 import { formatCount, parseNumberCount } from '~/lib/utils/numberFormatting';
 import { useTekById, useLikeTek, useViewTek, useImportTek } from '~/lib/stores/teksStore';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -50,7 +50,6 @@ export const TekCard: React.FC<TekCardProps> = ({
   onTagPress,
   onRefresh,
 }) => {
-  const [cachedImage, setCachedImage] = useState<string | null>(null);
   const [showImportActionSheet, setShowImportActionSheet] = useState(false);
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
@@ -58,6 +57,8 @@ export const TekCard: React.FC<TekCardProps> = ({
 
   const token = useAuthToken();
   const router = useRouter();
+  const profile = useProfile();
+  const profileImage = useProfileImage();
   
   // Get the current tek data from the store (with optimistic updates)
   const currentTek = useTekById(tek.id.toString()) || tek;
@@ -138,36 +139,23 @@ export const TekCard: React.FC<TekCardProps> = ({
     router.push(`/teks/${tek.id}/view`);
   }, [router, tek.id]);
 
-
-  // Load cached image for the tek creator
-  useEffect(() => {
-    const loadCachedImage = async () => {
-      if (tek.creator_name) {
-        try {
-          // First check for cached image
-          const cached = await getCachedProfileImage(tek.creator_name);
-
-          if (cached) {
-            setCachedImage(cached);
-          } else if (tek.creator_profile_image) {
-            // If no cached image but we have a profile image from the API, cache it
-            await cacheProfileImage(tek.creator_name, tek.creator_profile_image);
-            setCachedImage(tek.creator_profile_image);
-          }
-        } catch (error) {
-          console.error('Error loading cached image:', error);
-        }
-      }
-    };
-
-    loadCachedImage();
-  }, [tek.creator_name, tek.creator_profile_image]);
+  // Get the appropriate profile image for the tek creator
+  const getCreatorProfileImage = () => {
+    // If this is the current user's tek (private tek), use profile store image
+    if (profile && tek.creator_name === profile.username) {
+      return profileImage;
+    }
+    // Otherwise, use the creator_profile_image from the tek data (public teks)
+    return tek.creator_profile_image;
+  };
 
   // Get the first two letters of creator name for avatar fallback
   const getCreatorInitials = (name: string | undefined) => {
     if (!name) return 'U';
     return name.length >= 2 ? name.substring(0, 2).toUpperCase() : name.toUpperCase();
   };
+
+  const creatorProfileImage = getCreatorProfileImage();
 
   return (
       <>
@@ -177,8 +165,8 @@ export const TekCard: React.FC<TekCardProps> = ({
           {/* Creator info with avatar */}
           <HStack className="mb-5 items-center" space="sm">
             <Avatar size="lg">
-              {cachedImage || tek.creator_profile_image ? (
-                <AvatarImage source={{ uri: cachedImage || tek.creator_profile_image }} />
+              {creatorProfileImage ? (
+                <AvatarImage source={{ uri: creatorProfileImage }} />
               ) : (
                 <AvatarFallbackText>{getCreatorInitials(tek.creator_name)}</AvatarFallbackText>
               )}
