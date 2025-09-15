@@ -362,6 +362,18 @@ export class EncryptionService {
     return isValid;
   }
 
+  /**
+   * Get the master key for database encryption (SQLCipher)
+   * Returns the key as a Buffer for use with database encryption
+   */
+  getMasterKeyBuffer(): Buffer | null {
+    if (!this.isInitialized()) {
+      console.warn('[EncryptionService] Cannot get master key - encryption not initialized');
+      return null;
+    }
+    return this.masterKey;
+  }
+
   // Private helper methods
 
   /**

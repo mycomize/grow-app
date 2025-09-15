@@ -18,6 +18,13 @@
           "color": "#ffffff",
           "defaultChannel": "opentek-task-reminders"
         }
+      ],
+      [
+        "expo-sqlite",
+        {
+            "enableFTS": true,
+            "enabledSQLCipher": true
+        }
       ]
     ],
     "experiments": {
@@ -32,14 +39,19 @@
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.mycomize.opentek",
       "jsEngine": "hermes"
     },
     "android": {
-      "architectures": ["arm64-v8a", "armeabi-v7a"],
+      "architectures": [
+        "arm64-v8a",
+        "armeabi-v7a"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/opentek-icon.png",
         "backgroundColor": "#000000"

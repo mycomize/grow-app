@@ -15,6 +15,7 @@ module.exports = function (api) {
           },
         },
       ],
+      ["inline-import", {"extensions": [".sql"]}]
     ],
   };
 };
