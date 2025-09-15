@@ -19,11 +19,138 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { getSwitchColors } from '@/lib/switchUtils';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { cacheProfileImage } from '@/lib/imageCache';
+import { useUnifiedToast } from '~/components/ui/unified-toast';
 import { updateStateUpdatePreferences, getEntityStateUpdateCadenceMinutes } from '~/lib/userPreferences';
 import EntityStateUpdateManager from '~/lib/iot/entityStateUpdateManager';
 
 import { ChevronRight, Camera, AlertCircle, CheckCircle, Settings } from 'lucide-react-native';
+
+// Image processing constants
+const MAX_IMAGE_SIZE_MB = 2;
+const TARGET_IMAGE_WIDTH = 200;
+const TARGET_IMAGE_HEIGHT = 200;
+const COMPRESSION_QUALITY = 0.5;
+
+// Image processing utility functions
+const calculateImageSize = (base64: string): number => {
+  // Remove data URL prefix to get pure base64
+  const base64Data = base64.split(',')[1] || base64;
+  // Calculate size: base64 is ~4/3 the size of original binary
+  const sizeInBytes = (base64Data.length * 3) / 4;
+  const sizeInMB = sizeInBytes / (1024 * 1024);
+  return sizeInMB;
+};
+
+const resizeImageIfNeeded = async (uri: string): Promise<string> => {
+  console.log('[Image Processing] Checking if resize needed...');
+  
+  // Get image info to check dimensions
+  const imageInfo = await ImageManipulator.manipulateAsync(uri, [], { format: ImageManipulator.SaveFormat.JPEG });
+  
+  console.log(`[Image Processing] Original dimensions: ${imageInfo.width}x${imageInfo.height}`);
+  
+  if (imageInfo.width <= TARGET_IMAGE_WIDTH && imageInfo.height <= TARGET_IMAGE_HEIGHT) {
+    console.log('[Image Processing] Image already within size limits, no resize needed');
+    return uri;
+  }
+  
+  // Calculate scaling to fit within target dimensions while maintaining aspect ratio
+  const scaleX = TARGET_IMAGE_WIDTH / imageInfo.width;
+  const scaleY = TARGET_IMAGE_HEIGHT / imageInfo.height;
+  const scale = Math.min(scaleX, scaleY);
+  
+  const newWidth = Math.round(imageInfo.width * scale);
+  const newHeight = Math.round(imageInfo.height * scale);
+  
+  console.log(`[Image Processing] Resizing to: ${newWidth}x${newHeight} (scale: ${scale.toFixed(3)})`);
+  
+  const resizedImage = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ resize: { width: newWidth, height: newHeight } }],
+    { format: ImageManipulator.SaveFormat.JPEG, compress: 1 }
+  );
+  
+  console.log(`[Image Processing] Resize complete: ${resizedImage.width}x${resizedImage.height}`);
+  return resizedImage.uri;
+};
+
+const compressImage = async (uri: string): Promise<string> => {
+  console.log(`[Image Processing] Compressing image with quality: ${COMPRESSION_QUALITY}`);
+  
+  const compressedImage = await ImageManipulator.manipulateAsync(
+    uri,
+    [],
+    { 
+      format: ImageManipulator.SaveFormat.JPEG, 
+      compress: COMPRESSION_QUALITY 
+    }
+  );
+  
+  console.log('[Image Processing] Compression complete');
+  return compressedImage.uri;
+};
+
+const processImageForUpload = async (uri: string): Promise<{ compressed: string; uncompressed: string } | null> => {
+  try {
+    console.log('[Image Processing] Starting image processing pipeline...');
+    
+    // Step 1: Resize if needed
+    const resizedUri = await resizeImageIfNeeded(uri);
+    
+    // Step 2: Compress the image
+    const compressedUri = await compressImage(resizedUri);
+    
+    // Step 3: Get base64 for size calculation and upload
+    const compressedResult = await ImageManipulator.manipulateAsync(
+      compressedUri,
+      [],
+      { format: ImageManipulator.SaveFormat.JPEG, base64: true }
+    );
+    
+    if (!compressedResult.base64) {
+      throw new Error('Failed to generate base64 for compressed image');
+    }
+    
+    // Step 4: Check size
+    const compressedSizeMB = calculateImageSize(compressedResult.base64);
+    console.log(`[Image Processing] Compressed image size: ${compressedSizeMB.toFixed(2)}MB`);
+    
+    if (compressedSizeMB > MAX_IMAGE_SIZE_MB) {
+      console.log(`[Image Processing] FAILED: Compressed image size (${compressedSizeMB.toFixed(2)}MB) exceeds limit (${MAX_IMAGE_SIZE_MB}MB)`);
+      return null;
+    }
+    
+    // Step 5: Get uncompressed version for local caching
+    const uncompressedResult = await ImageManipulator.manipulateAsync(
+      resizedUri,
+      [],
+      { format: ImageManipulator.SaveFormat.JPEG, base64: true, compress: 1 }
+    );
+    
+    if (!uncompressedResult.base64) {
+      throw new Error('Failed to generate base64 for uncompressed image');
+    }
+    
+    const uncompressedSizeMB = calculateImageSize(uncompressedResult.base64);
+    console.log(`[Image Processing] Uncompressed image size: ${uncompressedSizeMB.toFixed(2)}MB`);
+    console.log(`[Image Processing] Size reduction: ${((uncompressedSizeMB - compressedSizeMB) / uncompressedSizeMB * 100).toFixed(1)}%`);
+    
+    const compressedBase64 = `data:image/jpeg;base64,${compressedResult.base64}`;
+    const uncompressedBase64 = `data:image/jpeg;base64,${uncompressedResult.base64}`;
+    
+    console.log('[Image Processing] Processing pipeline complete');
+    return {
+      compressed: compressedBase64,
+      uncompressed: uncompressedBase64
+    };
+    
+  } catch (error) {
+    console.error('[Image Processing] Error in processing pipeline:', error);
+    throw error;
+  }
+};
 
 export default function ProfileScreen() {
   const token = useAuthToken();
@@ -40,13 +167,15 @@ export default function ProfileScreen() {
   const [isUpdatingCadence, setIsUpdatingCadence] = useState(false);
   const router = useRouter();
   const toast = useToast();
+  const unifiedToast = useUnifiedToast();
 
   // Load user profile data
   const loadUserProfile = async () => {
     if (!token) return;
 
     try {
-      const userData = await apiClient.get('/auth/me', token);
+      const userData = await apiClient.get('/auth/me', token, 'User'); // Decrypt response using User schema
+
       setUsername(userData.username);
       setUserId(userData.id?.toString());
       setProfileImage(userData.profile_image);
@@ -183,61 +312,91 @@ export default function ProfileScreen() {
     });
   };
 
-  // Handle profile image upload
+  // Handle profile image upload with enhanced processing
   const handleImageUpload = async () => {
     try {
       // Request permissions
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (permissionResult.granted === false) {
-        showToast('Permission to access camera roll is required!', 'error');
+        unifiedToast.showError('Permission to access camera roll is required!');
         return;
       }
 
-      // Launch image picker
+      // Launch image picker with square cropping
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [4, 3],
+        allowsEditing: false,
+        aspect: [1, 1], // Force square aspect ratio
         quality: 1,
-        base64: true,
+        allowsMultipleSelection: false,
       });
 
       if (!result.canceled && result.assets[0]) {
         setIsUploadingImage(true);
 
         if (!token) {
-          showToast('Authentication required', 'error');
+          unifiedToast.showError('Authentication required');
           return;
         }
 
-        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        console.log(`[Image Processing] Selected image URI: ${result.assets[0].uri}`);
+        
+        // Calculate original image size for logging
+        const originalResult = await ImageManipulator.manipulateAsync(
+          result.assets[0].uri,
+          [],
+          { format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
+        
+        if (originalResult.base64) {
+          const originalSizeMB = calculateImageSize(originalResult.base64);
+          console.log(`[Image Processing] Original image size: ${originalSizeMB.toFixed(2)}MB`);
+        }
 
-        // Upload to backend
+        // Process the image through our pipeline
+        const processedImages = await processImageForUpload(result.assets[0].uri);
+        
+        if (!processedImages) {
+          // Image was too large even after compression
+          unifiedToast.showError(
+            `Image is too large. Please select a smaller image or reduce quality.`,
+            'Image Size Error',
+            `Maximum allowed size is ${MAX_IMAGE_SIZE_MB}MB after compression.`
+          );
+          return;
+        }
+
+        // Upload compressed version to backend with encryption
         const userData = await apiClient.put(
           '/auth/profile-image',
           {
-            profile_image: base64Image,
+            profile_image: processedImages.compressed,
           },
-          token
+          token,
+          'User', // Encrypt request data using User schema
+          'User'  // Decrypt response data using User schema
         );
 
+        // Update local state with the response from backend (which contains compressed image)
         setProfileImage(userData.profile_image);
 
-        // Cache the updated image
-        if (userId && userData.profile_image) {
-          await cacheProfileImage(userId, userData.profile_image);
+        // Cache uncompressed version locally for fast display
+        if (userId) {
+          await cacheProfileImage(userId, processedImages.uncompressed);
+          console.log('[Image Processing] Cached uncompressed version locally');
         }
 
-        showToast('Profile image updated successfully!', 'success');
+        unifiedToast.showSuccess('Profile image updated successfully!');
       }
     } catch (error) {
       if (isUnauthorizedError(error as Error)) {
         router.replace('/login');
+        return;
       }
 
-      console.error('Error uploading image:', error);
-      showToast('Failed to update profile image', 'error');
+      console.error('[Image Processing] Error uploading image:', error);
+      unifiedToast.showError('Failed to update profile image');
     } finally {
       setIsUploadingImage(false);
     }

@@ -149,7 +149,7 @@ class PaymentService {
       if (isUnauthorizedError(error)) {
         throw new Error('UNAUTHORIZED');
       }
-      console.error('[PaymentService] Failed to get price information:', error);
+      console.log('[PaymentService] Failed to get price information:', error);
       throw new Error('Failed to get pricing information. Please try again.');
     }
   }

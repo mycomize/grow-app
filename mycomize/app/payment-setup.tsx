@@ -28,14 +28,14 @@ export default function PaymentSetupScreen() {
     
     // Initialize payment flow when component mounts
     paymentFlow.initialize();
-  }, [token, paymentFlow.initialize]);
+  }, [token]); // Removed paymentFlow.initialize from dependencies
 
   // Handle errors from the payment flow
   useEffect(() => {
     if (paymentFlow.error) {
       showError(paymentFlow.error);
     }
-  }, [paymentFlow.error, showError]);
+  }, [paymentFlow.error]); // Removed showError from dependencies
 
   const handlePlanSelected = () => {
     paymentFlow.setStep('method-selection');
