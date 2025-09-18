@@ -7,22 +7,25 @@ import { FormControl } from '@/components/ui/form-control';
 import { Heading } from '@/components/ui/heading';
 import { Input, InputField } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
+import { Checkbox, CheckboxIndicator, CheckboxIcon, CheckboxLabel } from '~/components/ui/checkbox';
 import { Center } from '@/components/ui/center';
 import { VStack } from '@/components/ui/vstack';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '~/components/ui/text';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
 import { useRouter } from 'expo-router';
-import { UserPlus, LogIn } from 'lucide-react-native';
-import { useRegister, useIsAuthLoading } from '~/lib/stores/authEncryptionStore';
-
+import { LockKeyhole, Fingerprint, UserPlus, LogIn, Check } from 'lucide-react-native';
+import { Icon } from '@/components/ui/icon';
+import { useRegister } from '~/lib/stores/authStore';
 import OpenTekLogo from '~/assets/opentek-logo.svg';
+import type { AuthPreferences } from '~/lib/auth/authPreferences';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+
 
 export default function SignUpScreen() {
   const router = useRouter();
   const { showError } = useUnifiedToast();
   const register = useRegister();
-  const isAuthLoading = useIsAuthLoading();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -30,6 +33,12 @@ export default function SignUpScreen() {
   const [confirmFocused, setConfirmFocused] = useState(false);
   const [passwordsMatch, setPasswordsMatch] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Auth preferences state
+  const [authPreferences, setAuthPreferences] = useState<AuthPreferences>({
+    enableDbEncryption: false,
+    enableBiometrics: false,
+  });
 
   const handleConfirmPassword = (text: string) => {
     setConfirmPassword(text);
@@ -46,11 +55,11 @@ export default function SignUpScreen() {
 
     try {
       // The unified register function handles registration and redirect
-      const result = await register(username, password);
+      const result = await register(username, password, authPreferences);
+
       if (!result.success) {
         showError(result.error || 'Registration failed. Please try again.');
       }
-      // If successful, the register function handles navigation automatically
     } catch (error) {
       console.error('Registration error:', error);
       showError('An unexpected error occurred. Please try again.');
@@ -58,6 +67,12 @@ export default function SignUpScreen() {
       setIsLoading(false);
     }
   };
+
+  // Check if basic fields are valid to show preference checkboxes
+  const basicFieldsValid = username.trim().length >= 3 && 
+                           password.length >= 6 && 
+                           confirmPassword.length > 0 && 
+                           passwordsMatch;
 
   return (
     <Box className="h-full w-full flex-1 bg-background-50">
@@ -106,11 +121,61 @@ export default function SignUpScreen() {
                     className="min-w-[250px]"
                   />
                 </VStack>
+                
+                {/* Auth Preferences - shown when basic fields are valid */}
+                {basicFieldsValid && (
+                  <VStack space="md" className="mt-1 p-0 bg-background-50 rounded-lg">
+                    <HStack space="sm" className="items-center mb-1">
+                      <MaterialIcons name="security" size={20} color="#7c7c7c" />
+                      <Text className="text-typography-600 ">Security Preferences</Text>
+                    </HStack>
+                    <Checkbox 
+                      value="enableDbEncryption"
+                      isChecked={authPreferences.enableDbEncryption}
+                      onChange={(isChecked: boolean) => 
+                        setAuthPreferences(prev => ({ ...prev, enableDbEncryption: isChecked }))
+                      }
+                      className="gap-2"
+                      size="md"
+                    >
+                      <CheckboxIndicator>
+                        <CheckboxIcon as={Check} />
+                      </CheckboxIndicator>
+                      <CheckboxLabel>
+                        <VStack space="xs">
+                          <HStack className="items-center gap-1">
+                          <Text className="text-typography-600 ">Enable Encryption</Text></HStack>
+                        </VStack>
+                      </CheckboxLabel>
+                    </Checkbox>
+
+                    <Checkbox 
+                      value="enableBiometrics"
+                      isChecked={authPreferences.enableBiometrics}
+                      onChange={(isChecked: boolean) => 
+                        setAuthPreferences(prev => ({ ...prev, enableBiometrics: isChecked }))
+                      }
+                      className="gap-2"
+                      size="md"
+                    >
+                      <CheckboxIndicator>
+                        <CheckboxIcon as={Check} />
+                      </CheckboxIndicator>
+                      <CheckboxLabel>
+                        <VStack space="xs">
+                          <HStack className="items-center gap-1">
+                          <Text className="text-typography-600 ">Enable Biometrics</Text></HStack>
+                        </VStack>
+                      </CheckboxLabel>
+                    </Checkbox>
+                  </VStack>
+                )}
+
                 <Button
                   className="mx-auto"
                   action="positive"
                   onPress={handleSignUp}
-                  isDisabled={isLoading}>
+                  isDisabled={isLoading || !passwordsMatch || username.trim().length < 3 || password.length < 6}>
                   <ButtonText className="text-white">Sign Up</ButtonText>
                   <ButtonIcon className="text-white" as={UserPlus} size="md" />
                 </Button>

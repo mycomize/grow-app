@@ -27,14 +27,11 @@ const ENCRYPTION_CONFIG: EncryptionConfig = {
 export class EncryptionService {
   private masterKey: Buffer | null = null;
   private isReady = false;
+  private canUseBiometricAuthentication: true | false | undefined = undefined;
   private currentUserId: string | null = null;
 
-  private getMasterKeyStorageKey(userId: string): string {
+  private getMasterKeyKey(userId: string): string {
     return `opentek_master_key_${userId}`;
-  }
-
-  private getEncryptionTestKey(userId: string): string {
-    return `opentek_encryption_test_${userId}`;
   }
 
   /**
@@ -71,6 +68,7 @@ export class EncryptionService {
     seedWords: string[],
     password?: string
   ): Promise<boolean> {
+    
     try {
       // Validate seed phrase
       if (!this.validateSeedPhrase(seedWords)) {
@@ -79,20 +77,8 @@ export class EncryptionService {
       // Generate master key from seed phrase and password
       const masterKey = await this.deriveMasterKey(seedWords, password);
 
-      // Test the key by encrypting and decrypting test data
-      const testData = 'encryption_test_' + Date.now();
-      const encrypted = await this.encryptWithKey(testData, masterKey);
-      const decrypted = await this.decryptWithKey(encrypted, masterKey);
-
-      if (decrypted !== testData) {
-        throw new Error('Encryption test failed');
-      }
-
       // Store encrypted master key in secure storage
       await this.storeMasterKey(userId, masterKey);
-
-      // Store test data for future validation
-      await SecureStore.setItemAsync(this.getEncryptionTestKey(userId), encrypted);
 
       this.masterKey = masterKey;
       this.currentUserId = userId;
@@ -109,9 +95,14 @@ export class EncryptionService {
    * Load existing master key from secure storage for a specific user
    */
   async loadMasterKey(userId: string): Promise<boolean> {
+    this.canUseBiometricAuthentication = SecureStore.canUseBiometricAuthentication();
+    console.log("Can use biometrics:", this.canUseBiometricAuthentication);
+
     try {
       console.log(`[EncryptionService] Loading master key for user: ${userId}`);
-      const encryptedKeyData = await SecureStore.getItemAsync(this.getMasterKeyStorageKey(userId));
+      const encryptedKeyData = await SecureStore.getItemAsync(
+        this.getMasterKeyKey(userId)
+     );
       if (!encryptedKeyData) {
         console.log(`[EncryptionService] No master key found for user: ${userId}`);
         return false;
@@ -133,93 +124,10 @@ export class EncryptionService {
   }
 
   /**
-   * Test if encryption is working with current key for the current user
-   */
-  async testEncryption(): Promise<boolean> {
-    try {
-      if (!this.isReady || !this.masterKey || !this.currentUserId) {
-        console.log(`[EncryptionService] Encryption test failed - not ready or missing data`);
-        return false;
-      }
-
-      // Try to decrypt the stored test data
-      const testCiphertext = await SecureStore.getItemAsync(
-        this.getEncryptionTestKey(this.currentUserId)
-      );
-      if (!testCiphertext) {
-        console.log(`[EncryptionService] No test ciphertext found for user: ${this.currentUserId}`);
-        return false;
-      }
-
-      const decrypted = await this.decryptWithKey(testCiphertext, this.masterKey);
-      const isValid = decrypted.startsWith('encryption_test_');
-      console.log(`[EncryptionService] Encryption test ${isValid ? 'passed' : 'failed'} for user: ${this.currentUserId}`);
-      return isValid;
-    } catch (error) {
-      console.error(`[EncryptionService] Encryption test failed for user ${this.currentUserId}:`, error);
-      return false;
-    }
-  }
-
-  /**
    * Check if encryption service is initialized
    */
   isInitialized(): boolean {
     return this.isReady && this.masterKey !== null;
-  }
-
-  /**
-   * Encrypt a string value
-   */
-  async encrypt(plaintext: string): Promise<string> {
-    if (!this.isInitialized()) {
-      throw new Error('Encryption not initialized');
-    }
-
-    return await this.encryptWithKey(plaintext, this.masterKey!);
-  }
-
-  /**
-   * Decrypt a string value
-   */
-  async decrypt(ciphertext: string): Promise<string> {
-    if (!this.isInitialized()) {
-      throw new Error('Encryption not initialized');
-    }
-
-    if (!this.isEncrypted(ciphertext)) {
-      return ciphertext; // Return as-is if not encrypted
-    }
-
-    return await this.decryptWithKey(ciphertext, this.masterKey!);
-  }
-
-  /**
-   * Encrypt a JSON object
-   */
-  async encryptJSON(data: any): Promise<string> {
-    const jsonString = JSON.stringify(data);
-    return await this.encrypt(jsonString);
-  }
-
-  /**
-   * Decrypt a JSON object
-   */
-  async decryptJSON(ciphertext: string): Promise<any> {
-    const jsonString = await this.decrypt(ciphertext);
-    try {
-      return JSON.parse(jsonString);
-    } catch (error) {
-      // If JSON parsing fails, return as string
-      return jsonString;
-    }
-  }
-
-  /**
-   * Check if a string is encrypted (has the encryption prefix)
-   */
-  isEncrypted(data: string): boolean {
-    return typeof data === 'string' && data.startsWith(ENCRYPTION_CONFIG.cipherPrefix);
   }
 
   /**
@@ -237,50 +145,10 @@ export class EncryptionService {
   async deleteMasterKey(): Promise<void> {
     try {
       if (this.currentUserId) {
-        await SecureStore.deleteItemAsync(this.getMasterKeyStorageKey(this.currentUserId));
-        await SecureStore.deleteItemAsync(this.getEncryptionTestKey(this.currentUserId));
+        await SecureStore.deleteItemAsync(this.getMasterKeyKey(this.currentUserId));
       }
     } catch (error) {
       console.error('Failed to delete master key:', error);
-    }
-  }
-
-  /**
-   * Change encryption password (re-derive key with new password)
-   */
-  async changeEncryptionPassword(
-    seedWords: string[],
-    oldPassword?: string,
-    newPassword?: string
-  ): Promise<boolean> {
-    try {
-      // Verify current encryption works
-      if (!this.isInitialized() || !this.currentUserId) {
-        throw new Error('Encryption not initialized');
-      }
-
-      // Derive new master key with new password
-      const newMasterKey = await this.deriveMasterKey(seedWords, newPassword);
-
-      // Test the new key
-      const testData = 'password_change_test_' + Date.now();
-      const encrypted = await this.encryptWithKey(testData, newMasterKey);
-      const decrypted = await this.decryptWithKey(encrypted, newMasterKey);
-
-      if (decrypted !== testData) {
-        throw new Error('New password encryption test failed');
-      }
-
-      // Store the new key
-      await this.storeMasterKey(this.currentUserId, newMasterKey);
-      await SecureStore.setItemAsync(this.getEncryptionTestKey(this.currentUserId), encrypted);
-
-      this.masterKey = newMasterKey;
-
-      return true;
-    } catch (error) {
-      console.error('Failed to change encryption password:', error);
-      return false;
     }
   }
 
@@ -321,7 +189,7 @@ export class EncryptionService {
       console.log(`[EncryptionService] Checking encryption status for user: ${userId}`);
       
       // Check if user has master key stored
-      const masterKeyData = await SecureStore.getItemAsync(this.getMasterKeyStorageKey(userId));
+      const masterKeyData = await SecureStore.getItemAsync(this.getMasterKeyKey(userId));
       const hasEncryptionSetup = masterKeyData !== null; 
 
       const status = { hasEncryptionSetup };
@@ -363,15 +231,90 @@ export class EncryptionService {
   }
 
   /**
-   * Get the master key for database encryption (SQLCipher)
-   * Returns the key as a Buffer for use with database encryption
+   * Get SQLCipher database key as hex string
+   * This is used for PRAGMA key in SQLCipher databases
    */
-  getMasterKeyBuffer(): Buffer | null {
-    if (!this.isInitialized()) {
-      console.warn('[EncryptionService] Cannot get master key - encryption not initialized');
+  async getDatabaseKey(): Promise<string | null> {
+    try {
+      if (!this.isInitialized()) {
+        console.warn('[EncryptionService] Cannot get database key - encryption not initialized');
+        return null;
+      }
+
+      if (!this.masterKey) {
+        console.warn('[EncryptionService] Cannot get database key - master key not available');
+        return null;
+      }
+
+      // Convert master key buffer to hex string for SQLCipher
+      const hexKey = this.masterKey.toString('hex');
+      console.log('[EncryptionService] Database key generated successfully');
+
+      return hexKey;
+    } catch (error) {
+      console.error('[EncryptionService] Failed to generate database key:', error);
       return null;
     }
-    return this.masterKey;
+  }
+
+  /**
+   * Initialize database encryption for a user
+   * This prepares the encryption service for database operations
+   */
+  async initializeDatabaseEncryption(userId: string): Promise<boolean> {
+    try {
+      console.log(`[EncryptionService] Initializing database encryption for user: ${userId}`);
+
+      // Check if encryption is already initialized for this user
+      if (this.isInitialized() && this.currentUserId === userId) {
+        console.log(`[EncryptionService] Database encryption already initialized for user: ${userId}`);
+        return true;
+      }
+
+      // Load master key for the user
+      const keyLoaded = await this.loadMasterKey(userId);
+      if (!keyLoaded) {
+        console.error(`[EncryptionService] Failed to load master key for database encryption - user: ${userId}`);
+        return false;
+      }
+
+      console.log(`[EncryptionService] Database encryption initialized successfully for user: ${userId}`);
+      return true;
+    } catch (error) {
+      console.error(`[EncryptionService] Failed to initialize database encryption for user ${userId}:`, error);
+      this.clearUserContext();
+      return false;
+    }
+  }
+
+  /**
+   * Verify that database encryption can be set up for current user
+   * This checks that the user has encryption setup and key is available
+   */
+  async verifyDatabaseEncryptionReady(): Promise<boolean> {
+    try {
+      if (!this.isInitialized()) {
+        console.warn('[EncryptionService] Database encryption not ready - not initialized');
+        return false;
+      }
+
+      if (!this.currentUserId) {
+        console.warn('[EncryptionService] Database encryption not ready - no current user');
+        return false;
+      }
+
+      const databaseKey = await this.getDatabaseKey();
+      if (!databaseKey) {
+        console.warn('[EncryptionService] Database encryption not ready - cannot get database key');
+        return false;
+      }
+
+      console.log(`[EncryptionService] Database encryption ready for user: ${this.currentUserId}`);
+      return true;
+    } catch (error) {
+      console.error('[EncryptionService] Failed to verify database encryption readiness:', error);
+      return false;
+    }
   }
 
   // Private helper methods
@@ -393,73 +336,11 @@ export class EncryptionService {
       seed,
       salt,
       ENCRYPTION_CONFIG.keyDerivation.iterations,
-      32, // 256 bits / 8 = 32 bytes
+      32,
       'sha256'
     ) as unknown as Buffer;
 
     return masterKey;
-  }
-
-  /**
-   * Encrypt data with a specific key
-   */
-  private async encryptWithKey(plaintext: string, key: Buffer): Promise<string> {
-    // Generate random IV (12 bytes for GCM)
-    const iv = QuickCrypto.randomBytes(12);
-
-    // Create cipher
-    const cipher = QuickCrypto.createCipheriv('aes-256-gcm', key, iv);
-
-    // Encrypt the data
-    let encrypted = cipher.update(plaintext, 'utf8');
-    encrypted = Buffer.concat([encrypted, cipher.final()]);
-
-    // Get authentication tag
-    const authTag = cipher.getAuthTag();
-
-    // Combine IV, encrypted data, and auth tag
-    const combined = Buffer.concat([iv, encrypted, authTag]);
-
-    // Convert to base64 and add prefix and version
-    const base64 = combined.toString('base64');
-    return `${ENCRYPTION_CONFIG.cipherPrefix}${ENCRYPTION_CONFIG.version}:${base64}`;
-  }
-
-  /**
-   * Decrypt data with a specific key
-   */
-  private async decryptWithKey(ciphertext: string, key: Buffer): Promise<string> {
-    // Remove prefix and extract version and data
-    if (!ciphertext.startsWith(ENCRYPTION_CONFIG.cipherPrefix)) {
-      throw new Error('Invalid ciphertext format');
-    }
-
-    const withoutPrefix = ciphertext.substring(ENCRYPTION_CONFIG.cipherPrefix.length);
-    const [version, base64Data] = withoutPrefix.split(':', 2);
-
-    if (version !== ENCRYPTION_CONFIG.version) {
-      throw new Error(`Unsupported encryption version: ${version}`);
-    }
-
-    // Decode base64
-    const combined = Buffer.from(base64Data, 'base64');
-
-    // Extract IV, encrypted data, and auth tag
-    const iv = combined.subarray(0, 12);
-    const authTagStart = combined.length - 16;
-    const encryptedData = combined.subarray(12, authTagStart);
-    const authTag = combined.subarray(authTagStart);
-
-    // Create decipher
-    const decipher = QuickCrypto.createDecipheriv('aes-256-gcm', key, iv);
-    decipher.setAuthTag(authTag);
-
-    // Decrypt the data
-    let decrypted = decipher.update(encryptedData);
-    decrypted = Buffer.concat([decrypted, decipher.final()]);
-
-    // Convert back to string
-    return decrypted.toString('utf8');
   }
 
   /**
@@ -476,8 +357,8 @@ export class EncryptionService {
     };
 
     await SecureStore.setItemAsync(
-      this.getMasterKeyStorageKey(userId),
-      JSON.stringify(storageData)
+      this.getMasterKeyKey(userId),
+      JSON.stringify(storageData),
     );
   }
 }

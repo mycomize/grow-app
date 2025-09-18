@@ -5,41 +5,41 @@ import { Text } from '@/components/ui/text';
 import { Heading } from '@/components/ui/heading';
 import { HStack } from '@/components/ui/hstack';
 import { VStack } from '@/components/ui/vstack';
-import { Switch } from '@/components/ui/switch';
 import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
 import { Avatar, AvatarFallbackText, AvatarImage } from '@/components/ui/avatar';
 import { useToast, Toast } from '@/components/ui/toast';
 import { Input, InputField } from '@/components/ui/input';
 
-import { useAuthToken, useSignOut } from '~/lib/stores/authEncryptionStore';
-import { useProfile, useProfileImage, useAvatarFallback, useUpdateProfileImage } from '~/lib/stores/profileStore';
+import { useCurrentUser, useSignOut } from '~/lib/stores/authStore';
+import { useProfileImage, useAvatarFallback, useUpdateProfileImage } from '~/lib/stores/profileStore';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
 import { isUnauthorizedError } from '~/lib/api/ApiClient';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { getSwitchColors } from '@/lib/switchUtils';
 import * as ImagePicker from 'expo-image-picker';
 import { useUnifiedToast } from '~/components/ui/unified-toast';
 import { updateStateUpdatePreferences, getEntityStateUpdateCadenceMinutes } from '~/lib/userPreferences';
 import EntityStateUpdateManager from '~/lib/iot/entityStateUpdateManager';
+import { ConfirmationModal } from '~/components/modals/ConfirmationModal';
+import { deleteUser } from '~/lib/db/authDb';
+import { clearUserAuthPreferences } from '~/lib/auth/authPreferences';
 
-import { ChevronRight, Camera, AlertCircle, CheckCircle, Settings } from 'lucide-react-native';
+import { ChevronRight, Camera, AlertCircle, CheckCircle, Trash2 } from 'lucide-react-native';
 
 export default function ProfileScreen() {
-  const token = useAuthToken();
+  const currentUser = useCurrentUser();
   const signOut = useSignOut();
-  const profile = useProfile();
   const profileImage = useProfileImage();
   const avatarFallback = useAvatarFallback();
   const updateProfileImage = useUpdateProfileImage();
-  const { theme, toggleTheme } = useTheme();
-  const { trackFalse, trackTrue, thumbColor } = getSwitchColors(theme);
-  const [darkModeEnabled, setDarkModeEnabled] = useState(theme === 'dark');
+  const { theme } = useTheme();
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [cadenceMinutes, setCadenceMinutes] = useState<number>(1);
   const [cadenceInputValue, setCadenceInputValue] = useState<string>('1');
   const [isUpdatingCadence, setIsUpdatingCadence] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const router = useRouter();
   const toast = useToast();
   const unifiedToast = useUnifiedToast();
@@ -121,13 +121,43 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleDarkModeToggle = () => {
-    setDarkModeEnabled((prev) => !prev);
-    toggleTheme();
-  };
-
   const navigateToChangePassword = () => {
     router.push('/profile/change-password');
+  };
+
+  // Handle account deletion
+  const handleDeleteAccount = async () => {
+    if (!currentUser) {
+      unifiedToast.showError('No user session found');
+      return;
+    }
+
+    setIsDeletingAccount(true);
+
+    try {
+      const userId = parseInt(currentUser.id);
+      
+      // Clear user preferences from secure store
+      await clearUserAuthPreferences(currentUser.id);
+      
+      // Delete user from auth database
+      await deleteUser(userId);
+      
+      // Clear any cached data and sign out
+      await signOut();
+      
+      unifiedToast.showSuccess('Account deleted successfully');
+      
+      // Navigate to login
+      router.replace('/login');
+      
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      unifiedToast.showError('Failed to delete account. Please try again.');
+    } finally {
+      setIsDeletingAccount(false);
+      setShowDeleteModal(false);
+    }
   };
 
   // Toast functions
@@ -190,13 +220,13 @@ export default function ProfileScreen() {
       if (!result.canceled && result.assets[0]) {
         setIsUploadingImage(true);
 
-        if (!token) {
+        if (!currentUser) {
           unifiedToast.showError('Authentication required');
           return;
         }
 
-        // Use the profile store to update the image
-        await updateProfileImage(token, result.assets[0].uri);
+        // Use the profile store to update the image (assuming it handles auth internally)
+        await updateProfileImage(currentUser.id, result.assets[0].uri);
         unifiedToast.showSuccess('Profile image updated successfully!');
       }
     } catch (error) {
@@ -222,7 +252,7 @@ export default function ProfileScreen() {
     }
   };
 
-  if (!profile) {
+  if (!currentUser) {
     return (
       <View className="flex-1 items-center justify-center bg-background-50">
         <Text>Loading profile...</Text>
@@ -233,7 +263,7 @@ export default function ProfileScreen() {
   return (
     <>
       <Text className="bg-background-50 pl-6 pt-10" size="2xl">
-        @{profile.username}
+        @{currentUser.username}
       </Text>
       <VStack className="flex-1 items-center gap-3 bg-background-50 py-3">
         {/* Avatar and Username Section */}
@@ -270,23 +300,6 @@ export default function ProfileScreen() {
           </Pressable>
         </Card>
 
-        {/* Display card */}
-        <Card className="w-11/12 bg-background-0">
-          <Heading className="mb-3 text-typography-400">DISPLAY</Heading>
-          <HStack className="flex w-full flex-row">
-            <Text className="text-lg">Dark mode</Text>
-            <Switch
-              trackColor={{ false: trackFalse, true: trackTrue }}
-              thumbColor={thumbColor}
-              ios_backgroundColor={trackFalse}
-              className="ml-auto"
-              size="md"
-              value={darkModeEnabled}
-              onToggle={handleDarkModeToggle}
-            />
-          </HStack>
-        </Card>
-
         {/* Home Assistant Preferences card */}
         <Card className="w-11/12 bg-background-0">
           <Heading className="mb-3 text-typography-400">IOT GATEWAY</Heading>
@@ -315,6 +328,25 @@ export default function ProfileScreen() {
           </VStack>
         </Card>
 
+        {/* DANGER ZONE card */}
+        <Card className="w-11/12 bg-background-0 border-error-300">
+          <Heading className="mb-3 text-error-600">DANGER ZONE</Heading>
+          <Pressable 
+            onPress={() => setShowDeleteModal(true)}
+            disabled={isDeletingAccount}
+          >
+            <HStack className="flex w-full flex-row items-center py-2">
+              <VStack className="flex-1">
+                <Text className="text-lg text-typography-600">Delete Account</Text>
+                <Text className="text-sm text-typography-500">
+                  Permanently delete your account and all associated data
+                </Text>
+              </VStack>
+              <Icon className="mr-3 text-typography-400" as={Trash2} size="md" />
+            </HStack>
+          </Pressable>
+        </Card>
+
         {/* Sign out button */}
         <View className="flex-1" />
         <Button
@@ -325,6 +357,19 @@ export default function ProfileScreen() {
           <ButtonText className="text-white">Sign Out</ButtonText>
         </Button>
       </VStack>
+
+      {/* Delete Account Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteAccount}
+        type="delete"
+        title="Delete Account"
+        message="Are you sure you want to permanently delete your account? This action cannot be undone and will permanently delete all data."
+        itemName={currentUser?.username || 'your account'}
+        confirmText={isDeletingAccount ? "Deleting..." : "Delete"}
+        cancelText="Cancel"
+      />
     </>
   );
 }

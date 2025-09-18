@@ -2,27 +2,21 @@ import { Stack, Redirect } from 'expo-router';
 import { Text } from 'react-native';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
 import { 
-  useAuthToken, 
+  useIsAuthenticated, 
   useIsAuthLoading,
   useIsEncryptionReady,
   useIsEncryptionLoading, 
   useNeedsEncryptionSetup,
   useIsInitializing,
-  usePaymentStatus,
-  useIsPaymentLoading,
-  useNeedsPayment
-} from '~/lib/stores/authEncryptionStore';
+} from '~/lib/stores/authStore';
 
 export default function ProtectedLayout() {
-  const token = useAuthToken();
+  const isAuthenticated = useIsAuthenticated();
   const isAuthLoading = useIsAuthLoading();
   const isEncryptionReady = useIsEncryptionReady();
   const isEncryptionLoading = useIsEncryptionLoading();
   const needsEncryptionSetup = useNeedsEncryptionSetup();
   const isInitializing = useIsInitializing();
-  const needsPayment = useNeedsPayment();
-  const isPaymentLoading = useIsPaymentLoading();
-  const paymentStatus = usePaymentStatus();
   const { theme } = useTheme();
 
   // Set header styles based on theme
@@ -32,19 +26,14 @@ export default function ProtectedLayout() {
 
   const headerTintColor = theme === 'dark' ? '#ffffff' : '#000000';
 
-  // Show loading while the store is initializing or checking auth/encryption/payment status
-  if (isInitializing || isAuthLoading || isEncryptionLoading || isPaymentLoading) {
+  // Show loading while the store is initializing or checking auth/encryption status
+  if (isInitializing || isAuthLoading || isEncryptionLoading) {
     return <Text>Loading...</Text>;
   }
 
   // First check authentication
-  if (!token) {
+  if (!isAuthenticated) {
     return <Redirect href="/login" />;
-  }
-
-  // Then check payment status - redirect if user needs payment
-  if (needsPayment || paymentStatus === 'unpaid') {
-    return <Redirect href="/payment-setup" />;
   }
 
   // Then check encryption setup - redirect if user needs encryption setup
@@ -52,11 +41,13 @@ export default function ProtectedLayout() {
     return <Redirect href="/encryption-setup" />;
   }
 
-  // If encryption is not ready and we don't explicitly need setup, still wait
-  if (!isEncryptionReady) {
+  // If encryption is loading, show loading text
+  // Note: If encryption is disabled, isEncryptionReady will be false but needsEncryptionSetup will also be false
+  // In that case, we should proceed to show the protected content
+  if (isEncryptionLoading) {
     return <Text>Loading...</Text>;
   }
-
+  
   return (
       <Stack
         screenOptions={{

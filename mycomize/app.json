@@ -2,6 +2,7 @@
   "expo": {
     "name": "opentek",
     "slug": "opentek",
+    "newArchEnabled": true,
     "version": "1.0.0",
     "scheme": "opentek",
     "web": {
@@ -25,7 +26,15 @@
             "enableFTS": true,
             "enabledSQLCipher": true
         }
+      ],
+      [
+        "expo-secure-store",
+        {
+            "configureAndroidBackup": true,
+            "faceIDPermission": "Allow $(PRODUCT_NAME) to access your Face ID biometric data"
+        }
       ]
+
     ],
     "experiments": {
       "typedRoutes": true,
@@ -45,7 +54,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.mycomize.opentek",
-      "jsEngine": "hermes"
+      "jsEngine": "hermes",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "architectures": [

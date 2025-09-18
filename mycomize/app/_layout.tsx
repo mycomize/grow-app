@@ -7,27 +7,45 @@ import { ThemeProvider, useTheme } from '@/components/ui/themeprovider/themeprov
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useEffect } from 'react';
-import { useInitializeStore } from '~/lib/stores/authEncryptionStore';
+import { drizzle } from 'drizzle-orm/expo-sqlite';
+import { openDatabaseSync } from 'expo-sqlite';
+import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
+import { useDrizzleStudio } from 'expo-drizzle-studio-plugin';
+import { authSchema } from '~/db/schema/auth';
+import authMigrations from '~/drizzle/auth/migrations';
+import { setDatabaseReady } from '~/lib/db/useDatabaseReady';
 
-// Wrapper component to use the theme context and initialize the store
+// Global auth database instance
+const sqliteAuthDb = openDatabaseSync('auth.db');
+export const globalAuthDb = drizzle(sqliteAuthDb, { schema: authSchema });
+
+// Wrapper component to use the theme context
 function ThemedApp() {
   const { theme } = useTheme();
-  const initializeStore = useInitializeStore();
 
-  // Initialize the auth encryption store on app startup
+  // Apply migrations first
+  const { success: migrationsSuccess, error: migrationsError } = useMigrations(globalAuthDb, authMigrations);
+
+  // Set up Drizzle Studio after migrations
+  useDrizzleStudio(sqliteAuthDb);
+
+  // Log migration results and update database readiness
   useEffect(() => {
-    initializeStore();
-  }, [initializeStore]);
-
+    if (migrationsSuccess) {
+      console.log('[RootLayout] Database migrations successful');
+      setDatabaseReady(true, false);
+    } else if (migrationsError) {
+      console.error('[RootLayout] Database migrations failed:', migrationsError);
+      setDatabaseReady(false, true);
+    }
+  }, [migrationsSuccess, migrationsError]);
+  
   // Set header styles based on theme
   const headerStyle = {
     backgroundColor: theme === 'dark' ? '#1a1a1a' : '#ffffff',
   };
 
   const headerTintColor = theme === 'dark' ? '#ffffff' : '#000000';
-
-  // Status bar background color that matches the theme
-  const statusBarBgColor = theme === 'dark' ? '#1a1a1a' : '#ffffff';
 
   return (
     <SafeAreaProvider>

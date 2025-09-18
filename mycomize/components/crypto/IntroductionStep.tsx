@@ -52,7 +52,7 @@ export function IntroductionStep({ onCreateSeed, onRecoverData, onSignOut }: Int
                     <HStack className="items-center" space="md">
                       <Icon as={UserLock} size="lg" className="text-typography-500" />
                       <Text className="text-lg font-semibold text-typography-700">
-                        Client-side Encryption
+                        Data Encryption
                       </Text>
                     </HStack>
                     <Icon
@@ -69,19 +69,7 @@ export function IntroductionStep({ onCreateSeed, onRecoverData, onSignOut }: Int
                 <HStack className="items-start gap-2">
                   <Icon as={Dot} size="xl" className="mt-1 text-typography-500" />
                   <Text size="md" className="flex-1 text-typography-700">
-                    All your data is encrypted before leaving your device
-                  </Text>
-                </HStack>
-                <HStack className="items-start gap-2">
-                  <Icon as={Dot} size="xl" className="mt-1 text-typography-500" />
-                  <Text size="md" className="flex-1 text-typography-700">
-                    OpenTek servers never see your data unencrypted unless you explicitly allow it
-                  </Text>
-                </HStack>
-                <HStack className="items-start gap-2">
-                  <Icon as={Dot} size="xl" className="mt-1 text-typography-500" />
-                  <Text size="md" className="flex-1 text-typography-700">
-                    Offers complete control and privacy of your data
+                    All your data is encrypted before being written to the local database
                   </Text>
                 </HStack>
               </VStack>
@@ -115,13 +103,6 @@ export function IntroductionStep({ onCreateSeed, onRecoverData, onSignOut }: Int
                   <Text size="md" className="flex-1 text-typography-700">
                     The encryption key is derived locally from your seed phrase using open-source
                     cryptography libraries
-                  </Text>
-                </HStack>
-                <HStack className="items-start gap-2">
-                  <Icon as={Dot} size="xl" className="mt-1 text-typography-500" />
-                  <Text size="md" className="flex-1 text-typography-700">
-                    Your seed phrase enables you to recover your data, even if you delete the app or
-                    get a new device
                   </Text>
                 </HStack>
                 <HStack className="items-start gap-2">

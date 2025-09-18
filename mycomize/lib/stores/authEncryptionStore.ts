@@ -3,7 +3,6 @@ import { useShallow } from 'zustand/react/shallow';
 import { router } from 'expo-router';
 import { apiClient } from '~/lib/api/ApiClient';
 import { getEncryptionService } from '~/lib/crypto/EncryptionService';
-import { UserContextManager } from '~/lib/utils/userContextManager';
 import {
   AuthEncryptionState,
   AuthEncryptionActions,
@@ -128,10 +127,6 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
         isAuthLoading: false,
       });
 
-      // Store user auth data and current user ID
-      await UserContextManager.storeUserAuthState(userId, { token, user: userResponse });
-      await UserContextManager.storeCurrentUserId(userId);
-
       // Check encryption status for this user (this is the single place this happens)
       await get().checkUserEncryptionStatus(userId);
 
@@ -213,9 +208,6 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
         },
         sseService: null,
       });
-
-      // Clear user context data
-      await UserContextManager.performLogoutCleanup(currentUser?.id);
 
       // Navigate to login
       router.replace('/login');
@@ -317,15 +309,6 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
           needsEncryptionSetup: false,
         });
 
-        // Update stored user data
-        const authState = await UserContextManager.loadUserAuthState(currentUser.id);
-        if (authState) {
-          await UserContextManager.storeUserAuthState(currentUser.id, {
-            ...authState,
-            user: { ...authState.user, hasEncryptionKey: true, encryptionInitialized: true },
-          });
-        }
-
         console.log('[AuthEncryptionStore] Encryption initialization successful');
         return true;
       }
@@ -343,75 +326,6 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
   checkUserEncryptionStatus: async (userId: string) => {
     console.log(`[AuthEncryptionStore] Checking encryption status for user: ${userId}`);
     set({ isEncryptionLoading: true });
-
-    try {
-      // Check if user has existing encryption setup
-      const hasEncryptionSetup = await UserContextManager.hasUserEncryptionSetup(userId);
-      
-      if (hasEncryptionSetup) {
-        // Try to load the master key
-        const encryptionService = getEncryptionService();
-        const keyLoaded = await encryptionService.loadMasterKey(userId);
-
-        if (keyLoaded) {
-          // Test if encryption works
-          const testResult = await encryptionService.testEncryption();
-          
-          if (testResult) {
-            // Encryption is working
-            const { currentUser } = get();
-            if (currentUser && currentUser.id === userId) {
-              const updatedUser: User = {
-                ...currentUser,
-                hasEncryptionKey: true,
-                encryptionInitialized: true,
-              };
-
-              set({
-                currentUser: updatedUser,
-                isEncryptionReady: true,
-                isEncryptionLoading: false,
-                needsEncryptionSetup: false,
-              });
-
-              console.log(`[AuthEncryptionStore] Encryption loaded successfully for user: ${userId}`);
-              return;
-            }
-          } else {
-            console.warn(`[AuthEncryptionStore] Encryption test failed for user: ${userId}`);
-          }
-        } else {
-          console.warn(`[AuthEncryptionStore] Failed to load encryption key for user: ${userId}`);
-        }
-      }
-
-      // No working encryption found - user needs setup
-      const { currentUser } = get();
-      if (currentUser && currentUser.id === userId) {
-        const updatedUser: User = {
-          ...currentUser,
-          hasEncryptionKey: hasEncryptionSetup,
-          encryptionInitialized: false,
-        };
-
-        set({
-          currentUser: updatedUser,
-          isEncryptionReady: false,
-          isEncryptionLoading: false,
-          needsEncryptionSetup: true,
-        });
-
-        console.log(`[AuthEncryptionStore] User ${userId} needs encryption setup`);
-      }
-
-    } catch (error) {
-      console.error(`[AuthEncryptionStore] Error checking encryption status for user ${userId}:`, error);
-      set({
-        isEncryptionReady: false,
-        isEncryptionLoading: false,
-        needsEncryptionSetup: true,
-      });
-    }
   },
 
   // Internal state management
@@ -490,7 +404,6 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
         });
         
         // Clear stored data and redirect to login
-        await UserContextManager.performLogoutCleanup(currentUserId);
         router.replace('/login');
         return;
       }
@@ -803,56 +716,6 @@ const useAuthEncryptionStore = create<AuthEncryptionStore>((set, get) => ({
     console.log('[AuthEncryptionStore] Initializing store from persisted data');
     set({ isInitializing: true });
 
-    try {
-      // Check for current user
-      const currentUserId = await UserContextManager.loadCurrentUserId();
-      
-      if (!currentUserId) {
-        console.log('[AuthEncryptionStore] No current user found');
-        set({ isInitializing: false });
-        return;
-      }
-
-      // Load user's auth state
-      const authState = await UserContextManager.loadUserAuthState(currentUserId);
-      
-      if (!authState || !authState.token) {
-        console.log(`[AuthEncryptionStore] No valid auth state found for user: ${currentUserId}`);
-        await UserContextManager.clearCurrentUserId();
-        set({ isInitializing: false });
-        return;
-      }
-
-      // Create user object
-      const user: User = {
-        id: currentUserId,
-        username: authState.user.username,
-        hasEncryptionKey: false, // Will be determined by checkUserEncryptionStatus
-        encryptionInitialized: false,
-        paymentStatus: 'unpaid', // Default status, will be updated by checkPaymentStatus
-      };
-
-      // Restore auth state
-      set({
-        token: authState.token,
-        currentUser: user,
-      });
-
-      // Check encryption status
-      await get().checkUserEncryptionStatus(currentUserId);
-      
-      // Check payment status
-      await get().checkPaymentStatus();
-
-      console.log(`[AuthEncryptionStore] Store initialized successfully for user: ${currentUserId}`);
-
-    } catch (error) {
-      console.error('[AuthEncryptionStore] Error initializing store:', error);
-      // Clear any invalid state
-      await UserContextManager.clearCurrentUserId();
-    } finally {
-      set({ isInitializing: false });
-    }
   },
 }));
 

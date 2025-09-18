@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Tabs, useRouter, useSegments } from 'expo-router';
 import { CircuitBoard, User, FlaskConical, Layers } from 'lucide-react-native';
 import { useTheme } from '@/components/ui/themeprovider/themeprovider';
-import { useAuthToken } from '~/lib/stores/authEncryptionStore';
+import { useIsAuthenticated } from '~/lib/stores/authStore';
 import { useGrowStore, useTeksStore, useFetchProfile } from '~/lib/stores';
 import { useCalendarStore } from '~/lib/stores/calendarStore';
 import { useGatewayStore } from '~/lib/stores/iot/gatewayStore';
@@ -14,7 +14,7 @@ export default function TabLayout() {
   const { theme } = useTheme();
   const router = useRouter();
   const segments = useSegments();
-  const token = useAuthToken();
+  const isAuthenticated = useIsAuthenticated();
   const fetchGrows = useGrowStore((state) => state.fetchGrows);
   const fetchTeks = useTeksStore((state) => state.fetchTeks);
   const fetchProfile = useFetchProfile();
@@ -23,30 +23,33 @@ export default function TabLayout() {
   const gateways = useGatewayStore((state) => state.gateways);
   const linkedEntities = useEntityStore((state) => state.linkedEntities);
 
-  // Initial data fetch on app startup and redirect if no token
+  // Initial data fetch on app startup and redirect if not authenticated
   useEffect(() => {
     const initialSetup = async () => {
-      if (!token) {
+      if (!isAuthenticated) {
         router.replace('/login');
         return;
       }
       
       try {
-        await fetchProfile(token);
-        await fetchGrows(token);
-        await fetchCalendarTasks(token);
-        await initializeAllGatewayData(token);
-        await fetchTeks(token);
+        // TODO will handle these later once offline-first is established
+        //
+        //await fetchProfile();
+        //await fetchGrows();
+        
+        //await fetchCalendarTasks();
+        //await initializeAllGatewayData();
+        //await fetchTeks();
       } catch (error) {
       }
     };
 
     initialSetup();
-  }, [token, fetchProfile, fetchGrows, fetchTeks, fetchCalendarTasks, initializeAllGatewayData, router]);
+  }, [isAuthenticated, fetchProfile, fetchGrows, fetchTeks, fetchCalendarTasks, initializeAllGatewayData, router]);
 
   // Initial registration of real-time listeners for all linked entities after gateway data is loaded
   useEffect(() => {
-    if (!token || gateways.length === 0 || linkedEntities.length === 0) {
+    if (!isAuthenticated || gateways.length === 0 || linkedEntities.length === 0) {
       return;
     }
 
@@ -68,7 +71,7 @@ export default function TabLayout() {
     });
 
     console.log(`[TabLayout] Completed initial real-time listener registration for ${linkedEntities.length} entities`);
-  }, [token, gateways, linkedEntities]);
+  }, [isAuthenticated, gateways, linkedEntities]);
 
   // Set tab bar styles based on theme
   const tabBarStyle = {
